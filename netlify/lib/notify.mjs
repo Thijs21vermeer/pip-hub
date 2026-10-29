@@ -3,16 +3,19 @@
 // is lang en willekeurig, want wie het kent kan meelezen. Zonder NTFY_TOPIC: stil.
 
 const TIMEZONE = "Europe/Amsterdam";
+// Foto van Pip bij elke melding: op Android als icoontje, op de iPhone als plaatje
+// in de melding (daar blijft het icoon het ntfy-logo).
+const PHOTO_URL = "https://thijs21vermeer.github.io/pip-hub/pip-icoon.jpg";
 const RESET_HOUR = 4; // net als Pip (config.js resetHour): een nieuwe dag begint om 04:00
 
-export async function notify({ title, message, tags = [], priority = 3 }) {
+export async function notify({ title, message, priority = 3 }) {
   const topic = process.env.NTFY_TOPIC;
   if (!topic) return false;
-  // JSON in plaats van headers: dan mogen titels ook ë en ✓ bevatten.
+  // JSON in plaats van headers: dan mogen titels ook ë bevatten.
   const response = await fetch("https://ntfy.sh/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic, title, message, tags, priority }),
+    body: JSON.stringify({ topic, title, message, priority, icon: PHOTO_URL, attach: PHOTO_URL, filename: "pip.jpg" }),
   });
   return response.ok;
 }

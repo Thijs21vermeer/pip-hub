@@ -124,7 +124,6 @@ async function announceDone(before, after) {
     await notify({
       title: `Gedaan: ${task.title}`,
       message: `${entry.by} om ${localTime(entry.at).time}`,
-      tags: ["white_check_mark", "cat"],
     });
   }
 }

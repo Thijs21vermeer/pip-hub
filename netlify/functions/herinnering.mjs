@@ -28,7 +28,6 @@ export default async () => {
     await notify({
       title: `Nog doen: ${task.title}`,
       message: `Het is ${here.time} en nog niemand heeft "${task.title}" afgevinkt.`,
-      tags: ["alarm_clock", "cat"],
       priority: 4,
     });
     sent[task.id] = today;
