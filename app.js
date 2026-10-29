@@ -741,10 +741,10 @@
 
   // ---- Ruststand ----
 
-  // Kaartje linksboven in de ruststand: open taken en seintjes. Klein gehouden,
-  // zodat het boven Pip blijft; niets te melden = geen kaartje.
+  // Kaartje linksboven in de ruststand: open taken, en voorraad die binnenkort op
+  // is. Klein gehouden, zodat het boven Pip blijft; niets te melden = geen kaartje.
   const REST_TASKS = 3;
-  const REST_ALERTS = 2;
+  const REST_STOCK = 2;
   const REST_WHEN = { daily: "vandaag", weekly: "deze week", biweekly: "deze 2 weken", monthly: "deze maand", quarterly: "dit kwartaal" };
 
   function restRow(icon, name, when, kind = "") {
@@ -756,25 +756,22 @@
       </li>`;
   }
 
-  function restAlerts() {
-    const alerts = [];
-    // Alleen seintjes uit Voerraad, niet van de handmatige standaardvoorraad.
-    if (voerraadCode() && voerraad && voerraad.items) {
-      voerraad.items
-        .filter((item) => !item.ordered && item.daysLeft <= LOW_STOCK_DAYS)
-        .forEach((item) => {
-          const category = CATEGORIES[item.category] || CATEGORIES.other;
-          const when = item.daysLeft <= 0 ? "op" : `nog ${item.daysLeft} ${item.daysLeft === 1 ? "dag" : "dagen"}`;
-          alerts.push(restRow(ICONS[category.icon], item.name, when, "alert"));
-        });
-    }
-    if (kattenbak && kattenbak.binFull) alerts.push(restRow(ICONS.box, "Opvangbak", "vol", "alert"));
-    return alerts;
+  // Alleen uit Voerraad (niet de handmatige standaardvoorraad) en alleen wat
+  // binnenkort op is en nog niet besteld.
+  function restStock() {
+    if (!voerraadCode() || !voerraad || !voerraad.items) return [];
+    return voerraad.items
+      .filter((item) => !item.ordered && item.daysLeft <= LOW_STOCK_DAYS)
+      .map((item) => {
+        const category = CATEGORIES[item.category] || CATEGORIES.other;
+        const when = item.daysLeft <= 0 ? "op" : `nog ${item.daysLeft} ${item.daysLeft === 1 ? "dag" : "dagen"}`;
+        return restRow(ICONS[category.icon], item.name, when, "alert");
+      });
   }
 
   function renderRest() {
     const open = tasks().filter((task) => !currentDone(task));
-    const alerts = restAlerts();
+    const stock = restStock();
     let html = "";
     if (open.length) {
       const rows = open.slice(0, REST_TASKS).map((task) =>
@@ -782,8 +779,8 @@
       if (open.length > REST_TASKS) rows.push(`<li class="more">+${open.length - REST_TASKS} meer</li>`);
       html += `<div class="rest-title">Nog te doen</div><ul class="rest-list">${rows.join("")}</ul>`;
     }
-    if (alerts.length) {
-      html += `<div class="rest-title">Seintjes</div><ul class="rest-list">${alerts.slice(0, REST_ALERTS).join("")}</ul>`;
+    if (stock.length) {
+      html += `<div class="rest-title">Voorraad</div><ul class="rest-list">${stock.slice(0, REST_STOCK).join("")}</ul>`;
     }
     els.restCard.innerHTML = html;
     els.restCard.hidden = !html;
