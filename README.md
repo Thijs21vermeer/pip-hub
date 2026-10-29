@@ -131,7 +131,7 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 
 - **Voersignaal:** na **Voeren** altijd dezelfde drie tonen. Pip leert zo dat dat geluid "eten" betekent.
 - **Feestje:** vink je de laatste taak van de dag af, dan klinkt een vrolijk loopje en schieten twee confettikanonnen in de hoeken onderaan confetti over het scherm.
-- **Aai Pip:** tik op de ruststand en Pip miauwt (soms spint ze), met hartjes waar je tikt. Na een seconde opent het overzicht, net als eerst.
+- **Aai Pip:** tik op de ruststand en Pip miauwt (soms spint ze). Het overzicht opent meteen; de miauw klinkt erdoorheen.
 - **Pips miauw:** zet je via **Pips miauw** op de startpagina (een geluidsbestand van hooguit 1 MB, het liefst 1 tot 3 seconden). Zonder miauw spint ze alleen.
 - **Volume:** vanaf 21:00 tot 07:00 zijn de geluiden zachter. Het volume zelf regel je op de Google Hub.
 

@@ -1498,32 +1498,6 @@ main {
   filter: blur(32px) brightness(0.3);
 }
 
-/* Aai Pip: hartjes stijgen op waar je op de ruststand tikt. */
-.rest-hearts {
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  pointer-events: none;
-}
-
-.rest-hearts span {
-  position: absolute;
-  width: 2rem;
-  height: 2rem;
-  margin: -1rem 0 0 -1rem; /* midden op de vinger */
-  color: #f26b7a;
-  animation: heart-up 1.8s ease-out forwards;
-}
-
-.rest-hearts svg {
-  fill: currentColor; /* volle hartjes */
-}
-
-@keyframes heart-up {
-  from { opacity: 1; transform: translate(0, 0) scale(0.6); }
-  to { opacity: 0; transform: translate(var(--drift), -9rem) scale(1.2); }
-}
-
 /* Feestje als alles af is: confetti uit twee kanonnen (app.js, celebrate). */
 .confetti {
   position: fixed;

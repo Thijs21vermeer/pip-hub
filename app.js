@@ -139,7 +139,6 @@
     restDate: document.getElementById("rest-date"),
     restCard: document.getElementById("rest-card"),
     restPhotos: [...document.querySelectorAll(".rest-photo")],
-    restHearts: document.getElementById("rest-hearts"),
     video: document.getElementById("video"),
     videoTitle: document.getElementById("video-title"),
     videoFrame: document.getElementById("video-frame"),
@@ -1106,30 +1105,11 @@
     source.start();
   }
 
-  // Aai Pip: tik op de ruststand en ze miauwt (soms spint ze), met hartjes die
-  // opstijgen waar je tikt. Daarna opent het overzicht, net als eerst.
-  const PET_TO_DASHBOARD_MS = 900;
-  let petting = false;
-
-  function petPip(x, y) {
-    if (petting) return;
-    petting = true;
+  // Aai Pip: tik op de ruststand en ze miauwt (soms spint ze). Het overzicht
+  // opent meteen; de miauw klinkt erdoorheen.
+  function petPip() {
     if (meowBuffer && Math.random() < 0.75) playMeow();
     else playPurr();
-    for (let index = 0; index < 5; index++) {
-      const heart = document.createElement("span");
-      heart.innerHTML = ICONS.heart;
-      heart.style.left = `${x}px`;
-      heart.style.top = `${y}px`;
-      heart.style.setProperty("--drift", `${Math.round((Math.random() - 0.5) * 90)}px`);
-      heart.style.animationDelay = `${index * 0.1}s`;
-      els.restHearts.appendChild(heart);
-      setTimeout(() => heart.remove(), 2400);
-    }
-    setTimeout(() => {
-      petting = false;
-      hideRest();
-    }, PET_TO_DASHBOARD_MS);
   }
 
   // Feestje: alle taken van vandaag zijn af. Twee confettikanonnen in de hoeken
@@ -1972,7 +1952,8 @@
     }
     const { action, id } = target.dataset;
     if (action === "wake") {
-      petPip(event.clientX, event.clientY);
+      petPip();
+      hideRest();
     } else if (action === "video-close") {
       closeVideo();
     } else if (action === "to-google") {
