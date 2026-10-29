@@ -21,6 +21,7 @@ import sys
 import time
 import urllib.request
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -39,6 +40,9 @@ CODE_FILES = {
 CODE_ENV = {"voerraad-code": "PIP_VOERRAAD_CODE", "kattenbak-code": "PIP_KATTENBAK_CODE"}
 # Een container kent de Nederlandse tijd niet vanzelf.
 TIMEZONE = ZoneInfo(os.environ.get("PIP_TZ") or "Europe/Amsterdam")
+# Servertijd min de klok van dit apparaat. De klok van een NAS kan minuten
+# achterlopen; dan kwam Pip na een pauze te laat terug.
+clock_offset = 0.0
 NAMESPACE = "urn:x-cast:nl.pip.hub"
 IDLE_APP_IDS = {None, "E8C28D3C"}  # E8C28D3C is de fotolijst ("Backdrop")
 CHECK_EVERY_SECONDS = 30
@@ -82,19 +86,28 @@ def settings_request(body=None):
     request = urllib.request.Request(match.group(1), data=data, headers=headers, method="PUT" if data else "GET")
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
+            global clock_offset
+            if response.headers.get("Date"):
+                clock_offset = parsedate_to_datetime(response.headers["Date"]).timestamp() - time.time()
             return json.load(response)
     except (OSError, ValueError):
         return {}
 
 
 def away_until():
-    """Tot wanneer Pip weg moet blijven (knop "Google Hub"), in seconden; 0 = geen pauze."""
+    """Tot wanneer Pip weg moet blijven (knop "Google Hub"), op de klok van dit apparaat; 0 = geen pauze."""
     away = settings_request().get("away") or {}
-    return away.get("until", 0) / 1000
+    until = away.get("until", 0) / 1000
+    return until - clock_offset if until else 0
+
+
+def local_now():
+    """De echte tijd hier, ook als de klok van dit apparaat afwijkt."""
+    return datetime.fromtimestamp(time.time() + clock_offset, TIMEZONE)
 
 
 def now():
-    return datetime.now(TIMEZONE).strftime("%H:%M")
+    return local_now().strftime("%H:%M")
 
 
 def list_devices(casts):
@@ -185,7 +198,7 @@ def keep_pip_on(hub, app_id, pip):
             wait_until = time.time() + GRACE_SECONDS
             print(f"{now()} Pip is weg, de Google Hub krijgt even de ruimte.")
         was_on = on
-        if not on and start <= datetime.now(TIMEZONE).hour < end and hub.app_id in IDLE_APP_IDS:
+        if not on and start <= local_now().hour < end and hub.app_id in IDLE_APP_IDS:
             away = away_until()
             back = max(wait_until, away)
             if time.time() >= back:
@@ -196,7 +209,8 @@ def keep_pip_on(hub, app_id, pip):
                 except PyChromecastError as error:
                     print(f"{now()} Starten lukte niet ({error!r}), zo meteen opnieuw.")
             elif away > time.time() and away != told_pause:
-                print(f"{now()} Pauze via de knop: Pip komt om {datetime.fromtimestamp(away, TIMEZONE):%H:%M} terug.")
+                back_at = datetime.fromtimestamp(away + clock_offset, TIMEZONE)
+                print(f"{now()} Pauze via de knop: Pip komt om {back_at:%H:%M} terug.")
                 told_pause = away
         time.sleep(CHECK_EVERY_SECONDS)
 
