@@ -4,6 +4,8 @@
 //
 //   GET  /api/kattenbak                      status (gewicht, bezoeken, bak vol, kat erin)
 //                                            en van de voerbak (feeder)
+//   GET  /api/kattenbak?log=1                logboek van 7 dagen: bezoeken aan de bak,
+//                                            voerbeurten en schoonmaakbeurten
 //   POST /api/kattenbak  {"action":"clean"}  nu schoonmaken (niet als er een kat in zit)
 //   POST /api/kattenbak  {"action":"odourless"}  nu ontgeuren
 //   POST /api/kattenbak  {"action":"feed","portions":2}  nu voeren (1-10 porties)
@@ -13,6 +15,7 @@
 // ALLOWED_ORIGINS (komma's).
 
 import { createHash, createHmac, randomUUID } from "node:crypto";
+import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json, setting } from "../lib/http.mjs";
 
 const BASES = {
@@ -30,6 +33,13 @@ const CLEAN_COOLDOWN_MS = 2 * 60 * 1000;
 const MAX_PORTIONS = 10;
 const FEED_COOLDOWN_MS = 60 * 1000;
 const EMPTY_HASH = createHash("sha256").update("").digest("hex");
+// Logboek: Tuya bewaart de bezoeken aan de kattenbak, maar niet de voerbeurten
+// (alleen de laatste) en niet het schoonmaken. Die houden we hier zelf bij.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LOG_DAYS = 7;
+const LOG_KEY = "action-log";
+// Na een voerbeurt via het overzicht meldt de voerbak hem zelf ook; zelfde beurt.
+const SAME_FEED_MS = 3 * 60 * 1000;
 
 let lastClean = 0;
 let lastFeed = 0;
@@ -105,12 +115,86 @@ async function readFeeder(token) {
   }
 }
 
+// ---- Logboek ----
+
+function logStore() {
+  return getStore({ name: "pip", consistency: "strong" });
+}
+
+async function readLog() {
+  const log = (await logStore().get(LOG_KEY, { type: "json" })) || {};
+  return { feeds: log.feeds || [], cleans: log.cleans || [] };
+}
+
+function recent(list) {
+  const from = Date.now() - LOG_DAYS * DAY_MS;
+  return list.filter((entry) => entry.at >= from).sort((a, b) => a.at - b.at).slice(-200);
+}
+
+async function addToLog(kind, entry) {
+  const log = await readLog();
+  log[kind] = recent([...log[kind], entry]);
+  await logStore().setJSON(LOG_KEY, log);
+}
+
+// De laatste voerbeurt van de voerbak zelf (schema of app) erbij zetten, als die
+// nog niet in het logboek staat. Pip vraagt elk kwartier de status op, dus
+// voerbeurten die verder dan een kwartier uit elkaar liggen komen er allemaal in.
+async function noteFeederRecord(lastFeed) {
+  if (!lastFeed || !lastFeed.at || lastFeed.at < Date.now() - LOG_DAYS * DAY_MS) return;
+  const log = await readLog();
+  if (log.feeds.some((feed) => Math.abs(feed.at - lastFeed.at) < SAME_FEED_MS)) return;
+  log.feeds = recent([...log.feeds, { at: lastFeed.at, portions: lastFeed.portions, source: "voerbak" }]);
+  await logStore().setJSON(LOG_KEY, log);
+}
+
+// Bezoeken aan de kattenbak van de afgelopen week: per bezoek het gewicht en
+// hoe lang het duurde (twee meldingen op hetzelfde moment).
+async function readVisits(token) {
+  const end = Date.now();
+  const visits = new Map();
+  let rowKey = "";
+  for (let page = 0; page < 5; page++) {
+    // Tuya ondertekent de query letterlijk en op alfabet: geen %2C voor de komma.
+    const query = [
+      "codes=cat_weight,excretion_time_day",
+      `end_time=${end}`,
+      rowKey && `last_row_key=${rowKey}`,
+      "size=100",
+      `start_time=${end - LOG_DAYS * DAY_MS}`,
+    ].filter(Boolean).join("&");
+    const result = await tuya("GET", `/v2.0/cloud/thing/${setting("TUYA_DEVICE_ID")}/report-logs?${query}`, undefined, token);
+    for (const entry of result.logs || []) {
+      const key = Math.round(entry.event_time / 5000);
+      const visit = visits.get(key) || { at: entry.event_time };
+      if (entry.code === "cat_weight") visit.weightKg = Math.round(Number(entry.value) / 100) / 10;
+      if (entry.code === "excretion_time_day") visit.seconds = Number(entry.value);
+      visits.set(key, visit);
+    }
+    if (!result.has_more || !result.last_row_key) break;
+    rowKey = result.last_row_key;
+  }
+  return [...visits.values()].sort((a, b) => b.at - a.at);
+}
+
+async function readLogbook() {
+  const token = await accessToken();
+  const [visits, log] = await Promise.all([readVisits(token), readLog()]);
+  return {
+    visits,
+    feeds: [...log.feeds].reverse(),
+    cleans: [...log.cleans].reverse(),
+  };
+}
+
 async function readStatus() {
   const token = await accessToken();
   const [{ online, value }, feeder] = await Promise.all([
     readDevice(setting("TUYA_DEVICE_ID"), token),
     readFeeder(token),
   ]);
+  // Het logboek mag de status nooit tegenhouden.
+  await noteFeederRecord(feeder && feeder.lastFeed).catch(() => {});
   return {
     online,
     // cat_weight staat in grammen.
@@ -140,6 +224,7 @@ async function feed(portions) {
     token,
   );
   lastFeed = Date.now();
+  await addToLog("feeds", { at: lastFeed, portions, source: "overzicht" }).catch(() => {});
   return [200, { ok: true, action: "feed", portions, at: new Date().toISOString() }];
 }
 
@@ -160,7 +245,10 @@ async function runAction(action, portions) {
     { properties: JSON.stringify({ [code]: true }) },
     token,
   );
-  if (action === "clean") lastClean = Date.now();
+  if (action === "clean") {
+    lastClean = Date.now();
+    await addToLog("cleans", { at: lastClean, source: "overzicht" }).catch(() => {});
+  }
   return [200, { ok: true, action, at: new Date().toISOString() }];
 }
 
@@ -169,7 +257,10 @@ export default async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
   try {
     if (!authorized(request)) return json(401, { error: "UNAUTHORIZED" }, headers);
-    if (request.method === "GET") return json(200, await readStatus(), headers);
+    if (request.method === "GET") {
+      const wantsLog = new URL(request.url).searchParams.get("log") === "1";
+      return json(200, wantsLog ? await readLogbook() : await readStatus(), headers);
+    }
     if (request.method === "POST") {
       const { action, portions } = await request.json().catch(() => ({}));
       const [status, body] = await runAction(action, portions);

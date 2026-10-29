@@ -982,6 +982,110 @@ main {
   color: #fff;
 }
 
+/* Logboek: twee kaarten naast elkaar, elk met een eigen lijst per dag. */
+.log-columns {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.log-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 1rem 1.3rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.log-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.log-card-head .icon {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.log-card-head .icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.log-card-head h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.log-card-head p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.log-list {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.3rem;
+  overflow-y: auto;
+}
+
+.log-day {
+  margin: 0.9rem 0 0.25rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.3rem 0;
+  font-size: 1.05rem;
+}
+
+.log-time {
+  min-width: 3.1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.log-what {
+  font-weight: 500;
+}
+
+.log-source {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.log-row.clean .log-what {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.log-empty {
+  padding: 1rem 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
 .page-grid {
   flex: 1;
   min-height: 0;

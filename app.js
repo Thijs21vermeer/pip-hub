@@ -132,6 +132,8 @@
     pageGrid: document.getElementById("page-grid"),
     pageHint: document.getElementById("page-hint"),
     pageEdit: document.getElementById("page-edit"),
+    log: document.getElementById("log"),
+    logColumns: document.getElementById("log-columns"),
     rest: document.getElementById("rest"),
     restClock: document.getElementById("rest-clock"),
     restDate: document.getElementById("rest-date"),
@@ -949,6 +951,7 @@
     if (editor || !els.video.hidden) return scheduleRest();
     closeSheet();
     closePage();
+    closeLog();
     renderRest();
     els.rest.hidden = false;
   }
@@ -1029,6 +1032,108 @@
     pageEditing = false;
     els.page.hidden = true;
     clearTimeout(pageTimer);
+  }
+
+  // ---- Logboek: kattenbak en voeren ----
+
+  // Bezoeken aan de bak komen van Tuya; voerbeurten en het draaien via het
+  // overzicht houdt het servertje zelf bij (zie netlify/functions/kattenbak.mjs).
+  const LOG_TIMEOUT_MS = 2 * 60 * 1000;
+  let logOpen = false;
+  let logTimer = null;
+
+  // "Vandaag", "Gisteren" of "dinsdag 27 oktober" (gewone kalenderdagen).
+  function logDay(at) {
+    const date = new Date(at);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === new Date().toDateString()) return "Vandaag";
+    if (date.toDateString() === yesterday.toDateString()) return "Gisteren";
+    return formatDate(date);
+  }
+
+  function duration(seconds) {
+    if (!(seconds > 0)) return "";
+    return seconds < 60 ? `${seconds} s` : `${Math.round(seconds / 60)} min`;
+  }
+
+  function logRows(entries, row) {
+    if (!entries.length) return '<p class="log-empty">Nog niets deze week.</p>';
+    let day = "";
+    return entries.map((entry) => {
+      const label = logDay(entry.at);
+      const head = label === day ? "" : `<div class="log-day">${label}</div>`;
+      day = label;
+      return `${head}<div class="log-row${entry.kind === "clean" ? " clean" : ""}">
+        <span class="log-time">${formatTime(new Date(entry.at))}</span>${row(entry)}</div>`;
+    }).join("");
+  }
+
+  function logCard(icon, title, summary, body) {
+    return `
+      <section class="log-card">
+        <header class="log-card-head">
+          <span class="icon">${icon}</span>
+          <div><h3>${title}</h3><p>${summary}</p></div>
+        </header>
+        <div class="log-list">${body}</div>
+      </section>`;
+  }
+
+  function renderLog(data) {
+    if (!data || data.error) {
+      const text = data ? ACTION_ERRORS[data.error] || "Logboek niet bereikbaar" : "Laden…";
+      els.logColumns.innerHTML = `<p class="log-empty">${escapeHtml(text)}</p>`;
+      return;
+    }
+    const isToday = (entry) => logDay(entry.at) === "Vandaag";
+    const visits = data.visits || [];
+    const cleans = (data.cleans || []).map((entry) => ({ ...entry, kind: "clean" }));
+    const box = [...visits, ...cleans].sort((a, b) => b.at - a.at);
+    const latest = visits.find((visit) => visit.weightKg);
+    const boxSummary = [`Vandaag ${visits.filter(isToday).length}×`, latest && `Pip ${String(latest.weightKg).replace(".", ",")} kg`]
+      .filter(Boolean).join(" · ");
+    const feeds = data.feeds || [];
+    const portionsToday = feeds.filter(isToday).reduce((sum, feed) => sum + (feed.portions || 0), 0);
+    els.logColumns.innerHTML =
+      logCard(ICONS.box, "Kattenbak", boxSummary, logRows(box, (entry) => entry.kind === "clean"
+        ? '<span class="log-what">Gedraaid</span><span class="log-source">via overzicht</span>'
+        : `<span class="log-what">${[entry.weightKg && `${String(entry.weightKg).replace(".", ",")} kg`, duration(entry.seconds)].filter(Boolean).join(" · ") || "Bezoek"}</span>`)) +
+      logCard(ICONS.bowl, "Voeren", `Vandaag ${portionsText(portionsToday)}`, logRows(feeds, (feed) =>
+        `<span class="log-what">${portionsText(feed.portions)}</span><span class="log-source">${feed.source === "overzicht" ? "via overzicht" : "schema of app"}</span>`));
+  }
+
+  async function refreshLog() {
+    if (!kattenbakLinked()) return renderLog({ error: "UNAUTHORIZED" });
+    try {
+      const response = await fetch(`${kattenbakUrl()}?log=1`, {
+        headers: { Authorization: `Bearer ${actionCode()}` },
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (logOpen) renderLog(response.ok ? data : { error: data.error || "UNREACHABLE" });
+    } catch (error) {
+      if (logOpen) renderLog({ error: "UNREACHABLE" });
+    }
+  }
+
+  function touchLog() {
+    clearTimeout(logTimer);
+    logTimer = setTimeout(closeLog, LOG_TIMEOUT_MS);
+  }
+
+  function openLog() {
+    logOpen = true;
+    els.log.hidden = false;
+    renderLog(null);
+    refreshLog();
+    touchLog();
+  }
+
+  function closeLog() {
+    logOpen = false;
+    els.log.hidden = true;
+    clearTimeout(logTimer);
   }
 
   // ---- Taak toevoegen of wijzigen (met schermtoetsenbord) ----
@@ -1540,6 +1645,7 @@
 
   document.addEventListener("click", (event) => {
     if (pageOpen) touchPage();
+    if (logOpen) touchLog();
     if (els.rest.hidden) scheduleRest(); // elke tik stelt de ruststand uit
     const target = event.target.closest("[data-action]");
     if (!target || target.disabled) {
@@ -1565,6 +1671,10 @@
       openPage();
     } else if (action === "page-close") {
       closePage();
+    } else if (action === "log-open") {
+      openLog();
+    } else if (action === "log-close") {
+      closeLog();
     } else if (action === "page-edit") {
       pageEditing = !pageEditing;
       renderPage();
