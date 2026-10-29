@@ -1,7 +1,7 @@
 // Instellingen voor Pip. Pas dit bestand aan en zet het daarna opnieuw online.
 window.PIP_CONFIG = {
   // App-ID uit de Google Cast Developer Console (8 tekens, bijvoorbeeld "A1B2C3D4").
-  castAppId: "",
+  castAppId: "6E3BD9DA",
 
   // Naam van je Nest Hub zoals in de Google Home-app. Leeg laten = de enige Hub in huis.
   hubName: "hub",
