@@ -29,7 +29,10 @@
 
   <main>
     <div class="left">
-      <h2 class="group-title">Taken</h2>
+      <div class="group-head">
+        <h2 class="group-title">Taken</h2>
+        <button class="group-link" id="tasks-more" data-action="all-tasks"></button>
+      </div>
       <section class="tasks" id="tasks" aria-label="Taken"></section>
       <h2 class="group-title">Acties</h2>
       <section class="actions" id="actions" aria-label="Acties"></section>
@@ -39,6 +42,19 @@
       <div id="stock"></div>
     </aside>
   </main>
+
+  <!-- Alle taken: bekijken, afvinken en beheren (toevoegen, wijzigen, volgorde). -->
+  <section class="page" id="page" hidden aria-label="Alle taken">
+    <header class="page-head">
+      <button class="page-back" data-action="page-close">‹ Terug</button>
+      <div>
+        <h2>Alle taken</h2>
+        <p id="page-hint"></p>
+      </div>
+      <button class="page-edit" id="page-edit" data-action="page-edit"></button>
+    </header>
+    <div class="page-grid" id="page-grid"></div>
+  </section>
 
   <div class="sheet-backdrop" id="sheet" hidden>
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>

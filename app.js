@@ -25,6 +25,31 @@
     UNREACHABLE: "Servertje niet bereikbaar",
   };
 
+  // Takenlijst die je op de Hub zelf beheert.
+  const SETTINGS_KEY = "pip-hub-settings";
+  const HOME_TASKS = 4; // zoveel taken staan op het startscherm, de rest onder "meer"
+  const MAX_TASKS = 12;
+  const MAX_TITLE = 30;
+  const PAGE_TIMEOUT_MS = 90 * 1000; // pagina "Alle taken" sluit vanzelf
+  const TASK_ICONS = ["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"];
+  const SUGGESTIONS = [
+    { title: "Kattenbak verschonen", icon: "box" },
+    { title: "Borstelen", icon: "heart" },
+    { title: "Spelen", icon: "ball" },
+    { title: "Nagels knippen", icon: "scissors" },
+    { title: "Medicijn geven", icon: "pill" },
+    { title: "Fontein schoonmaken", icon: "drop" },
+    { title: "Tanden poetsen", icon: "heart" },
+    { title: "Vlooienmiddel", icon: "pill" },
+  ];
+  // Schermtoetsenbord: de Hub heeft zelf geen toetsenbord voor apps.
+  const KEY_ROWS = [
+    ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+    ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+    ["z", "x", "c", "v", "b", "n", "m", "back"],
+    ["-", "space", "&"],
+  ];
+
   const DAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
   const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
     "augustus", "september", "oktober", "november", "december"];
@@ -43,6 +68,12 @@
     heart: svg('<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>'),
     pill: svg('<path d="M10.5 20.5l-7-7a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>'),
     wind: svg('<path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>'),
+    scissors: svg('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/>'),
+    ball: svg('<circle cx="12" cy="12" r="9"/><path d="M5.5 6.5c3 2 4.5 6 4 11.5M18.5 6.5c-3 2-4.5 6-4 11.5M3.5 11c5-1 12-1 17 0"/>'),
+    pencil: svg('<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>'),
+    left: svg('<path d="M15 6l-6 6 6 6"/>'),
+    right: svg('<path d="M9 6l6 6-6 6"/>'),
+    erase: svg('<path d="M9 5h11v14H9l-6-7z"/><path d="M12 9l5 6M17 9l-5 6"/>'),
     check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     minus: svg('<path d="M5 12h14"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
@@ -67,6 +98,11 @@
     clock: document.getElementById("clock"),
     date: document.getElementById("date"),
     tasks: document.getElementById("tasks"),
+    tasksMore: document.getElementById("tasks-more"),
+    page: document.getElementById("page"),
+    pageGrid: document.getElementById("page-grid"),
+    pageHint: document.getElementById("page-hint"),
+    pageEdit: document.getElementById("page-edit"),
     actions: document.getElementById("actions"),
     stock: document.getElementById("stock"),
     sheet: document.getElementById("sheet"),
@@ -78,6 +114,12 @@
   let kattenbak = null; // laatste status van het servertje
   const actionFeedback = {}; // per actie: { text, kind, until }
   const busyActions = new Set();
+  let settings = loadSettingsCache(); // { tasks?, people? } van de Hub of het servertje
+  let pushTimer = null;
+  let editor = null; // taak die nu gewijzigd wordt: { id, title, icon, confirmDelete }
+  let pageOpen = false;
+  let pageEditing = false;
+  let pageTimer = null;
   let sheetTask = null;
   let sheetAction = null;
   let sheetTimer = null;
@@ -128,11 +170,12 @@
 
   function markDone(task, person) {
     const entry = { by: person, at: Date.now(), took: 0 };
+    const stock = stockFor(task);
     // Met Voerraad gekoppeld telt Voerraad zelf de dagen af.
-    if (task.stock && !voerraadCode() && task.stock.id in state.stock) {
-      const before = state.stock[task.stock.id];
-      state.stock[task.stock.id] = Math.max(0, before - task.stock.amount);
-      entry.took = before - state.stock[task.stock.id];
+    if (stock && !voerraadCode() && stock.id in state.stock) {
+      const before = state.stock[stock.id];
+      state.stock[stock.id] = Math.max(0, before - stock.amount);
+      entry.took = before - state.stock[stock.id];
     }
     state.done[task.id] = entry;
     saveState();
@@ -142,7 +185,8 @@
   function undo(task) {
     const entry = state.done[task.id];
     if (!entry) return;
-    if (task.stock && entry.took) state.stock[task.stock.id] += entry.took;
+    const stock = stockFor(task);
+    if (stock && entry.took) state.stock[stock.id] += entry.took;
     delete state.done[task.id];
     saveState();
     render();
@@ -282,6 +326,7 @@
     writeStorage(ACTION_CODE_KEY, clean || null);
     kattenbak = null;
     refreshKattenbak();
+    pullSettings();
   }
 
   // ---- Huisgenoten ----
@@ -299,7 +344,9 @@
   }
 
   function people() {
-    let saved = [];
+    const fromSettings = cleanPeople(settings.people);
+    if (fromSettings.length) return fromSettings;
+    let saved = []; // van vóór de instellingen op het servertje stonden
     try {
       saved = cleanPeople(JSON.parse(readStorage(PEOPLE_KEY)));
     } catch (error) {
@@ -310,8 +357,97 @@
 
   function setPeople(list) {
     const clean = cleanPeople(list);
-    writeStorage(PEOPLE_KEY, clean.length ? JSON.stringify(clean) : null);
+    if (clean.length) {
+      saveSettings({ people: clean });
+    } else {
+      const { people: removed, ...rest } = settings;
+      settings = rest;
+      writeStorage(SETTINGS_KEY, JSON.stringify(settings));
+      writeStorage(PEOPLE_KEY, null);
+    }
     closeSheet();
+  }
+
+  // ---- Instellingen: takenlijst en huisgenoten ----
+
+  // Bewaard op de Hub en op het servertje (zelfde code als de kattenbak), zodat
+  // een herstart van de Hub niets kwijtraakt. Wat op het servertje staat wint.
+
+  function settingsUrl() {
+    return localOverride("settings") || config.settings.url;
+  }
+
+  function loadSettingsCache() {
+    try {
+      return JSON.parse(readStorage(SETTINGS_KEY)) || {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function saveSettings(patch) {
+    settings = { ...settings, ...patch };
+    writeStorage(SETTINGS_KEY, JSON.stringify(settings));
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushSettings, 800);
+  }
+
+  async function pushSettings() {
+    if (!actionCode() || !settingsUrl()) return;
+    const body = {};
+    if (settings.tasks) body.tasks = settings.tasks;
+    if (settings.people) body.people = settings.people;
+    try {
+      await fetch(settingsUrl(), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${actionCode()}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      // Niet bereikbaar: de Hub houdt zijn eigen kopie, de volgende wijziging probeert opnieuw.
+    }
+  }
+
+  async function pullSettings() {
+    if (!actionCode() || !settingsUrl()) return;
+    try {
+      const response = await fetch(settingsUrl(), {
+        headers: { Authorization: `Bearer ${actionCode()}` },
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const remote = await response.json();
+      if (remote.tasks || remote.people) {
+        settings = { ...settings, ...remote };
+        writeStorage(SETTINGS_KEY, JSON.stringify(settings));
+        render();
+      } else if (settings.tasks || settings.people) {
+        pushSettings();
+      }
+    } catch (error) {
+      // Niet bereikbaar: dan maar met de kopie op de Hub.
+    }
+  }
+
+  function tasks() {
+    return settings.tasks && settings.tasks.length ? settings.tasks : config.tasks;
+  }
+
+  // Voorraadkoppeling (bv. ontbijt → natvoer) hoort bij de standaardtaken in config.js.
+  function stockFor(task) {
+    const base = config.tasks.find((t) => t.id === task.id);
+    return base && base.stock;
+  }
+
+  function setTasks(list) {
+    const clean = list.map(({ id, title, icon }) => ({ id, title, icon }));
+    saveSettings({ tasks: clean });
+    // Weggehaalde taken ook uit de vinkjes van vandaag.
+    Object.keys(state.done).forEach((id) => {
+      if (!clean.some((task) => task.id === id)) delete state.done[id];
+    });
+    saveState();
+    render();
   }
 
   function setVoerraadCode(code) {
@@ -489,30 +625,187 @@
 
   function render() {
     renderClock();
-    const total = config.tasks.length;
-    const doneCount = config.tasks.filter((task) => state.done[task.id]).length;
+    const list = tasks();
+    const total = list.length;
+    const doneCount = list.filter((task) => state.done[task.id]).length;
     const allDone = total > 0 && doneCount === total;
     document.body.classList.toggle("all-done", allDone);
     els.progressText.textContent = allDone ? "Alles gedaan voor vandaag" : `${doneCount} van ${total} gedaan`;
     els.progressBar.style.width = total ? `${(doneCount / total) * 100}%` : "0";
-    els.tasks.innerHTML = config.tasks.map(taskCard).join("");
+    els.tasks.innerHTML = list.slice(0, HOME_TASKS).map(taskCard).join("");
+    const extra = total - HOME_TASKS;
+    els.tasksMore.textContent = extra > 0 ? `+${extra} meer ›` : "Beheren ›";
     renderActions();
     renderStock();
+    renderPage();
+  }
+
+  // ---- Pagina "Alle taken" ----
+
+  function editCard(task, index) {
+    return `
+      <button class="task editing" data-action="edit-task" data-id="${escapeHtml(task.id)}">
+        <span class="icon">${ICONS[task.icon] || ICONS.paw}</span>
+        <span>
+          <span class="title">${escapeHtml(task.title)}</span>
+          <span class="status">${index < HOME_TASKS ? "Op startscherm" : "Onder meer"}</span>
+        </span>
+        <span class="edit-badge">${ICONS.pencil}</span>
+      </button>`;
+  }
+
+  function renderPage() {
+    if (!pageOpen) return;
+    const list = tasks();
+    els.pageEdit.textContent = pageEditing ? "Klaar" : "Bewerken";
+    els.pageHint.textContent = pageEditing
+      ? "Tik op een taak om hem te wijzigen. De eerste 4 staan op het startscherm."
+      : `${list.length} ${list.length === 1 ? "taak" : "taken"} · de eerste 4 staan op het startscherm`;
+    const cards = list.map((task, index) => (pageEditing ? editCard(task, index) : taskCard(task)));
+    if (pageEditing && list.length < MAX_TASKS) {
+      cards.push(`
+        <button class="task add" data-action="add-task">
+          <span class="icon">${ICONS.plus}</span>
+          <span class="title">Taak toevoegen</span>
+        </button>`);
+    }
+    els.pageGrid.innerHTML = cards.join("");
+  }
+
+  function touchPage() {
+    clearTimeout(pageTimer);
+    pageTimer = setTimeout(() => {
+      if (!editor) closePage();
+    }, PAGE_TIMEOUT_MS);
+  }
+
+  function openPage() {
+    pageOpen = true;
+    pageEditing = false;
+    els.page.hidden = false;
+    renderPage();
+    touchPage();
+  }
+
+  function closePage() {
+    pageOpen = false;
+    pageEditing = false;
+    els.page.hidden = true;
+    clearTimeout(pageTimer);
+  }
+
+  // ---- Taak toevoegen of wijzigen (met schermtoetsenbord) ----
+
+  function keyButton(key) {
+    if (key === "back") return `<button class="key wide" data-action="kb-key" data-key="back" aria-label="Wissen">${ICONS.erase}</button>`;
+    if (key === "space") return '<button class="key space" data-action="kb-key" data-key="space">spatie</button>';
+    return `<button class="key" data-action="kb-key" data-key="${escapeHtml(key)}">${escapeHtml(key)}</button>`;
+  }
+
+  function editorHtml() {
+    const list = tasks();
+    const isNew = !editor.id;
+    const index = isNew ? -1 : list.findIndex((task) => task.id === editor.id);
+    const taken = new Set(list.map((task) => task.title.toLowerCase()));
+    const suggestions = isNew ? SUGGESTIONS.filter((s) => !taken.has(s.title.toLowerCase())).slice(0, 6) : [];
+    const chips = suggestions.map((s) =>
+      `<button class="chip" data-action="kb-suggest" data-title="${escapeHtml(s.title)}" data-icon="${s.icon}">${escapeHtml(s.title)}</button>`).join("");
+    const icons = TASK_ICONS.map((name) =>
+      `<button class="icon-pick${name === editor.icon ? " selected" : ""}" data-action="kb-icon" data-icon="${name}" aria-label="${name}">${ICONS[name]}</button>`).join("");
+    const manage = isNew ? "" : `
+      <button class="choice warn small" data-action="kb-delete"${list.length <= 1 ? " disabled" : ""}>${editor.confirmDelete ? "Echt verwijderen?" : "Verwijderen"}</button>
+      <button class="choice secondary small square" data-action="kb-move" data-delta="-1" aria-label="Eerder"${index <= 0 ? " disabled" : ""}>${ICONS.left}</button>
+      <button class="choice secondary small square" data-action="kb-move" data-delta="1" aria-label="Later"${index >= list.length - 1 ? " disabled" : ""}>${ICONS.right}</button>
+      <span class="position">Plek ${index + 1} van ${list.length}${index < HOME_TASKS ? " · startscherm" : ""}</span>`;
+    return `
+      <h3>${isNew ? "Nieuwe taak" : "Taak wijzigen"}</h3>
+      <div class="name-field${editor.title ? "" : " empty"}">${escapeHtml(editor.title) || "Naam van de taak"}<span class="caret"></span></div>
+      ${chips ? `<div class="chips">${chips}</div>` : ""}
+      <div class="icon-row">${icons}</div>
+      <div class="keyboard">${KEY_ROWS.map((row) => `<div class="kb-row">${row.map(keyButton).join("")}</div>`).join("")}</div>
+      <div class="editor-actions">
+        <div class="editor-manage">${manage}</div>
+        <div class="editor-done">
+          <button class="choice secondary small" data-action="close">Annuleren</button>
+          <button class="choice small" data-action="kb-save"${editor.title.trim() ? "" : " disabled"}>Opslaan</button>
+        </div>
+      </div>`;
+  }
+
+  function openEditor(task) {
+    const base = task ? { id: task.id, title: task.title, icon: task.icon || "paw" } : { id: null, title: "", icon: "paw" };
+    openSheet(null, "", { wide: true });
+    editor = { ...base, confirmDelete: false };
+    refreshEditor();
+  }
+
+  function refreshEditor() {
+    if (editor) els.sheetBody.innerHTML = editorHtml();
+  }
+
+  function typeKey(key) {
+    if (key === "back") {
+      editor.title = editor.title.slice(0, -1);
+    } else if (editor.title.length < MAX_TITLE) {
+      const char = key === "space" ? " " : key;
+      if (char === " " && (!editor.title || editor.title.endsWith(" "))) return;
+      editor.title += editor.title ? char : char.toUpperCase();
+    }
+    editor.confirmDelete = false;
+    refreshEditor();
+  }
+
+  function saveEditor() {
+    const title = editor.title.trim();
+    if (!title) return;
+    const list = tasks().map((task) => ({ ...task }));
+    if (editor.id) {
+      const task = list.find((t) => t.id === editor.id);
+      if (task) Object.assign(task, { title, icon: editor.icon });
+    } else {
+      list.push({ id: `t${Date.now().toString(36)}`, title, icon: editor.icon });
+    }
+    closeSheet();
+    setTasks(list);
+  }
+
+  function moveEditing(delta) {
+    const list = tasks().map((task) => ({ ...task }));
+    const from = list.findIndex((task) => task.id === editor.id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= list.length) return;
+    [list[from], list[to]] = [list[to], list[from]];
+    setTasks(list);
+    refreshEditor();
+  }
+
+  function deleteEditing() {
+    if (!editor.confirmDelete) {
+      editor.confirmDelete = true;
+      refreshEditor();
+      return;
+    }
+    const list = tasks().filter((task) => task.id !== editor.id);
+    closeSheet();
+    if (list.length) setTasks(list);
   }
 
   // ---- Keuzevenster ----
 
-  function openSheet(task, html) {
+  // wide: groot venster (bewerken); dat sluit niet vanzelf, want je bent aan het typen.
+  function openSheet(task, html, { wide = false } = {}) {
     sheetTask = task;
+    els.sheetBody.className = wide ? "sheet wide" : "sheet";
     els.sheetBody.innerHTML = html;
     els.sheet.hidden = false;
     clearTimeout(sheetTimer);
-    sheetTimer = setTimeout(closeSheet, SHEET_TIMEOUT_MS);
+    if (!wide) sheetTimer = setTimeout(closeSheet, SHEET_TIMEOUT_MS);
   }
 
   function closeSheet() {
     sheetTask = null;
     sheetAction = null;
+    editor = null;
     els.sheet.hidden = true;
     clearTimeout(sheetTimer);
   }
@@ -562,14 +855,44 @@
   }, true);
 
   document.addEventListener("click", (event) => {
+    if (pageOpen) touchPage();
     const target = event.target.closest("[data-action]");
-    if (!target) {
-      if (event.target === els.sheet) closeSheet();
+    if (!target || target.disabled) {
+      // Naast het venster tikken sluit het, behalve tijdens het typen.
+      if (event.target === els.sheet && !editor) closeSheet();
       return;
     }
     const { action, id } = target.dataset;
-    if (action === "task") {
-      const task = config.tasks.find((t) => t.id === id);
+    if (action === "all-tasks") {
+      openPage();
+    } else if (action === "page-close") {
+      closePage();
+    } else if (action === "page-edit") {
+      pageEditing = !pageEditing;
+      renderPage();
+    } else if (action === "edit-task") {
+      const task = tasks().find((t) => t.id === id);
+      if (task) openEditor(task);
+    } else if (action === "add-task") {
+      openEditor(null);
+    } else if (action === "kb-key" && editor) {
+      typeKey(target.dataset.key);
+    } else if (action === "kb-icon" && editor) {
+      editor.icon = target.dataset.icon;
+      refreshEditor();
+    } else if (action === "kb-suggest" && editor) {
+      editor.title = target.dataset.title;
+      editor.icon = target.dataset.icon;
+      refreshEditor();
+    } else if (action === "kb-save" && editor) {
+      saveEditor();
+    } else if (action === "kb-move" && editor) {
+      moveEditing(Number(target.dataset.delta));
+    } else if (action === "kb-delete" && editor) {
+      deleteEditing();
+    } else if (action === "task") {
+      const task = tasks().find((t) => t.id === id);
+      if (!task) return;
       if (state.done[task.id]) showDone(task);
       else if (people().length <= 1) markDone(task, people()[0] || "Gedaan");
       else askWho(task);
@@ -603,6 +926,7 @@
   render();
   refreshVoerraad();
   refreshKattenbak();
+  pullSettings();
   setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
   setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
   setInterval(() => {

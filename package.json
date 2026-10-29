@@ -1,0 +1,9 @@
+{
+  "name": "pip-hub",
+  "private": true,
+  "type": "module",
+  "description": "Alleen voor de Netlify-functies (netlify/functions); Pip zelf heeft niets nodig.",
+  "dependencies": {
+    "@netlify/blobs": "11.1.4"
+  }
+}

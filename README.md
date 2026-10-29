@@ -66,6 +66,15 @@ Met een koppeling laat het Voorraad-blok zien wat Voerraad weet: per product hoe
 
 De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitgelekt? Maak in Voerraad een nieuwe code (de oude werkt dan niet meer) of kies **Ontkoppelen**.
 
+## Taken beheren op de Hub
+
+- **Op het startscherm** staan de eerste 4 taken. Zijn het er meer, dan staat naast "Taken" bijvoorbeeld **+2 meer ›**; anders staat er **Beheren ›**.
+- **Daarachter** zit de pagina **Alle taken**: daar vink je alle taken af. Met **Bewerken** wijzig, verplaats of verwijder je een taak, of voeg je er een toe (maximaal 12).
+- **Typen** gaat met het schermtoetsenbord van Pip, want de Hub heeft geen eigen toetsenbord. Er staan ook suggesties klaar, zoals "Nagels knippen" of "Medicijn geven".
+- **Volgorde:** met ‹ en › verplaats je een taak. Wat op plek 1 t/m 4 staat, komt op het startscherm.
+- **Opslag:** de lijst wordt op de Hub bewaard en op het servertje (`/api/pip-settings`, Netlify Blobs), met dezelfde kattenbak-code. Zo overleeft hij een herstart van de Hub. Ook de huisgenoten van de startpagina komen daar terecht.
+- `config.js` bevat alleen de standaardlijst voor als er nog niets is opgeslagen.
+
 ## Acties: kattenbak draaien en ontgeuren
 
 Onder **Acties** staan twee knoppen voor de Viervoeter-kattenbak (Smart Life / Tuya): **Kattenbak draaien** en **Ontgeuren**. Ze tonen ook Pips gewicht, het aantal bezoeken vandaag en of de opvangbak vol is.

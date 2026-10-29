@@ -9,7 +9,8 @@
 // Omgeving: TUYA_ACCESS_ID, TUYA_ACCESS_SECRET, TUYA_DEVICE_ID, PIP_ACTION_CODE,
 // optioneel TUYA_REGION (standaard eu) en ALLOWED_ORIGINS (komma's).
 
-import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
+import { authorized, corsHeaders, json, setting } from "../lib/http.mjs";
 
 const BASES = {
   eu: "https://openapi.tuyaeu.com",
@@ -26,39 +27,6 @@ const EMPTY_HASH = createHash("sha256").update("").digest("hex");
 
 let lastClean = 0;
 let cachedToken = null;
-
-function setting(name) {
-  const value = process.env[name];
-  if (!value) throw Object.assign(new Error(`MISSING_${name}`), { code: "CONFIG" });
-  return value;
-}
-
-function corsHeaders(request) {
-  const allowed = (process.env.ALLOWED_ORIGINS || "https://thijs21vermeer.github.io")
-    .split(",")
-    .map((origin) => origin.trim());
-  const origin = request.headers.get("origin");
-  return {
-    "Access-Control-Allow-Origin": origin && allowed.includes(origin) ? origin : allowed[0],
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
-  };
-}
-
-function json(status, body, headers) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...headers, "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
-}
-
-function authorized(request) {
-  const given = Buffer.from((request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim());
-  const expected = Buffer.from(setting("PIP_ACTION_CODE"));
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
 
 // ---- Tuya OpenAPI (HMAC-SHA256-ondertekening) ----
 
@@ -135,7 +103,7 @@ async function runAction(action) {
 }
 
 export default async (request) => {
-  const headers = corsHeaders(request);
+  const headers = corsHeaders(request, "GET, POST");
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
   try {
     if (!authorized(request)) return json(401, { error: "UNAUTHORIZED" }, headers);

@@ -13,7 +13,10 @@ window.PIP_CONFIG = {
   // Hoe laat de lijst weer leeg begint (24-uursklok). 4 betekent om 04:00 's nachts.
   resetHour: 4,
 
-  // Dagelijkse taken (vier passen er). icon: sun, moon, drop, box, bowl, heart of paw.
+  // Dagelijkse taken: de standaardlijst. Op de Hub zelf kun je taken toevoegen,
+  // wijzigen en verplaatsen; die lijst komt dan van het servertje. De eerste 4
+  // staan op het startscherm, de rest onder "meer".
+  // icon: sun, moon, drop, bowl, box, heart, paw, pill, scissors of ball.
   // stock: haalt bij afvinken automatisch iets van de voorraad af.
   tasks: [
     { id: "ontbijt", title: "Ontbijt", icon: "sun", stock: { id: "natvoer", amount: 1 } },
@@ -32,6 +35,10 @@ window.PIP_CONFIG = {
   // Adres van dat servertje. De code om het te gebruiken staat NIET hier (deze
   // map is openbaar): die vul je in op de startpagina.
   kattenbak: { url: "https://pip-kattenbak.netlify.app/api/kattenbak", refreshMinutes: 15 },
+
+  // Waar de Hub zijn takenlijst en huisgenoten bewaart (zelfde servertje en code),
+  // zodat ze een herstart van de Hub overleven.
+  settings: { url: "https://pip-kattenbak.netlify.app/api/pip-settings" },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is
