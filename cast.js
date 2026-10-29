@@ -7,6 +7,10 @@
   const SDK_URL = "https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js";
   const KEEPALIVE_MS = 9 * 60 * 1000;
   const KEEPALIVE_IMAGE = new URL("pip.png", location.href).href;
+  // Zo staat het overzicht in het menu van de Google Hub: met Pips snoet en een
+  // duidelijke naam, in plaats van een Chrome-logo. Tik erop en je bent terug.
+  const MENU_TITLE = "Overzicht van Pip";
+  const MENU_PHOTO = new URL("pip-icoon.jpg", location.href).href;
   // Kanaal waarover de startknop de Voerraad-koppelcode (niet in config.js: die is
   // openbaar) en de huisgenoten stuurt.
   const NAMESPACE = "urn:x-cast:nl.pip.hub";
@@ -55,7 +59,7 @@
 
     const options = new framework.CastReceiverOptions();
     options.disableIdleTimeout = true;
-    options.statusText = "Pip";
+    options.statusText = MENU_TITLE;
     options.customNamespaces = { [NAMESPACE]: framework.system.MessageType.JSON };
     context.start(options);
 
@@ -67,7 +71,9 @@
       request.media.contentType = "image/png";
       request.media.streamType = framework.messages.StreamType.NONE;
       request.media.metadata = new framework.messages.GenericMediaMetadata();
-      request.media.metadata.title = "Pip";
+      request.media.metadata.title = MENU_TITLE;
+      request.media.metadata.subtitle = "Taken, voer en kattenbak";
+      request.media.metadata.images = [new framework.messages.Image(MENU_PHOTO)];
       request.requestId = 0;
       playerManager.load(request);
     }
