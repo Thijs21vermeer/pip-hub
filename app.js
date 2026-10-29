@@ -118,7 +118,7 @@
     rest: document.getElementById("rest"),
     restClock: document.getElementById("rest-clock"),
     restDate: document.getElementById("rest-date"),
-    restHint: document.getElementById("rest-hint"),
+    restCard: document.getElementById("rest-card"),
     video: document.getElementById("video"),
     videoTitle: document.getElementById("video-title"),
     videoFrame: document.getElementById("video-frame"),
@@ -741,24 +741,52 @@
 
   // ---- Ruststand ----
 
-  // Eén regel in de ruststand, alleen als er iets is: open taken, bijna op, bak vol.
-  function restHint() {
-    const parts = [];
-    const open = tasks().filter((task) => !currentDone(task)).length;
-    if (open) parts.push(`${open} ${open === 1 ? "taak" : "taken"} open`);
-    // Alleen een seintje uit Voerraad, niet van de handmatige standaardvoorraad.
-    const low = voerraadCode() && voerraad && voerraad.items
-      ? voerraad.items.filter((item) => !item.ordered && item.daysLeft <= LOW_STOCK_DAYS).map((item) => item.name)
-      : [];
-    if (low.length) parts.push(low.length === 1 ? `${low[0]} bijna op` : `${low.length} producten bijna op`);
-    if (kattenbak && kattenbak.binFull) parts.push("Opvangbak vol");
-    return parts.join(" · ");
+  // Kaartje linksboven in de ruststand: open taken en seintjes. Klein gehouden,
+  // zodat het boven Pip blijft; niets te melden = geen kaartje.
+  const REST_TASKS = 3;
+  const REST_ALERTS = 2;
+  const REST_WHEN = { daily: "vandaag", weekly: "deze week", biweekly: "deze 2 weken", monthly: "deze maand", quarterly: "dit kwartaal" };
+
+  function restRow(icon, name, when, kind = "") {
+    return `
+      <li class="${kind}">
+        <span class="rest-icon">${icon}</span>
+        <span class="rest-name">${escapeHtml(name)}</span>
+        <span class="rest-when">${escapeHtml(when)}</span>
+      </li>`;
+  }
+
+  function restAlerts() {
+    const alerts = [];
+    // Alleen seintjes uit Voerraad, niet van de handmatige standaardvoorraad.
+    if (voerraadCode() && voerraad && voerraad.items) {
+      voerraad.items
+        .filter((item) => !item.ordered && item.daysLeft <= LOW_STOCK_DAYS)
+        .forEach((item) => {
+          const category = CATEGORIES[item.category] || CATEGORIES.other;
+          const when = item.daysLeft <= 0 ? "op" : `nog ${item.daysLeft} ${item.daysLeft === 1 ? "dag" : "dagen"}`;
+          alerts.push(restRow(ICONS[category.icon], item.name, when, "alert"));
+        });
+    }
+    if (kattenbak && kattenbak.binFull) alerts.push(restRow(ICONS.box, "Opvangbak", "vol", "alert"));
+    return alerts;
   }
 
   function renderRest() {
-    const hint = restHint();
-    els.restHint.textContent = hint;
-    els.restHint.hidden = !hint;
+    const open = tasks().filter((task) => !currentDone(task));
+    const alerts = restAlerts();
+    let html = "";
+    if (open.length) {
+      const rows = open.slice(0, REST_TASKS).map((task) =>
+        restRow(ICONS[task.icon] || ICONS.paw, task.title, REST_WHEN[repeatOf(task)]));
+      if (open.length > REST_TASKS) rows.push(`<li class="more">+${open.length - REST_TASKS} meer</li>`);
+      html += `<div class="rest-title">Nog te doen</div><ul class="rest-list">${rows.join("")}</ul>`;
+    }
+    if (alerts.length) {
+      html += `<div class="rest-title">Seintjes</div><ul class="rest-list">${alerts.slice(0, REST_ALERTS).join("")}</ul>`;
+    }
+    els.restCard.innerHTML = html;
+    els.restCard.hidden = !html;
   }
 
   function scheduleRest() {
