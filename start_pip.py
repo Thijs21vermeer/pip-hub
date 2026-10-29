@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Start Pip op je Nest Hub vanaf je Mac (of later vanaf een Raspberry Pi).
+"""Start Pip op je Google Hub vanaf je Mac (of later vanaf een Raspberry Pi).
 
   ./start-pip.command           Pip één keer starten
-  ./start-pip.command --blijf   blijven draaien en Pip terugzetten zodra de Hub vrij is
+  ./start-pip.command --blijf   blijven draaien en Pip terugzetten zodra de Google Hub vrij is
   ./start-pip.command --zoek    alle Cast-apparaten in je netwerk tonen
 """
 
@@ -43,7 +43,7 @@ def now():
 
 def list_devices(casts):
     if not casts:
-        print("Geen Cast-apparaten gevonden. Zit je Mac op hetzelfde wifi als de Hub?")
+        print("Geen Cast-apparaten gevonden. Zit je Mac op hetzelfde wifi als de Google Hub?")
     for cast in sorted(casts, key=lambda c: c.cast_info.friendly_name):
         info = cast.cast_info
         print(f"  - {info.friendly_name}  ({info.model_name}, {info.host})")
@@ -55,7 +55,7 @@ def pick_hub(casts, name):
         problem = f'Geen apparaat met de naam "{name}" gevonden. Gevonden apparaten:'
     else:
         matches = [c for c in casts if "hub" in (c.cast_info.model_name or "").casefold()]
-        problem = "Geen of meerdere Nest Hubs gevonden. Zet de naam van je Hub bij hubName in config.js:"
+        problem = "Geen of meerdere Nest Hubs gevonden. Zet de naam van je Google Hub bij hubName in config.js:"
     if len(matches) == 1:
         return matches[0]
     print(problem)
@@ -64,7 +64,7 @@ def pick_hub(casts, name):
 
 
 class PipController(BaseController):
-    """Praat met Pip op de Hub over het eigen kanaal (voor de Voerraad-koppelcode)."""
+    """Praat met Pip op de Google Hub over het eigen kanaal (voor de Voerraad-koppelcode)."""
 
     def __init__(self, app_id):
         super().__init__(NAMESPACE, app_id)
@@ -87,7 +87,7 @@ def send_codes(hub, pip):
         for kind, code in codes.items():
             pip.send_message({"type": kind, "code": code})
         time.sleep(1)  # de socket even de tijd geven voordat het script stopt
-        print(f"Koppelcodes naar de Hub gestuurd: {', '.join(codes)}.")
+        print(f"Koppelcodes naar de Google Hub gestuurd: {', '.join(codes)}.")
     except PyChromecastError as error:
         print(f"Koppelcodes versturen lukte niet ({error!r}).")
 
@@ -102,7 +102,7 @@ def launch(hub, app_id, pip):
             hub.start_app(app_id)
         except PyChromecastError as error:
             print(f"Starten lukte niet ({error!r}).")
-            print("Is je Hub geregistreerd in de Cast Developer Console en daarna herstart? Zie README.")
+            print("Is je Google Hub geregistreerd in de Cast Developer Console en daarna herstart? Zie README.")
             return False
         print("Klaar.")
     send_codes(hub, pip)
@@ -115,7 +115,7 @@ def keep_pip_on(hub, app_id, pip):
     print("Laat dit venster open; sluit het om te stoppen.")
     while True:
         if start <= datetime.now().hour < end and hub.app_id in IDLE_APP_IDS:
-            print(f"{now()} Hub is vrij, Pip wordt gestart.")
+            print(f"{now()} Google Hub is vrij, Pip wordt gestart.")
             try:
                 hub.start_app(app_id)
                 send_codes(hub, pip)
@@ -125,8 +125,8 @@ def keep_pip_on(hub, app_id, pip):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Start Pip op je Nest Hub.")
-    parser.add_argument("--blijf", action="store_true", help="blijf draaien en zet Pip terug als de Hub vrij is")
+    parser = argparse.ArgumentParser(description="Start Pip op je Google Hub.")
+    parser.add_argument("--blijf", action="store_true", help="blijf draaien en zet Pip terug als de Google Hub vrij is")
     parser.add_argument("--zoek", action="store_true", help="toon alle Cast-apparaten in je netwerk")
     args = parser.parse_args()
 

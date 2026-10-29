@@ -216,15 +216,15 @@
 <body>
   <main>
     <img src="pip.png" alt="">
-    <h1>Pip op de Hub</h1>
+    <h1>Pip op de Google Hub</h1>
     <p id="status">Even laden…</p>
     <button id="start" disabled>Start Pip</button>
-    <button id="stop" class="secondary" hidden>Stop Pip op de Hub</button>
-    <p class="note">Werkt in Chrome op Android of op je Mac, op hetzelfde wifi als de Hub. Kies na het tikken je Nest Hub in de lijst.</p>
+    <button id="stop" class="secondary" hidden>Stop Pip op de Google Hub</button>
+    <p class="note">Werkt in Chrome op Android of op je Mac, op hetzelfde wifi als de Google Hub. Kies na het tikken je Google Hub in de lijst.</p>
 
     <details id="people-box">
       <summary>Huisgenoten</summary>
-      <p class="note">Wie kan op de Hub een taak afvinken? Een wijziging gaat meteen naar Pip als die draait, en anders bij de volgende start.</p>
+      <p class="note">Wie kan op de Google Hub een taak afvinken? Een wijziging gaat meteen naar Pip als die draait, en anders bij de volgende start.</p>
       <ul id="people" class="people"></ul>
       <div class="add-row">
         <input id="new-person" type="text" maxlength="20" autocomplete="off" placeholder="Naam toevoegen">
@@ -235,7 +235,7 @@
 
     <details id="voerraad-box">
       <summary>Voerraad koppelen</summary>
-      <p class="note">Maak in Voerraad een koppelcode (Instellingen → Huishouden → Scherm in huis) en plak hem hier. De code blijft alleen op dit apparaat en gaat bij elke start mee naar de Hub.</p>
+      <p class="note">Maak in Voerraad een koppelcode (Instellingen → Huishouden → Scherm in huis) en plak hem hier. De code blijft alleen op dit apparaat en gaat bij elke start mee naar de Google Hub.</p>
       <input type="password" autocomplete="off" spellcheck="false" placeholder="vrh_…">
       <button class="secondary" data-role="save">Code opslaan</button>
       <button class="secondary" data-role="clear" hidden>Ontkoppelen</button>
@@ -244,7 +244,7 @@
 
     <details id="kattenbak-box">
       <summary>Kattenbak koppelen</summary>
-      <p class="note">Plak de kattenbak-code. Die staat op je Mac in ~/.config/pip/kattenbak-code.txt. Ook deze code blijft alleen op dit apparaat en gaat bij elke start mee naar de Hub.</p>
+      <p class="note">Plak de kattenbak-code. Die staat op je Mac in ~/.config/pip/kattenbak-code.txt. Ook deze code blijft alleen op dit apparaat en gaat bij elke start mee naar de Google Hub.</p>
       <input type="password" autocomplete="off" spellcheck="false" placeholder="pip_…">
       <button class="secondary" data-role="save">Code opslaan</button>
       <button class="secondary" data-role="clear" hidden>Ontkoppelen</button>
@@ -270,7 +270,7 @@
         status.className = kind || "";
       }
 
-      // Stuurt een bericht naar Pip op de Hub, als die nu verbonden is.
+      // Stuurt een bericht naar Pip op de Google Hub, als die nu verbonden is.
       function send(message) {
         if (!castLoaded || !window.cast || !cast.framework) return false;
         const session = cast.framework.CastContext.getInstance().getCurrentSession();
@@ -351,7 +351,7 @@
           sendCode();
           showLine("Ontkoppeld.");
         });
-        showLine(stored() ? "De code gaat bij elke start mee naar de Hub." : "");
+        showLine(stored() ? "De code gaat bij elke start mee naar de Google Hub." : "");
         return { stored, sendCode };
       }
 
@@ -385,7 +385,7 @@
         ),
       });
 
-      // ---- Huisgenoten: wie op de Hub kan afvinken ----
+      // ---- Huisgenoten: wie op de Google Hub kan afvinken ----
 
       const PEOPLE_KEY = "pip-people";
       const MAX_PEOPLE = 6;
@@ -393,7 +393,7 @@
       const newPerson = document.getElementById("new-person");
       const peopleStatus = document.getElementById("people-status");
 
-      // null = nog nooit aangepast: dan houdt de Hub zijn eigen lijst.
+      // null = nog nooit aangepast: dan houdt de Google Hub zijn eigen lijst.
       function customPeople() {
         try {
           const list = JSON.parse(localStorage.getItem(PEOPLE_KEY));
@@ -436,7 +436,7 @@
         } catch (error) {
           // Geen opslag: de lijst gaat alleen nu mee.
         }
-        renderPeople(sendPeople() ? "Bijgewerkt op de Hub." : "Opgeslagen. Gaat mee bij de volgende start.", "ok");
+        renderPeople(sendPeople() ? "Bijgewerkt op de Google Hub." : "Opgeslagen. Gaat mee bij de volgende start.", "ok");
       }
 
       function addPerson() {
@@ -492,10 +492,10 @@
       }
 
       function start() {
-        show("Kies je Nest Hub…");
+        show("Kies je Google Hub…");
         cast.framework.CastContext.getInstance().requestSession().then(updateStatus, (error) => {
           if (error === chrome.cast.ErrorCode.CANCEL) updateStatus();
-          else show(`Starten lukte niet (${error}). Staat de Hub aan en zit je op hetzelfde wifi?`, "error");
+          else show(`Starten lukte niet (${error}). Staat de Google Hub aan en zit je op hetzelfde wifi?`, "error");
         });
       }
 

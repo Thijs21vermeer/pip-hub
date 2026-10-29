@@ -1,5 +1,5 @@
 #!/bin/bash
-# Dubbelklik om Pip op je Nest Hub te starten. De eerste keer worden de benodigdheden geïnstalleerd.
+# Dubbelklik om Pip op je Google Hub te starten. De eerste keer worden de benodigdheden geïnstalleerd.
 cd "$(dirname "$0")" || exit 1
 if [ ! -x .venv/bin/python ]; then
   echo "Eerste keer: benodigdheden installeren…"
