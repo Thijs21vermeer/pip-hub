@@ -7,11 +7,12 @@
   const SDK_URL = "https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js";
   const KEEPALIVE_MS = 9 * 60 * 1000;
   const KEEPALIVE_IMAGE = new URL("pip.png", location.href).href;
-  // Zo staat het overzicht in het menu van de Google Hub: met Pips snoet en een
-  // korte naam. Google toont alleen bij muziek een plaatje (de "hoes"), dus het
-  // wakker-houd-plaatje doet zich voor als muziek. Tik erop en je bent terug.
+  // Zo staat het overzicht als kaartje in het menu van de Google Hub (tik erop en
+  // je bent terug). Kort, zodat de tekst niet schuift. Een plaatje laat Google
+  // daar niet zien, ook niet als muziek; als muziek kreeg het kaartje alleen een
+  // knop "volgende" die niets doet.
   const MENU_TITLE = "Overzicht";
-  const MENU_ARTIST = "Pip";
+  const MENU_SUBTITLE = "Pip";
   const MENU_PHOTO = new URL("pip-icoon.jpg", location.href).href;
   // Kanaal waarover de startknop de Voerraad-koppelcode (niet in config.js: die is
   // openbaar) en de huisgenoten stuurt.
@@ -61,7 +62,7 @@
 
     const options = new framework.CastReceiverOptions();
     options.disableIdleTimeout = true;
-    options.statusText = `${MENU_TITLE} van ${MENU_ARTIST}`;
+    options.statusText = `${MENU_TITLE} van ${MENU_SUBTITLE}`;
     options.customNamespaces = { [NAMESPACE]: framework.system.MessageType.JSON };
     context.start(options);
 
@@ -72,9 +73,9 @@
       request.media.contentId = KEEPALIVE_IMAGE;
       request.media.contentType = "image/png";
       request.media.streamType = framework.messages.StreamType.NONE;
-      request.media.metadata = new framework.messages.MusicTrackMediaMetadata();
+      request.media.metadata = new framework.messages.GenericMediaMetadata();
       request.media.metadata.title = MENU_TITLE;
-      request.media.metadata.artist = MENU_ARTIST;
+      request.media.metadata.subtitle = MENU_SUBTITLE;
       request.media.metadata.images = [new framework.messages.Image(MENU_PHOTO)];
       request.requestId = 0;
       playerManager.load(request);
