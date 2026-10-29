@@ -341,31 +341,44 @@
       transform: scale(1.15);
     }
 
-    .focus-pick {
-      position: relative;
-      display: inline-block;
-      max-width: 100%;
-      margin-top: 4px;
-      border-radius: 14px;
-      overflow: hidden;
-      touch-action: manipulation;
+    /* Vullen: in het Hub-lijstje slepen en knijpen. */
+    .hub.crop {
+      touch-action: none;
+      cursor: grab;
     }
 
-    .focus-pick img {
-      display: block;
-      max-width: 100%;
-      max-height: 46vh;
+    .zoom-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
     }
 
-    .focus-dot {
-      position: absolute;
-      width: 34px;
-      height: 34px;
-      margin: -17px 0 0 -17px;
-      border: 3px solid #fff;
+    .zoom-row input {
+      flex: 1;
+      height: 32px;
+      accent-color: var(--accent);
+    }
+
+    .zoom-row button {
+      flex: none;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
       border-radius: 50%;
-      box-shadow: 0 0 0 2px rgb(0 0 0 / 0.35), inset 0 0 0 2px rgb(0 0 0 / 0.2);
-      pointer-events: none;
+      background: transparent;
+      font-size: 1.4rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .reset {
+      margin-top: 6px;
+      padding: 8px 0;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font-weight: 600;
     }
 
     .remove {
@@ -439,23 +452,27 @@
       <h2>Op de Google Hub</h2>
       <div class="hub" id="hub"><img class="bg" alt=""><img class="fg" alt="Voorbeeld op de Google Hub"></div>
 
+      <div id="crop-box">
+        <p class="note">Sleep de foto om hem te verschuiven. Knijp met twee vingers, of gebruik de schuif, om in te zoomen.</p>
+        <div class="zoom-row">
+          <button id="zoom-out" aria-label="Uitzoomen">−</button>
+          <input id="zoom" type="range" min="1" max="4" step="0.05" value="1" aria-label="Zoom">
+          <button id="zoom-in" aria-label="Inzoomen">+</button>
+        </div>
+        <button class="reset" id="reset">Terugzetten</button>
+      </div>
+
       <h2>Weergave</h2>
       <div class="pills" id="fit">
         <button data-value="cover">Vullen</button>
         <button data-value="contain">Hele foto</button>
       </div>
 
-      <div id="focus-box">
-        <h2>Wat moet in beeld blijven?</h2>
-        <p class="note">Tik op het belangrijkste deel, bijvoorbeeld Pips snoet.</p>
-        <div class="focus-pick" id="focus-pick"><img alt="Hele foto"><span class="focus-dot" id="focus-dot"></span></div>
-      </div>
-
       <button class="remove" id="remove">Foto verwijderen</button>
     </main>
   </section>
 
-  <script src="config.js?v=20261029-20"></script>
+  <script src="config.js?v=20261029-21"></script>
   <script>
     (function () {
       "use strict";
@@ -671,16 +688,53 @@
 
       // ---- Eén foto bewerken ----
 
+      const MAX_ZOOM = 4;
+      // Wat er op de Hub te zien is: zoom, en het punt van de foto (x, y in %) dat
+      // in het midden staat.
+      let view = { zoom: 1, x: 50, y: 50 };
+
+      // Vullen met zoom en verschuiving, zonder dat er rand zichtbaar wordt. Precies
+      // dezelfde berekening als op de Google Hub (app.js, placeCover). Geeft het
+      // midden terug zoals het na het rechttrekken echt staat.
+      function placeCover(image, current) {
+        const frameWidth = image.parentElement.clientWidth;
+        const frameHeight = image.parentElement.clientHeight;
+        if (!image.naturalWidth || !frameWidth) return null;
+        const scale = Math.max(frameWidth / image.naturalWidth, frameHeight / image.naturalHeight) * current.zoom;
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        const left = Math.min(0, Math.max(frameWidth - width, frameWidth / 2 - (current.x / 100) * width));
+        const top = Math.min(0, Math.max(frameHeight - height, frameHeight / 2 - (current.y / 100) * height));
+        Object.assign(image.style, {
+          inset: "auto",
+          left: `${left}px`,
+          top: `${top}px`,
+          width: `${width}px`,
+          height: `${height}px`,
+          maxWidth: "none",
+          objectFit: "fill",
+        });
+        return { x: ((frameWidth / 2 - left) / width) * 100, y: ((frameHeight / 2 - top) / height) * 100 };
+      }
+
+      function canCrop() {
+        return Boolean(editing) && editing.id !== DEFAULT_ID && fitOf(editing) === "cover";
+      }
+
       function renderEditor() {
-        const photo = editing;
-        const fit = fitOf(photo);
-        const focus = `${photo.focusX ?? 50}% ${photo.focusY ?? 50}%`;
+        const fit = fitOf(editing);
+        const front = $("hub").querySelector(".fg");
         $("hub").classList.toggle("whole", fit === "contain");
-        $("hub").querySelector(".fg").style.objectPosition = fit === "cover" ? focus : "50% 50%";
+        $("hub").classList.toggle("crop", canCrop());
+        if (fit === "cover") {
+          const placed = placeCover(front, view);
+          if (placed) Object.assign(view, placed);
+        } else {
+          front.removeAttribute("style");
+        }
         $("fit").querySelectorAll("button").forEach((button) => button.classList.toggle("on", button.dataset.value === fit));
-        $("focus-box").hidden = fit !== "cover" || photo.id === DEFAULT_ID;
-        $("focus-dot").style.left = `${photo.focusX ?? 50}%`;
-        $("focus-dot").style.top = `${photo.focusY ?? 50}%`;
+        $("crop-box").hidden = !canCrop();
+        $("zoom").value = view.zoom;
       }
 
       async function openEditor(photo) {
@@ -690,14 +744,115 @@
         $("fit").hidden = isDefault;
         $("fit").previousElementSibling.hidden = isDefault;
         $("remove").hidden = isDefault;
-        if (isDefault) editing = { ...photo, fit: "cover", focusX: 50, focusY: 62 };
+        view = isDefault
+          ? { zoom: 1, x: 50, y: 62 }
+          : { zoom: photo.zoom || 1, x: photo.focusX ?? 50, y: photo.focusY ?? 50 };
+        if (isDefault) editing = { ...photo, fit: "cover" };
         const url = await imageUrl(photo);
+        const front = $("hub").querySelector(".fg");
         $("hub").querySelectorAll("img").forEach((image) => { image.src = url; });
-        $("focus-pick").querySelector("img").src = url;
-        renderEditor();
-        $("editor").hidden = false;
+        $("editor").hidden = false; // eerst zichtbaar: de berekening heeft de maat van het lijstje nodig
         $("editor").scrollTop = 0;
+        await front.decode().catch(() => {});
+        renderEditor();
       }
+
+      function clampZoom(value) {
+        return Math.min(MAX_ZOOM, Math.max(1, value));
+      }
+
+      let viewTimer = null;
+      function saveView() {
+        clearTimeout(viewTimer);
+        viewTimer = setTimeout(() => savePhoto({
+          zoom: Math.round(view.zoom * 100) / 100,
+          focusX: Math.round(view.x),
+          focusY: Math.round(view.y),
+        }), 300);
+      }
+
+      // Slepen met één vinger, knijpen met twee (of slepen met de muis).
+      const pointers = new Map();
+      let gesture = null;
+
+      function middle(points) {
+        return {
+          x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+          y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+        };
+      }
+
+      function spread(points) {
+        return points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0;
+      }
+
+      function startGesture() {
+        const points = [...pointers.values()];
+        const front = $("hub").querySelector(".fg");
+        gesture = {
+          view: { ...view },
+          width: parseFloat(front.style.width) || 1,
+          height: parseFloat(front.style.height) || 1,
+          middle: middle(points),
+          spread: spread(points),
+        };
+      }
+
+      $("hub").addEventListener("pointerdown", (event) => {
+        if (!canCrop()) return;
+        try {
+          $("hub").setPointerCapture(event.pointerId); // blijven volgen, ook buiten het lijstje
+        } catch (error) {
+          // Niet erg: dan alleen zolang de vinger in het lijstje blijft.
+        }
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        startGesture();
+      });
+
+      $("hub").addEventListener("pointermove", (event) => {
+        if (!pointers.has(event.pointerId) || !gesture) return;
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        const points = [...pointers.values()];
+        const zoom = points.length > 1 && gesture.spread
+          ? clampZoom(gesture.view.zoom * (spread(points) / gesture.spread))
+          : gesture.view.zoom;
+        const grow = zoom / gesture.view.zoom;
+        const now = middle(points);
+        // Vinger naar rechts = foto naar rechts = het midden schuift naar links in de foto.
+        view = {
+          zoom,
+          x: gesture.view.x - ((now.x - gesture.middle.x) / (gesture.width * grow)) * 100,
+          y: gesture.view.y - ((now.y - gesture.middle.y) / (gesture.height * grow)) * 100,
+        };
+        renderEditor();
+      });
+
+      ["pointerup", "pointercancel"].forEach((type) => $("hub").addEventListener(type, (event) => {
+        if (!pointers.delete(event.pointerId)) return;
+        if (pointers.size) return startGesture(); // nog een vinger: verder vanaf hier
+        gesture = null;
+        saveView();
+      }));
+
+      $("zoom").addEventListener("input", () => {
+        view.zoom = clampZoom(Number($("zoom").value));
+        renderEditor();
+        saveView();
+      });
+
+      [["zoom-out", -0.25], ["zoom-in", 0.25]].forEach(([id, step]) => $(id).addEventListener("click", () => {
+        view.zoom = clampZoom(view.zoom + step);
+        renderEditor();
+        saveView();
+      }));
+
+      $("reset").addEventListener("click", () => {
+        view = { zoom: 1, x: 50, y: 50 };
+        renderEditor();
+        saveView();
+      });
+
+      window.addEventListener("resize", () => { if (editing) renderEditor(); });
 
       let savedTimer = null;
       async function savePhoto(change) {
@@ -722,14 +877,6 @@
 
       $("fit").querySelectorAll("button").forEach((button) => {
         button.addEventListener("click", () => savePhoto({ fit: button.dataset.value }));
-      });
-
-      $("focus-pick").addEventListener("click", (event) => {
-        const box = $("focus-pick").getBoundingClientRect();
-        savePhoto({
-          focusX: Math.round(((event.clientX - box.left) / box.width) * 100),
-          focusY: Math.round(((event.clientY - box.top) / box.height) * 100),
-        });
       });
 
       $("remove").addEventListener("click", async () => {

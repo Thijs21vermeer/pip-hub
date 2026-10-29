@@ -922,7 +922,11 @@
 
   // De standaardfoto plus wat jullie via de startpagina sturen (nieuwste eerst).
   // Elke config.photos.seconds een andere, alleen als de ruststand in beeld is.
-  const DEFAULT_SLIDE = { url: els.restPhotos[0].querySelector(".rest-fg").getAttribute("src"), tall: false, focus: "50% 62%" };
+  const DEFAULT_SLIDE = {
+    url: els.restPhotos[0].querySelector(".rest-fg").getAttribute("src"),
+    tall: false,
+    view: { zoom: 1, x: 50, y: 62 },
+  };
   const photoUrls = new Map(); // id → blob-URL van een opgehaalde foto
   let slides = [DEFAULT_SLIDE];
   let slideIndex = 0;
@@ -991,13 +995,36 @@
           // "Hele foto" (gekozen op fotos.html, of vanzelf bij staande foto's):
           // helemaal tonen, met een vage achtergrond.
           tall: photo.fit ? photo.fit === "contain" : Boolean(photo.width && photo.height && photo.width / photo.height < 1.25),
-          // Wat in beeld moet blijven, gekozen op fotos.html.
-          focus: `${photo.focusX ?? 50}% ${photo.focusY ?? 50}%`,
+          // Ingezoomd en verschoven op fotos.html: zoom, en het punt dat in het midden staat.
+          view: { zoom: photo.zoom || 1, x: photo.focusX ?? 50, y: photo.focusY ?? 50 },
         }));
       slides = photoStyle.includeDefault || !uploaded.length ? uploaded.concat(DEFAULT_SLIDE) : uploaded;
     } catch (error) {
       // Niet bereikbaar: de foto's die er al waren blijven wisselen.
     }
+  }
+
+  // Vullen met zoom en verschuiving, zonder dat er rand zichtbaar wordt. Precies
+  // dezelfde berekening als het voorbeeld op fotos.html.
+  function placeCover(image, view) {
+    const frameWidth = image.parentElement.clientWidth;
+    const frameHeight = image.parentElement.clientHeight;
+    if (!image.naturalWidth || !frameWidth) return;
+    const scale = Math.max(frameWidth / image.naturalWidth, frameHeight / image.naturalHeight) * view.zoom;
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    const left = Math.min(0, Math.max(frameWidth - width, frameWidth / 2 - (view.x / 100) * width));
+    const top = Math.min(0, Math.max(frameHeight - height, frameHeight / 2 - (view.y / 100) * height));
+    Object.assign(image.style, {
+      inset: "auto",
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+      objectFit: "fill",
+      // Rustig inzoomen vanuit het midden van wat je ziet.
+      transformOrigin: `${frameWidth / 2 - left}px ${frameHeight / 2 - top}px`,
+    });
   }
 
   async function nextSlide() {
@@ -1012,8 +1039,8 @@
     const layer = els.restPhotos[1 - frontLayer];
     const front = layer.querySelector(".rest-fg");
     const back = layer.querySelector(".rest-bg");
+    front.removeAttribute("style");
     front.src = slide.url;
-    front.style.objectPosition = slide.focus;
     if (slide.tall) back.src = slide.url;
     else back.removeAttribute("src");
     layer.classList.toggle("tall", slide.tall);
@@ -1023,6 +1050,7 @@
       new Promise((resolve) => setTimeout(() => resolve(front.complete && front.naturalWidth > 0), 3000)),
     ]);
     if (!loaded) return;
+    if (!slide.tall) placeCover(front, slide.view);
     layer.classList.add("shown");
     els.restPhotos[frontLayer].classList.remove("shown");
     frontLayer = 1 - frontLayer;

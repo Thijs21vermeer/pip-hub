@@ -126,7 +126,7 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Toevoegen:** tik op **+ Foto's toevoegen**. Dat werkt ook op een iPhone. Foto's worden op je telefoon eerst verkleind (langste kant 1600 pixels); er passen er maximaal 40 op.
 - **Per foto:** tik op een foto. Je ziet hoe hij op de Google Hub staat.
   - **Vullen** of **Hele foto** (met een vage uitvergroting van zichzelf erachter). Zonder keuze krijgen staande foto's vanzelf "Hele foto".
-  - Bij **Vullen**: tik aan wat in beeld moet blijven, bijvoorbeeld Pips snoet.
+  - Bij **Vullen**: sleep de foto in het Hub-lijstje om hem te verschuiven, en knijp met twee vingers (of gebruik de schuif met − en +) om in te zoomen, tot 4×. **Terugzetten** zet hem weer op het geheel. Precies wat je in het lijstje ziet, staat straks op de Google Hub.
   - **Foto verwijderen.**
 - **Stijl:**
   - wisselen elke 10 s, 20 s, 1 min of 5 min;
