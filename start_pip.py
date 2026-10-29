@@ -1,31 +1,44 @@
 #!/usr/bin/env python3
-"""Start Pip op je Google Hub vanaf je Mac (of later vanaf een Raspberry Pi).
+"""Start Pip op je Google Hub vanaf je Mac, of laat de NAS hem steeds terugzetten.
 
   ./start-pip.command           Pip één keer starten
   ./start-pip.command --blijf   blijven draaien en Pip terugzetten zodra de Google Hub vrij is
   ./start-pip.command --zoek    alle Cast-apparaten in je netwerk tonen
+
+Op de NAS draait --blijf in een container (nas/docker-compose.yml). Daar komen de
+instellingen uit omgevingsvariabelen:
+  PIP_KATTENBAK_CODE   kattenbak-code (op de Mac: ~/.config/pip/kattenbak-code.txt)
+  PIP_VOERRAAD_CODE    Voerraad-koppelcode, niet nodig (Pip haalt hem van het servertje)
+  PIP_HUB_HOST         IP-adres van de Google Hub, als zoeken in het netwerk niet lukt
+  PIP_TZ               tijdzone voor 07:00-23:00, standaard Europe/Amsterdam
 """
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pychromecast
 from pychromecast.controllers import BaseController
 from pychromecast.error import PyChromecastError
 
 CONFIG_FILE = Path(__file__).with_name("config.js")
-# Koppelcodes: alleen op deze Mac, niet in config.js (die is openbaar).
+# Koppelcodes: niet in config.js (die is openbaar). Op de Mac in deze bestanden,
+# op de NAS in de omgevingsvariabelen van CODE_ENV.
 CODE_FILES = {
     "voerraad-code": Path(__file__).with_name("voerraad-code.txt"),
     # Gemaakt bij het opzetten van het kattenbak-servertje; staat buiten deze map.
     "kattenbak-code": Path.home() / ".config" / "pip" / "kattenbak-code.txt",
 }
+CODE_ENV = {"voerraad-code": "PIP_VOERRAAD_CODE", "kattenbak-code": "PIP_KATTENBAK_CODE"}
+# Een container kent de Nederlandse tijd niet vanzelf.
+TIMEZONE = ZoneInfo(os.environ.get("PIP_TZ") or "Europe/Amsterdam")
 NAMESPACE = "urn:x-cast:nl.pip.hub"
 IDLE_APP_IDS = {None, "E8C28D3C"}  # E8C28D3C is de fotolijst ("Backdrop")
 CHECK_EVERY_SECONDS = 30
@@ -43,16 +56,25 @@ def read_setting(key):
     return match.group(1).strip() if match else ""
 
 
+def read_code(kind):
+    """Koppelcode uit de omgevingsvariabele (NAS) of uit het bestand (Mac); "" als er geen is."""
+    code = os.environ.get(CODE_ENV[kind], "").strip()
+    path = CODE_FILES[kind]
+    if not code and path.exists():
+        code = path.read_text(encoding="utf-8").strip()
+    return code
+
+
 def settings_request(body=None):
     """Praat met het servertje (settings.url in config.js), met de kattenbak-code.
 
     Geeft de instellingen terug, of {} als dat niet lukt.
     """
     match = re.search(r'settings\s*:\s*\{\s*url\s*:\s*"([^"]+)"', CONFIG_FILE.read_text(encoding="utf-8"))
-    code_file = CODE_FILES["kattenbak-code"]
-    if not match or not code_file.exists():
+    code = read_code("kattenbak-code")
+    if not match or not code:
         return {}
-    headers = {"Authorization": f"Bearer {code_file.read_text(encoding='utf-8').strip()}"}
+    headers = {"Authorization": f"Bearer {code}"}
     data = None
     if body is not None:
         headers["Content-Type"] = "application/json"
@@ -72,7 +94,7 @@ def away_until():
 
 
 def now():
-    return datetime.now().strftime("%H:%M")
+    return datetime.now(TIMEZONE).strftime("%H:%M")
 
 
 def list_devices(casts):
@@ -108,8 +130,8 @@ class PipController(BaseController):
 
 
 def send_codes(hub, pip):
-    """Stuurt de koppelcodes uit CODE_FILES naar Pip, voor zover die bestanden er zijn."""
-    codes = {kind: path.read_text(encoding="utf-8").strip() for kind, path in CODE_FILES.items() if path.exists()}
+    """Stuurt de koppelcodes naar Pip, voor zover die er zijn (zie read_code)."""
+    codes = {kind: read_code(kind) for kind in CODE_FILES}
     codes = {kind: code for kind, code in codes.items() if code}
     if not codes:
         return
@@ -146,7 +168,8 @@ def launch(hub, app_id, pip):
 def keep_pip_on(hub, app_id, pip):
     start, end = ACTIVE_HOURS
     print(f"Pip blijft aan op {hub.cast_info.friendly_name} tussen {start}:00 en {end}:00.")
-    print("Laat dit venster open; sluit het om te stoppen.")
+    if sys.stdout.isatty():  # niet in het log van de NAS of de achtergrond-versie
+        print("Laat dit venster open; sluit het om te stoppen.")
     was_on = hub.app_id == app_id
     wait_until = 0  # Pip niet eerder terugzetten dan dit moment
     told_pause = 0
@@ -162,7 +185,7 @@ def keep_pip_on(hub, app_id, pip):
             wait_until = time.time() + GRACE_SECONDS
             print(f"{now()} Pip is weg, de Google Hub krijgt even de ruimte.")
         was_on = on
-        if not on and start <= datetime.now().hour < end and hub.app_id in IDLE_APP_IDS:
+        if not on and start <= datetime.now(TIMEZONE).hour < end and hub.app_id in IDLE_APP_IDS:
             away = away_until()
             back = max(wait_until, away)
             if time.time() >= back:
@@ -173,7 +196,7 @@ def keep_pip_on(hub, app_id, pip):
                 except PyChromecastError as error:
                     print(f"{now()} Starten lukte niet ({error!r}), zo meteen opnieuw.")
             elif away > time.time() and away != told_pause:
-                print(f"{now()} Pauze via de knop: Pip komt om {datetime.fromtimestamp(away):%H:%M} terug.")
+                print(f"{now()} Pauze via de knop: Pip komt om {datetime.fromtimestamp(away, TIMEZONE):%H:%M} terug.")
                 told_pause = away
         time.sleep(CHECK_EVERY_SECONDS)
 
@@ -185,7 +208,9 @@ def main():
     args = parser.parse_args()
 
     print("Zoeken naar Cast-apparaten…")
-    casts, browser = pychromecast.get_chromecasts(timeout=DISCOVERY_SECONDS)
+    # Met PIP_HUB_HOST ook rechtstreeks op dat adres kijken (als zoeken niet lukt).
+    known_hosts = [host.strip() for host in os.environ.get("PIP_HUB_HOST", "").split(",") if host.strip()]
+    casts, browser = pychromecast.get_chromecasts(timeout=DISCOVERY_SECONDS, known_hosts=known_hosts or None)
     try:
         if args.zoek:
             list_devices(casts)

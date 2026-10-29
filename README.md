@@ -54,7 +54,23 @@ Zet de map daarna opnieuw online.
 Pip draait gewoon zonder Mac of ander apparaat dat aan moet blijven. Alleen terugkomen nadat Pip weg is gegaan, kan niet vanuit de cloud: Google laat een eigen Cast-app alleen starten door een apparaat in je eigen wifi. Daarom zijn er twee standen.
 
 - **Zonder apparaat (standaard):** Pip blijft staan tot iets hem wegdrukt: muziek, een video die je naar de Hub stuurt, soms een timer of "Hé Google". Dan start je Pip zelf weer met **Start Pip** op je telefoon (Android) of `start-pip.command` op de Mac. De knop **Google Hub** staat er dan niet, zodat niemand Pip per ongeluk wegtikt.
-- **Met het script (optioneel):** draait `pip-altijd-aan.command` op een Mac (of later een Raspberry Pi), dan verschijnt de knop **Google Hub** en komt Pip vanzelf terug. Hieronder hoe dat werkt.
+- **Met het script (optioneel):** draait het script op de NAS (zie hieronder) of met `pip-altijd-aan.command` op een Mac, dan verschijnt de knop **Google Hub** en komt Pip vanzelf terug. Hieronder hoe dat werkt.
+
+#### Pip op de NAS (QNAP TS-251D)
+
+De NAS staat toch altijd aan, dus daar draait het script het handigst. Het draait in een container met Container Station.
+
+1. **Container Station:** open op de NAS het **App Center** en installeer **Container Station**, als die er nog niet staat.
+2. **Applicatie maken:** ga in Container Station naar **Applicaties → Maken**, noem hem `pip-blijf` en plak de inhoud van `nas/docker-compose.yml`.
+3. **Code invullen:** vervang `PLAK-HIER-DE-KATTENBAK-CODE` door de kattenbak-code (op de Mac: `~/.config/pip/kattenbak-code.txt`). Zet die code niet in GitHub.
+4. **Maken:** de eerste keer haalt hij Python en het script op; dat duurt een minuut.
+5. **Controleren:** bij de container `pip-blijf` → **Logs** moet staan: "Pip blijft aan op hub tussen 7:00 en 23:00". Binnen 10 minuten verschijnt de knop **Google Hub** op Pip.
+
+Goed om te weten:
+
+- **Bijwerken:** bij elke herstart van de container haalt hij `start_pip.py` en `config.js` opnieuw van GitHub. Na een wijziging is een herstart van de container genoeg.
+- **Google Hub niet gevonden:** vul bij `PIP_HUB_HOST` het IP-adres van de Google Hub in. Dat staat in de Google Home-app bij de apparaatinformatie.
+- **Uitzetten:** stop de container `pip-blijf` in Container Station. De knop **Google Hub** verdwijnt dan binnen ongeveer 20 minuten van Pip.
 
 - **Naar Google:** tik rechtsboven op **Google Hub** en kies wanneer Pip terugkomt: over 15 minuten, over 1 uur of morgenochtend. Pip gaat aan de kant en je ziet meteen het scherm van Google (timers, weer, fotolijst).
 - **Zelf kiezen:** onder de vaste tijden stel je met −1 uur, −15 min, +15 min en +1 uur zelf een tijdstip in (tussen 5 minuten en 24 uur vooruit). Valt dat na 23:00, dan komt Pip de volgende ochtend om 07:00 terug.

@@ -1,0 +1,29 @@
+# Pip op de NAS: zet Pip op de Google Hub terug als hij weg is, zonder dat er
+# een Mac aan hoeft te staan. Plak dit in QNAP Container Station bij
+# Applicaties → Maken, en vul hieronder de kattenbak-code in (staat op de Mac in
+# ~/.config/pip/kattenbak-code.txt). Zie README, "Pip op de NAS".
+#
+# Bij elke (her)start haalt de container start_pip.py en config.js van GitHub,
+# dus een nieuwe versie van Pip komt vanzelf mee na een herstart.
+services:
+  pip-blijf:
+    image: python:3.12-slim
+    container_name: pip-blijf
+    restart: unless-stopped
+    # Host-netwerk: nodig om de Google Hub in het wifi te vinden.
+    network_mode: host
+    environment:
+      PIP_KATTENBAK_CODE: "PLAK-HIER-DE-KATTENBAK-CODE"
+      PIP_TZ: Europe/Amsterdam
+      # Vindt hij de Google Hub niet? Vul dan zijn IP-adres in (Google Home-app →
+      # Google Hub → Instellingen → Apparaatinformatie).
+      PIP_HUB_HOST: ""
+    command:
+      - sh
+      - -c
+      - >-
+        pip install --quiet --no-cache-dir --disable-pip-version-check --root-user-action=ignore
+        pychromecast==14.1.0 tzdata &&
+        mkdir -p /app && cd /app &&
+        python -c "import urllib.request as u; [u.urlretrieve('https://raw.githubusercontent.com/Thijs21vermeer/pip-hub/main/' + f, f) for f in ('start_pip.py', 'config.js')]" &&
+        exec python -u start_pip.py --blijf
