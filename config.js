@@ -25,11 +25,12 @@ window.PIP_CONFIG = {
     { id: "brokjes", title: "Brokjes bijvullen", icon: "bowl" },
   ],
 
-  // Acties: knoppen die de kattenbak iets laten doen, via het servertje op
+  // Acties: knoppen voor de kattenbak en de voerbak, via het servertje op
   // Netlify (netlify/functions/kattenbak.mjs). id = actie op dat servertje.
+  // "feed" vraagt eerst hoeveel porties; "odourless" (ontgeuren) kan ook nog.
   actions: [
     { id: "clean", title: "Kattenbak draaien", icon: "box", confirm: "Kattenbak nu laten draaien?", button: "Ja, draaien" },
-    { id: "odourless", title: "Ontgeuren", icon: "wind", confirm: "Kattenbak nu ontgeuren?", button: "Ja, ontgeuren" },
+    { id: "feed", title: "Voeren", icon: "bowl" },
   ],
 
   // Adres van dat servertje. De code om het te gebruiken staat NIET hier (deze

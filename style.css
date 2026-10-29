@@ -178,19 +178,19 @@ h1 {
   font-size: 0.95rem;
 }
 
-/* Zelf kiezen wanneer Pip terugkomt: een grote tijd, met − en + ernaast. */
-.sheet.away {
+/* Kiezer met een grote waarde en − en + ernaast: terugkeertijd en porties. */
+.sheet.picker {
   width: min(36rem, 88vw);
   padding: 1.6rem 2rem 1.8rem;
 }
 
-.sheet .away-label {
+.sheet .pick-label {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-.away-pick {
+.pick-row {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,7 +198,7 @@ h1 {
   margin-top: 0.4rem;
 }
 
-.away-step {
+.pick-step {
   display: grid;
   place-items: center;
   width: 4.4rem;
@@ -212,17 +212,17 @@ h1 {
   transition: transform 0.1s ease;
 }
 
-.away-step svg {
+.pick-step svg {
   width: 1.8rem;
   height: 1.8rem;
   stroke-width: 2.6;
 }
 
-.away-step:active {
+.pick-step:active {
   transform: scale(0.93);
 }
 
-.away-time {
+.pick-value {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -230,7 +230,7 @@ h1 {
 }
 
 /* "morgen" houdt altijd zijn plek, zodat de tijd niet verspringt. */
-.away-day {
+.pick-day {
   visibility: hidden;
   color: var(--accent);
   font-size: 0.85rem;
@@ -239,11 +239,11 @@ h1 {
   text-transform: uppercase;
 }
 
-.away-day.shown {
+.pick-day.shown {
   visibility: visible;
 }
 
-.away-time strong {
+.pick-value strong {
   font-size: 4.8rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -251,14 +251,14 @@ h1 {
   line-height: 1;
 }
 
-.away-left {
+.pick-sub {
   margin-top: 0.5rem;
   color: var(--muted);
   font-size: 1.05rem;
   font-weight: 500;
 }
 
-.sheet.away .choices {
+.sheet.picker .choices {
   margin-top: 1.6rem;
 }
 

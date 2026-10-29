@@ -116,9 +116,15 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Opslag:** de lijst wordt op de Google Hub bewaard en op het servertje (`/api/pip-settings`, Netlify Blobs), met dezelfde kattenbak-code. Zo overleeft hij een herstart van de Google Hub. Ook de huisgenoten van de startpagina komen daar terecht.
 - `config.js` bevat alleen de standaardlijst voor als er nog niets is opgeslagen.
 
-## Acties: kattenbak draaien en ontgeuren
+## Acties: kattenbak draaien en voeren
 
-Onder **Acties** staan twee knoppen voor de Viervoeter-kattenbak (Smart Life / Tuya): **Kattenbak draaien** en **Ontgeuren**. Ze tonen ook Pips gewicht, het aantal bezoeken vandaag en of de opvangbak vol is.
+Onder **Acties** staan twee knoppen:
+
+- **Kattenbak draaien** voor de Viervoeter-kattenbak (Smart Life / Tuya). Eronder staan Pips gewicht en het aantal bezoeken vandaag.
+- **Voeren** voor de voerbak (F14-W, Tuya-app). Je kiest eerst hoeveel porties (1 tot 10, met − en +). Eronder staat de laatste voerbeurt, ook die van het schema in de app: "Laatst 2 porties om 08:00".
+  - Het servertje weigert te voeren als de voerbak offline is of net al voert, en niet twee keer binnen een minuut.
+  - De voerbak staat in de Netlify-instellingen als `TUYA_FEEDER_ID`. Het Tuya-account van de app moet in het cloudproject gekoppeld zijn met **Read, Write and Manage**; anders staat er "Geen schrijfrechten in Tuya".
+- **Ontgeuren** kan het servertje nog steeds. Wil je die knop terug, zet hem dan weer bij `actions` in `config.js`.
 
 - **Hoe het werkt:** Pip praat met een klein servertje op Netlify (`netlify/functions/kattenbak.mjs`, site `pip-kattenbak`). Dat servertje heeft de Tuya-sleutels en stuurt de kattenbak aan. Pip zelf kent die sleutels niet.
 - **Veiligheid:** draaien kan niet als er een kat in de bak zit, en niet twee keer binnen 2 minuten. "Alle korrels verversen" zit er bewust niet in.

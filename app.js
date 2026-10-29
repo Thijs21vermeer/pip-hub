@@ -23,7 +23,14 @@
     UNAUTHORIZED: "Koppelcode werkt niet",
     NOT_CONFIGURED: "Servertje nog niet ingesteld",
     UNREACHABLE: "Servertje niet bereikbaar",
+    FEEDER_OFFLINE: "Voerbak is offline",
+    FEEDING: "Voert al, even wachten",
+    NO_PERMISSION: "Geen schrijfrechten in Tuya",
+    BAD_PORTIONS: "Ongeldig aantal porties",
   };
+  // Voerbak: 1 tot 10 porties per keer; het laatst gekozen aantal wordt onthouden.
+  const FEED_PORTIONS_KEY = "pip-hub-feed-portions";
+  const MAX_PORTIONS = 10;
 
   // Takenlijst die je op de Hub zelf beheert.
   const SETTINGS_KEY = "pip-hub-settings";
@@ -420,7 +427,11 @@
     renderActions();
   }
 
-  async function runAction(action) {
+  function portionsText(count) {
+    return `${count} ${count === 1 ? "portie" : "porties"}`;
+  }
+
+  async function runAction(action, extra = {}) {
     busyActions.add(action.id);
     renderActions();
     let result;
@@ -428,11 +439,12 @@
       const response = await fetch(kattenbakUrl(), {
         method: "POST",
         headers: { Authorization: `Bearer ${actionCode()}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ action: action.id }),
+        body: JSON.stringify({ action: action.id, ...extra }),
       });
       const data = await response.json().catch(() => ({}));
+      const done = action.id === "feed" ? `${portionsText(extra.portions)} om` : "Gestart om";
       result = response.ok
-        ? { text: `Gestart om ${formatTime(new Date())}`, kind: "ok" }
+        ? { text: `${done} ${formatTime(new Date())}`, kind: "ok" }
         : { text: ACTION_ERRORS[data.error] || "Niet gelukt", kind: "warn" };
     } catch (error) {
       result = { text: ACTION_ERRORS.UNREACHABLE, kind: "warn" };
@@ -441,6 +453,8 @@
     actionFeedback[action.id] = { ...result, until: Date.now() + FEEDBACK_MS };
     renderActions();
     refreshKattenbak();
+    // Voeren duurt even; daarna staat de voerbeurt in "Laatst …".
+    if (action.id === "feed" && result.kind === "ok") setTimeout(refreshKattenbak, 30 * 1000);
   }
 
   function setActionCode(code) {
@@ -727,6 +741,7 @@
     if (!kattenbakLinked()) return { text: "Nog niet gekoppeld", kind: "" };
     if (!kattenbak) return { text: "Status ophalen…", kind: "" };
     if (kattenbak.error) return { text: ACTION_ERRORS[kattenbak.error] || "Niet bereikbaar", kind: "warn" };
+    if (action.id === "feed") return feederStatus(kattenbak.feeder);
     if (!kattenbak.online) return { text: ACTION_ERRORS.OFFLINE, kind: "warn" };
     if (action.id === "clean") {
       if (kattenbak.catInside) return { text: "Pip zit erin", kind: "warn" };
@@ -736,6 +751,19 @@
       return { text: parts.join(" · ") || "Klaar", kind: "" };
     }
     return kattenbak.binFull ? { text: "Opvangbak vol", kind: "warn" } : { text: "Opvangbak ok", kind: "" };
+  }
+
+  // "Laatst 2 porties · vandaag 08:00" (ook de voerbeurten van het schema in de app).
+  function feederStatus(feeder) {
+    if (!feeder) return { text: "Voerbak nog niet ingesteld", kind: "" };
+    if (feeder.error) return { text: ACTION_ERRORS[feeder.error] || "Voerbak niet bereikbaar", kind: "warn" };
+    if (!feeder.online) return { text: ACTION_ERRORS.FEEDER_OFFLINE, kind: "warn" };
+    if (feeder.feeding) return { text: "Bezig met voeren", kind: "" };
+    if (feeder.lastFeed && feeder.lastFeed.at) {
+      const when = whenShort(feeder.lastFeed.at).replace(/^vandaag /, "om ").replace(/^gisteren .*/, "· gisteren");
+      return { text: `Laatst ${portionsText(feeder.lastFeed.portions)} ${when.startsWith("om") || when.startsWith("·") ? when : `· ${when}`}`, kind: "" };
+    }
+    return { text: "Klaar", kind: "" };
   }
 
   function actionCard(action) {
@@ -1224,15 +1252,15 @@
   // Rustig: alleen de tijd, met − en + (een kwartier; ingedrukt houden gaat sneller).
   function customAwayHtml() {
     const step = (delta, icon, label) =>
-      `<button class="away-step" data-action="google-step" data-delta="${delta}" aria-label="${label}">${icon}</button>`;
+      `<button class="pick-step" data-action="google-step" data-delta="${delta}" aria-label="${label}">${icon}</button>`;
     return `
-      <p class="away-label">Het overzicht komt terug om</p>
-      <div class="away-pick">
+      <p class="pick-label">Het overzicht komt terug om</p>
+      <div class="pick-row">
         ${step(-15, ICONS.minus, "Kwartier eerder")}
-        <div class="away-time">
-          <span class="away-day" id="away-day">morgen</span>
+        <div class="pick-value">
+          <span class="pick-day" id="away-day">morgen</span>
           <strong id="away-clock"></strong>
-          <span class="away-left" id="away-left"></span>
+          <span class="pick-sub" id="away-left"></span>
         </div>
         ${step(15, ICONS.plus, "Kwartier later")}
       </div>
@@ -1256,7 +1284,7 @@
     // Begin een half uur vooruit, afgerond op het volgende kwartier.
     awayPick = clampAway(Math.ceil((Date.now() + 30 * 60 * 1000) / AWAY_STEP_MS) * AWAY_STEP_MS);
     openSheet(null, customAwayHtml());
-    els.sheetBody.classList.add("away");
+    els.sheetBody.classList.add("picker");
     renderAwayTime();
   }
 
@@ -1276,15 +1304,18 @@
     clearTimeout(holdTimer);
   }
 
+  const STEPPERS = { "google-step": (delta) => stepCustomAway(delta), "feed-step": (delta) => stepFeed(delta) };
+
   els.sheet.addEventListener("pointerdown", (event) => {
-    const button = event.target.closest('[data-action="google-step"]');
+    const button = event.target.closest('[data-action="google-step"], [data-action="feed-step"]');
     if (!button) return;
     held = false;
+    const step = STEPPERS[button.dataset.action];
     const delta = Number(button.dataset.delta);
     const repeat = (wait) => {
       holdTimer = setTimeout(() => {
         held = true;
-        stepCustomAway(delta);
+        step(delta);
         repeat(Math.max(70, wait * 0.8));
       }, wait);
     };
@@ -1338,6 +1369,50 @@
     // Eerst opslaan: na stop() draait Pip niet meer.
     if (choice !== "none") await putAway(awayUntil(choice));
     window.PipCast.stop();
+  }
+
+  // ---- Voeren: hoeveel porties ----
+
+  let feedPortions = 1;
+
+  function feedSheetHtml() {
+    return `
+      <p class="pick-label">Hoeveel porties voeren?</p>
+      <div class="pick-row">
+        <button class="pick-step" data-action="feed-step" data-delta="-1" aria-label="Portie minder">${ICONS.minus}</button>
+        <div class="pick-value">
+          <strong id="feed-count"></strong>
+          <span class="pick-sub" id="feed-unit"></span>
+        </div>
+        <button class="pick-step" data-action="feed-step" data-delta="1" aria-label="Portie meer">${ICONS.plus}</button>
+      </div>
+      <div class="choices">
+        <button class="choice" data-action="act-confirm">Voeren</button>
+        <button class="choice secondary" data-action="close">Annuleren</button>
+      </div>`;
+  }
+
+  function renderFeedCount() {
+    const count = document.getElementById("feed-count");
+    if (!count) return;
+    count.textContent = feedPortions;
+    document.getElementById("feed-unit").textContent = feedPortions === 1 ? "portie" : "porties";
+  }
+
+  function askFeed(action) {
+    const saved = Number(readStorage(FEED_PORTIONS_KEY));
+    feedPortions = Number.isInteger(saved) && saved >= 1 && saved <= MAX_PORTIONS ? saved : 1;
+    openSheet(null, feedSheetHtml());
+    els.sheetBody.classList.add("picker");
+    sheetAction = action;
+    renderFeedCount();
+  }
+
+  function stepFeed(delta) {
+    feedPortions = Math.min(MAX_PORTIONS, Math.max(1, feedPortions + delta));
+    renderFeedCount();
+    clearTimeout(sheetTimer);
+    sheetTimer = setTimeout(closeSheet, SHEET_TIMEOUT_MS);
   }
 
   function showNotLinked() {
@@ -1481,9 +1556,9 @@
       askGoogle();
     } else if (action === "google-custom") {
       openCustomAway();
-    } else if (action === "google-step") {
+    } else if (action === "google-step" || action === "feed-step") {
       if (held) held = false; // ingedrukt gehouden: de tik is al verwerkt
-      else stepCustomAway(Number(target.dataset.delta));
+      else STEPPERS[action](Number(target.dataset.delta));
     } else if (action === "google-go") {
       goToGoogle(target.dataset.choice);
     } else if (action === "all-tasks") {
@@ -1538,12 +1613,18 @@
     } else if (action === "act") {
       const act = (config.actions || []).find((a) => a.id === id);
       if (!act || busyActions.has(act.id)) return;
-      if (kattenbakLinked()) confirmAction(act);
-      else showNotLinked();
+      if (!kattenbakLinked()) showNotLinked();
+      else if (act.id === "feed") askFeed(act);
+      else confirmAction(act);
     } else if (action === "act-confirm" && sheetAction) {
       const act = sheetAction;
       closeSheet();
-      runAction(act);
+      if (act.id === "feed") {
+        writeStorage(FEED_PORTIONS_KEY, String(feedPortions));
+        runAction(act, { portions: feedPortions });
+      } else {
+        runAction(act);
+      }
     } else if (action === "close") {
       closeSheet();
     } else if (action === "stock") {
