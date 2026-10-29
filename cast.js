@@ -8,8 +8,10 @@
   const KEEPALIVE_MS = 9 * 60 * 1000;
   const KEEPALIVE_IMAGE = new URL("pip.png", location.href).href;
   // Zo staat het overzicht in het menu van de Google Hub: met Pips snoet en een
-  // duidelijke naam, in plaats van een Chrome-logo. Tik erop en je bent terug.
-  const MENU_TITLE = "Overzicht van Pip";
+  // korte naam. Google toont alleen bij muziek een plaatje (de "hoes"), dus het
+  // wakker-houd-plaatje doet zich voor als muziek. Tik erop en je bent terug.
+  const MENU_TITLE = "Overzicht";
+  const MENU_ARTIST = "Pip";
   const MENU_PHOTO = new URL("pip-icoon.jpg", location.href).href;
   // Kanaal waarover de startknop de Voerraad-koppelcode (niet in config.js: die is
   // openbaar) en de huisgenoten stuurt.
@@ -59,7 +61,7 @@
 
     const options = new framework.CastReceiverOptions();
     options.disableIdleTimeout = true;
-    options.statusText = MENU_TITLE;
+    options.statusText = `${MENU_TITLE} van ${MENU_ARTIST}`;
     options.customNamespaces = { [NAMESPACE]: framework.system.MessageType.JSON };
     context.start(options);
 
@@ -70,9 +72,9 @@
       request.media.contentId = KEEPALIVE_IMAGE;
       request.media.contentType = "image/png";
       request.media.streamType = framework.messages.StreamType.NONE;
-      request.media.metadata = new framework.messages.GenericMediaMetadata();
+      request.media.metadata = new framework.messages.MusicTrackMediaMetadata();
       request.media.metadata.title = MENU_TITLE;
-      request.media.metadata.subtitle = "Taken, voer en kattenbak";
+      request.media.metadata.artist = MENU_ARTIST;
       request.media.metadata.images = [new framework.messages.Image(MENU_PHOTO)];
       request.requestId = 0;
       playerManager.load(request);
