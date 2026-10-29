@@ -74,6 +74,14 @@ python3 -m http.server 8000
 
 Open daarna http://localhost:8000 in je browser.
 
+## Start Pip niet?
+
+- **"Starten lukte niet" / `NOT_FOUND`:** de Hub kent de app nog niet.
+  - Kijk in de Cast Console bij **Cast Receiver Devices** of daar het **serienummer van de Hub** staat, en niet de App-ID.
+  - Ook na "Ready For Testing" kan het nog 10 minuten of langer duren. Trek daarna de stekker van de Hub eruit en steek hem er weer in.
+- **Serienummer zeker weten:** open [cast.google.com/publish](https://cast.google.com/publish) in Chrome, kies **Casten…** en dan je Hub. Het serienummer verschijnt op het scherm van de Hub.
+- **Hub niet gevonden:** check met `./start-pip.command --zoek` of je Mac hem ziet. De Hub moet aan staan en op hetzelfde wifi zitten (geen gastnetwerk).
+
 ## Goed om te weten
 
 - **Wakker houden:** de Hub sluit een cast-app na ongeveer 10 minuten als er geen media speelt. `cast.js` "speelt" daarom elke 9 minuten onzichtbaar `pip.png` af, dezelfde truc als Home Assistant Cast. Niet officieel, dus een update van Google kan dit breken.
