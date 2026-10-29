@@ -1444,6 +1444,16 @@ main {
   visibility: hidden;
 }
 
+/* Rustig inzoomen (fotos.html → Stijl): zolang een foto in beeld is. */
+.rest.motion .rest-photo.shown .rest-fg {
+  animation: slow-zoom var(--slide-seconds, 22s) ease-out forwards;
+}
+
+@keyframes slow-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
 /* Staande foto: helemaal in beeld, met een vage uitvergroting van zichzelf erachter. */
 .rest-photo.tall .rest-fg {
   object-fit: contain;

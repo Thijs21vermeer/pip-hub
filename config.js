@@ -44,7 +44,11 @@ window.PIP_CONFIG = {
   // Foto's van Pip voor de ruststand (zet je erop via de startpagina; de Hub
   // wisselt elke zoveel seconden) en haar eigen miauw voor "Aai Pip". Zelfde
   // servertje en code als de kattenbak.
-  photos: { url: "https://pip-kattenbak.netlify.app/api/fotos", seconds: 20 },
+  // Hoe de fotolijst wisselt (tempo, volgorde, zoom) stel je in op fotos.html.
+  photos: {
+    url: "https://pip-kattenbak.netlify.app/api/fotos",
+    styleUrl: "https://pip-kattenbak.netlify.app/api/fotolijst",
+  },
   meow: { url: "https://pip-kattenbak.netlify.app/api/geluid" },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad

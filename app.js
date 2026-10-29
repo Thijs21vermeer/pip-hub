@@ -932,6 +932,31 @@
     return localOverride("fotos") || (config.photos && config.photos.url);
   }
 
+  function photoStyleUrl() {
+    return localOverride("fotolijst") || (config.photos && config.photos.styleUrl);
+  }
+
+  // Stijl van de fotolijst, in te stellen op fotos.html.
+  let photoStyle = { seconds: 20, order: "newest", includeDefault: true, motion: false };
+  let slideTimer = null;
+
+  function scheduleSlide() {
+    clearTimeout(slideTimer);
+    slideTimer = setTimeout(async () => {
+      await nextSlide();
+      scheduleSlide();
+    }, photoStyle.seconds * 1000);
+  }
+
+  function applyPhotoStyle(style) {
+    const tempoChanged = style.seconds !== photoStyle.seconds;
+    photoStyle = { ...photoStyle, ...style };
+    els.rest.classList.toggle("motion", photoStyle.motion);
+    // Inzoomen duurt net zo lang als een foto in beeld is.
+    els.rest.style.setProperty("--slide-seconds", `${photoStyle.seconds + 2}s`);
+    if (tempoChanged) scheduleSlide();
+  }
+
   function authHeader() {
     return { Authorization: `Bearer ${actionCode()}` };
   }
@@ -939,7 +964,13 @@
   async function refreshPhotos() {
     if (!actionCode() || !photosUrl()) return;
     try {
-      const response = await fetch(photosUrl(), { headers: authHeader(), cache: "no-store" });
+      const [response, style] = await Promise.all([
+        fetch(photosUrl(), { headers: authHeader(), cache: "no-store" }),
+        photoStyleUrl()
+          ? fetch(photoStyleUrl(), { headers: authHeader(), cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+          : null,
+      ]);
+      if (style) applyPhotoStyle(style);
       if (!response.ok) return;
       const list = await response.json();
       const ids = new Set(list.map((photo) => photo.id));
@@ -953,15 +984,17 @@
         const image = await fetch(`${photosUrl()}/${photo.id}`, { headers: authHeader() });
         if (image.ok) photoUrls.set(photo.id, URL.createObjectURL(await image.blob()));
       }
-      slides = [...list].reverse()
+      const uploaded = [...list].reverse()
         .filter((photo) => photoUrls.has(photo.id))
         .map((photo) => ({
           url: photoUrls.get(photo.id),
-          // Staand of bijna vierkant: helemaal tonen, met een vage achtergrond.
-          tall: Boolean(photo.width && photo.height && photo.width / photo.height < 1.25),
-          focus: "50% 50%",
-        }))
-        .concat(DEFAULT_SLIDE);
+          // "Hele foto" (gekozen op fotos.html, of vanzelf bij staande foto's):
+          // helemaal tonen, met een vage achtergrond.
+          tall: photo.fit ? photo.fit === "contain" : Boolean(photo.width && photo.height && photo.width / photo.height < 1.25),
+          // Wat in beeld moet blijven, gekozen op fotos.html.
+          focus: `${photo.focusX ?? 50}% ${photo.focusY ?? 50}%`,
+        }));
+      slides = photoStyle.includeDefault || !uploaded.length ? uploaded.concat(DEFAULT_SLIDE) : uploaded;
     } catch (error) {
       // Niet bereikbaar: de foto's die er al waren blijven wisselen.
     }
@@ -969,7 +1002,12 @@
 
   async function nextSlide() {
     if (els.rest.hidden || slides.length < 2) return;
-    slideIndex = (slideIndex + 1) % slides.length;
+    if (photoStyle.order === "shuffle") {
+      // Door elkaar, maar nooit twee keer dezelfde achter elkaar.
+      slideIndex = (slideIndex + 1 + Math.floor(Math.random() * (slides.length - 1))) % slides.length;
+    } else {
+      slideIndex = (slideIndex + 1) % slides.length;
+    }
     const slide = slides[slideIndex];
     const layer = els.restPhotos[1 - frontLayer];
     const front = layer.querySelector(".rest-fg");
@@ -1136,7 +1174,7 @@
   }
 
   function linkUrl() {
-    return `${new URL("start.html", location.href).href}#koppel=${encodeURIComponent(actionCode())}`;
+    return `${new URL("fotos.html", location.href).href}#koppel=${encodeURIComponent(actionCode())}`;
   }
 
   async function showRestQr() {
@@ -2122,8 +2160,9 @@
   setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
   refreshPhotos();
   refreshMeow();
-  setInterval(() => { refreshPhotos(); refreshMeow(); }, 15 * 60 * 1000);
-  setInterval(nextSlide, ((config.photos && config.photos.seconds) || 20) * 1000);
+  setInterval(refreshPhotos, 5 * 60 * 1000); // wijzigingen op fotos.html binnen 5 minuten
+  setInterval(refreshMeow, 15 * 60 * 1000);
+  scheduleSlide();
   // Lukte het eerste ophalen niet (geen netwerk), elke minuut opnieuw proberen.
   setInterval(() => {
     if (!synced) pullSettings();

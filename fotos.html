@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Foto's van Pip</title>
+  <link rel="icon" href="pip.png">
+  <link rel="apple-touch-icon" href="pip.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+  <style>
+    /* Kleuren en lettertype van Voerraad, net als het overzicht op de Google Hub. */
+    :root {
+      --bg: #fbf7f2;
+      --surface: #ffffff;
+      --line: #eee7de;
+      --text: #1a1612;
+      --muted: #7c7264;
+      --accent: #a9642f;
+      --accent-soft: #f4e6d9;
+      --done: #5c7f52;
+      --warn: #a8701f;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14110e;
+        --surface: #1f1a16;
+        --line: #332b24;
+        --text: #f3ece4;
+        --muted: #a89c8e;
+        --accent: #d08a50;
+        --accent-soft: #3a2a1d;
+        --done: #8db27f;
+        --warn: #e2ae5e;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Outfit", system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: max(20px, env(safe-area-inset-top)) 16px 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    header img {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      margin: 32px 0 12px;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 500;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .add {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 60px;
+      margin-top: 22px;
+      border: 0;
+      border-radius: 18px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .add span {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .status {
+      min-height: 1.4em;
+      margin-top: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .status.ok {
+      color: var(--done);
+    }
+
+    .status.error {
+      color: var(--warn);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    @media (min-width: 560px) {
+      .grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .tile {
+      position: relative;
+      aspect-ratio: 1;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+      border-radius: 14px;
+      background: var(--line);
+    }
+
+    .tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .tile.off img {
+      opacity: 0.35;
+    }
+
+    .tile .label {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: rgb(0 0 0 / 0.55);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .card {
+      padding: 6px 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 0;
+    }
+
+    .row + .row {
+      border-top: 1px solid var(--line);
+    }
+
+    .row > span {
+      font-weight: 600;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pills button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      background: transparent;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .pills button.on {
+      border-color: transparent;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 32px;
+      border: 0;
+      border-radius: 99px;
+      background: var(--line);
+      transition: background 0.2s;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+      transition: transform 0.2s;
+    }
+
+    .switch.on {
+      background: var(--accent);
+    }
+
+    .switch.on::after {
+      transform: translateX(20px);
+    }
+
+    .note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .empty {
+      margin-top: 40px;
+      padding: 24px;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    /* Bewerken: één foto, en hoe hij op de Google Hub staat. */
+    .editor {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .editor[hidden] {
+      display: none;
+    }
+
+    .editor main {
+      padding-top: max(16px, env(safe-area-inset-top));
+    }
+
+    .editor-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .back {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      background: transparent;
+      font-weight: 600;
+    }
+
+    .saved {
+      color: var(--done);
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .saved.show {
+      opacity: 1;
+    }
+
+    .hub {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 1024 / 600;
+      margin-top: 10px;
+      border: 6px solid #2a2420;
+      border-radius: 18px;
+      background: #000;
+    }
+
+    .hub img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hub .bg {
+      visibility: hidden;
+    }
+
+    .hub.whole .fg {
+      object-fit: contain;
+    }
+
+    .hub.whole .bg {
+      visibility: visible;
+      filter: blur(16px) brightness(0.8);
+      transform: scale(1.15);
+    }
+
+    .focus-pick {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      margin-top: 4px;
+      border-radius: 14px;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .focus-pick img {
+      display: block;
+      max-width: 100%;
+      max-height: 46vh;
+    }
+
+    .focus-dot {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      margin: -17px 0 0 -17px;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgb(0 0 0 / 0.35), inset 0 0 0 2px rgb(0 0 0 / 0.2);
+      pointer-events: none;
+    }
+
+    .remove {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 28px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: transparent;
+      color: var(--warn);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="pip.png" alt="">
+      <div>
+        <h1>Foto's van Pip</h1>
+        <p class="sub" id="summary">Even laden…</p>
+      </div>
+    </header>
+
+    <div id="linked" hidden>
+      <input id="file" type="file" accept="image/*" multiple hidden>
+      <button class="add" id="add"><span>+</span> Foto's toevoegen</button>
+      <p class="status" id="status"></p>
+      <div class="grid" id="grid"></div>
+
+      <h2>Stijl</h2>
+      <div class="card">
+        <div class="row">
+          <span>Wisselen</span>
+          <div class="pills" data-style="seconds">
+            <button data-value="10">10 s</button>
+            <button data-value="20">20 s</button>
+            <button data-value="60">1 min</button>
+            <button data-value="300">5 min</button>
+          </div>
+        </div>
+        <div class="row">
+          <span>Volgorde</span>
+          <div class="pills" data-style="order">
+            <button data-value="newest">Nieuwste eerst</button>
+            <button data-value="shuffle">Door elkaar</button>
+          </div>
+        </div>
+        <div class="row">
+          <span>Standaardfoto meenemen</span>
+          <button class="switch" data-style="includeDefault" aria-label="Standaardfoto meenemen"></button>
+        </div>
+        <div class="row">
+          <span>Rustig inzoomen</span>
+          <button class="switch" data-style="motion" aria-label="Rustig inzoomen"></button>
+        </div>
+      </div>
+      <p class="note">Tik op een foto om te kiezen hoe hij op de Google Hub staat. De Google Hub neemt wijzigingen binnen 5 minuten over.</p>
+    </div>
+
+    <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
+  </main>
+
+  <section class="editor" id="editor" hidden>
+    <main>
+      <div class="editor-top">
+        <button class="back" id="close">‹ Klaar</button>
+        <span class="saved" id="saved">Opgeslagen</span>
+      </div>
+
+      <h2>Op de Google Hub</h2>
+      <div class="hub" id="hub"><img class="bg" alt=""><img class="fg" alt="Voorbeeld op de Google Hub"></div>
+
+      <h2>Weergave</h2>
+      <div class="pills" id="fit">
+        <button data-value="cover">Vullen</button>
+        <button data-value="contain">Hele foto</button>
+      </div>
+
+      <div id="focus-box">
+        <h2>Wat moet in beeld blijven?</h2>
+        <p class="note">Tik op het belangrijkste deel, bijvoorbeeld Pips snoet.</p>
+        <div class="focus-pick" id="focus-pick"><img alt="Hele foto"><span class="focus-dot" id="focus-dot"></span></div>
+      </div>
+
+      <button class="remove" id="remove">Foto verwijderen</button>
+    </main>
+  </section>
+
+  <script src="config.js?v=20261029-20"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const config = window.PIP_CONFIG;
+      const CODE_KEY = "pip-kattenbak-code"; // zelfde als op de startpagina
+      const MAX_SIDE = 1600; // langste kant; de Google Hub is 1024 breed
+      const DEFAULT_ID = "standaard";
+      const $ = (id) => document.getElementById(id);
+
+      // Alleen bij lokaal testen mag een ander servertje, bv. ?fotos=http://localhost:9/f
+      function serverUrl(name, fallback) {
+        const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+        return (local && new URLSearchParams(location.search).get(name)) || fallback;
+      }
+
+      const photosUrl = serverUrl("fotos", config.photos.url);
+      const styleUrl = serverUrl("fotolijst", config.photos.styleUrl);
+      const checkUrl = serverUrl("kattenbak", config.kattenbak.url);
+
+      let photos = [];
+      let style = {};
+      const images = new Map(); // id → blob-URL
+      let editing = null;
+
+      function code() {
+        try {
+          return localStorage.getItem(CODE_KEY) || "";
+        } catch (error) {
+          return "";
+        }
+      }
+
+      function auth(extra = {}) {
+        return { Authorization: `Bearer ${code()}`, ...extra };
+      }
+
+      function status(text, kind) {
+        $("status").textContent = text || "";
+        $("status").className = `status ${kind || ""}`;
+      }
+
+      // ---- Koppelen met de QR-code uit de ruststand (fotos.html#koppel=…) ----
+
+      async function linkFromQr() {
+        const given = new URLSearchParams(location.hash.slice(1)).get("koppel");
+        if (!given) return;
+        history.replaceState(null, "", location.pathname + location.search); // code uit de adresbalk
+        try {
+          const response = await fetch(checkUrl, { headers: { Authorization: `Bearer ${given.trim()}` } });
+          if (!response.ok) throw new Error(String(response.status));
+          localStorage.setItem(CODE_KEY, given.trim());
+          status("Gekoppeld! Tik op Foto's toevoegen.", "ok");
+        } catch (error) {
+          status("Deze QR-code werkt niet (meer). Scan hem opnieuw op de Google Hub.", "error");
+        }
+      }
+
+      // ---- Foto's ----
+
+      // Op de telefoon verkleinen; een <img> houdt rekening met hoe de foto gedraaid is.
+      async function shrink(file) {
+        const url = URL.createObjectURL(file);
+        try {
+          const image = new Image();
+          image.src = url;
+          await image.decode();
+          const scale = Math.min(1, MAX_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(image.naturalWidth * scale);
+          canvas.height = Math.round(image.naturalHeight * scale);
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+          return { blob, width: canvas.width, height: canvas.height };
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      async function imageUrl(photo) {
+        if (photo.id === DEFAULT_ID) return "pip-foto.jpg";
+        if (!images.has(photo.id)) {
+          const response = await fetch(`${photosUrl}/${photo.id}`, { headers: auth() });
+          images.set(photo.id, URL.createObjectURL(await response.blob()));
+        }
+        return images.get(photo.id);
+      }
+
+      // Zelfde regel als de Google Hub: zonder keuze staan staande foto's helemaal in beeld.
+      function fitOf(photo) {
+        if (photo.fit) return photo.fit;
+        return photo.width && photo.height && photo.width / photo.height < 1.25 ? "contain" : "cover";
+      }
+
+      function tempoText(seconds) {
+        return seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`;
+      }
+
+      function renderSummary() {
+        const count = photos.length;
+        $("summary").textContent = `${count} ${count === 1 ? "foto" : "foto's"} · wisselt elke ${tempoText(style.seconds || 20)}`;
+      }
+
+      function renderGrid() {
+        const grid = $("grid");
+        grid.innerHTML = "";
+        const all = [...photos].reverse().concat({ id: DEFAULT_ID, width: 1600, height: 900 });
+        for (const photo of all) {
+          const tile = document.createElement("button");
+          tile.className = "tile";
+          if (photo.id === DEFAULT_ID) {
+            tile.classList.toggle("off", style.includeDefault === false);
+            tile.innerHTML = '<span class="label">Standaard</span>';
+          }
+          const image = document.createElement("img");
+          image.alt = "Foto van Pip";
+          tile.prepend(image);
+          tile.addEventListener("click", () => openEditor(photo));
+          grid.append(tile);
+          imageUrl(photo).then((url) => { image.src = url; }).catch(() => {});
+        }
+        renderSummary();
+      }
+
+      async function load() {
+        try {
+          const [list, settings] = await Promise.all([
+            fetch(photosUrl, { headers: auth() }).then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
+            fetch(styleUrl, { headers: auth() }).then((r) => (r.ok ? r.json() : Promise.reject(r.status))),
+          ]);
+          photos = list;
+          style = settings;
+          renderGrid();
+          renderStyle();
+        } catch (error) {
+          $("summary").textContent = "";
+          status(error === 401 ? "Deze telefoon is niet (meer) gekoppeld. Scan de QR-code op de Google Hub." : "Het servertje is nu niet bereikbaar.", "error");
+        }
+      }
+
+      $("add").addEventListener("click", () => $("file").click());
+      $("file").addEventListener("change", async (event) => {
+        const files = [...event.target.files];
+        event.target.value = "";
+        let sent = 0;
+        for (const [index, file] of files.entries()) {
+          status(`Foto ${index + 1} van ${files.length} versturen…`);
+          try {
+            const { blob, width, height } = await shrink(file);
+            const response = await fetch(`${photosUrl}?w=${width}&h=${height}`, {
+              method: "POST",
+              headers: auth({ "Content-Type": "image/jpeg" }),
+              body: blob,
+            });
+            if (response.status === 409) {
+              status("Er staan al 40 foto's op. Haal er eerst een paar weg.", "error");
+              break;
+            }
+            if (response.ok) sent += 1;
+          } catch (error) {
+            // Deze foto overslaan (bijvoorbeeld een formaat dat de browser niet kan openen).
+          }
+        }
+        await load();
+        if (sent) status(`${sent} ${sent === 1 ? "foto" : "foto's"} toegevoegd.`, "ok");
+        else if (files.length) status("Dat lukte niet. Probeer een andere foto.", "error");
+      });
+
+      // ---- Stijl ----
+
+      function renderStyle() {
+        document.querySelectorAll(".pills[data-style] button").forEach((button) => {
+          const key = button.parentElement.dataset.style;
+          button.classList.toggle("on", String(style[key]) === button.dataset.value);
+        });
+        document.querySelectorAll(".switch[data-style]").forEach((button) => {
+          button.classList.toggle("on", style[button.dataset.style] !== false);
+          button.setAttribute("aria-pressed", String(style[button.dataset.style] !== false));
+        });
+      }
+
+      async function saveStyle(change) {
+        style = { ...style, ...change };
+        renderStyle();
+        renderGrid();
+        try {
+          const response = await fetch(styleUrl, {
+            method: "PUT",
+            headers: auth({ "Content-Type": "application/json" }),
+            body: JSON.stringify(change),
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          style = await response.json();
+          status("Opgeslagen.", "ok");
+        } catch (error) {
+          status("Opslaan lukte niet. Probeer het zo nog eens.", "error");
+        }
+      }
+
+      document.querySelectorAll(".pills[data-style] button").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.parentElement.dataset.style;
+          const value = key === "seconds" ? Number(button.dataset.value) : button.dataset.value;
+          saveStyle({ [key]: value });
+        });
+      });
+      document.querySelectorAll(".switch[data-style]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.style;
+          saveStyle({ [key]: style[key] === false });
+        });
+      });
+
+      // ---- Eén foto bewerken ----
+
+      function renderEditor() {
+        const photo = editing;
+        const fit = fitOf(photo);
+        const focus = `${photo.focusX ?? 50}% ${photo.focusY ?? 50}%`;
+        $("hub").classList.toggle("whole", fit === "contain");
+        $("hub").querySelector(".fg").style.objectPosition = fit === "cover" ? focus : "50% 50%";
+        $("fit").querySelectorAll("button").forEach((button) => button.classList.toggle("on", button.dataset.value === fit));
+        $("focus-box").hidden = fit !== "cover" || photo.id === DEFAULT_ID;
+        $("focus-dot").style.left = `${photo.focusX ?? 50}%`;
+        $("focus-dot").style.top = `${photo.focusY ?? 50}%`;
+      }
+
+      async function openEditor(photo) {
+        editing = { ...photo };
+        const isDefault = photo.id === DEFAULT_ID;
+        // De standaardfoto staat vast; die kun je alleen aan- of uitzetten bij Stijl.
+        $("fit").hidden = isDefault;
+        $("fit").previousElementSibling.hidden = isDefault;
+        $("remove").hidden = isDefault;
+        if (isDefault) editing = { ...photo, fit: "cover", focusX: 50, focusY: 62 };
+        const url = await imageUrl(photo);
+        $("hub").querySelectorAll("img").forEach((image) => { image.src = url; });
+        $("focus-pick").querySelector("img").src = url;
+        renderEditor();
+        $("editor").hidden = false;
+        $("editor").scrollTop = 0;
+      }
+
+      let savedTimer = null;
+      async function savePhoto(change) {
+        Object.assign(editing, change);
+        renderEditor();
+        try {
+          const response = await fetch(`${photosUrl}/${editing.id}`, {
+            method: "PATCH",
+            headers: auth({ "Content-Type": "application/json" }),
+            body: JSON.stringify(change),
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          const saved = await response.json();
+          photos = photos.map((photo) => (photo.id === saved.id ? saved : photo));
+          $("saved").classList.add("show");
+          clearTimeout(savedTimer);
+          savedTimer = setTimeout(() => $("saved").classList.remove("show"), 1500);
+        } catch (error) {
+          status("Opslaan lukte niet.", "error");
+        }
+      }
+
+      $("fit").querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => savePhoto({ fit: button.dataset.value }));
+      });
+
+      $("focus-pick").addEventListener("click", (event) => {
+        const box = $("focus-pick").getBoundingClientRect();
+        savePhoto({
+          focusX: Math.round(((event.clientX - box.left) / box.width) * 100),
+          focusY: Math.round(((event.clientY - box.top) / box.height) * 100),
+        });
+      });
+
+      $("remove").addEventListener("click", async () => {
+        if (!confirm("Deze foto van de Google Hub halen?")) return;
+        await fetch(`${photosUrl}/${editing.id}`, { method: "DELETE", headers: auth() });
+        $("editor").hidden = true;
+        await load();
+        status("Foto verwijderd.", "ok");
+      });
+
+      $("close").addEventListener("click", () => {
+        $("editor").hidden = true;
+        editing = null;
+      });
+
+      // ---- Start ----
+
+      (async function start() {
+        await linkFromQr();
+        const linked = Boolean(code());
+        $("linked").hidden = !linked;
+        $("not-linked").hidden = linked;
+        if (linked) load();
+        else $("summary").textContent = "";
+      })();
+    })();
+  </script>
+</body>
+</html>

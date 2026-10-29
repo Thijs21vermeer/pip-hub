@@ -118,18 +118,23 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 
 ## Foto's en geluid
 
-**Fotolijst in de ruststand.** De ruststand wisselt elke 20 seconden tussen de standaardfoto en de foto's die jullie sturen, met de nieuwste eerst.
+**Fotolijst in de ruststand.** De ruststand wisselt tussen jullie foto's van Pip. Alles regel je op de fotopagina `fotos.html`, op je telefoon:
 
-- **Telefoon koppelen met de QR-code:** tik in de ruststand linksonder op het QR-knopje. De QR-code klapt open; scan hem met de camera van je telefoon.
-  - De startpagina gaat dan open en de telefoon is meteen gekoppeld.
+- **Erheen:** tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code. Je telefoon is dan meteen gekoppeld, en de fotopagina gaat open. Via de startpagina kan het ook: **Foto's van Pip → Foto's beheren**.
   - De QR-code bevat de kattenbak-code, en daarmee kun je ook de kattenbak en de voerbak bedienen. Daarom staat hij alleen open als je erom vraagt; hij sluit vanzelf na 2 minuten, of als je erop tikt.
-  - De code zit in de link achter het `#`. Dat deel gaat nooit naar een server, en de startpagina haalt het meteen uit de adresbalk.
-- **Foto's toevoegen:** open op je telefoon de startpagina, klap **Foto's van Pip** open en tik op **Foto's kiezen**. Dat werkt ook op een iPhone.
-  - De foto wordt op je telefoon eerst verkleind (langste kant 1600 pixels).
-  - De Google Hub haalt nieuwe foto's elk kwartier op.
-- **Staande foto's** komen helemaal in beeld, met een vage uitvergroting van zichzelf erachter.
-- **Weghalen:** tik op × bij een foto. Er passen er maximaal 40 op.
-- **Opslag:** de foto's staan op het servertje (`/api/fotos`, Netlify Blobs) en alleen wie de kattenbak-code heeft kan erbij.
+  - De code zit in de link achter het `#`. Dat deel gaat nooit naar een server, en de pagina haalt het meteen uit de adresbalk.
+- **Toevoegen:** tik op **+ Foto's toevoegen**. Dat werkt ook op een iPhone. Foto's worden op je telefoon eerst verkleind (langste kant 1600 pixels); er passen er maximaal 40 op.
+- **Per foto:** tik op een foto. Je ziet hoe hij op de Google Hub staat.
+  - **Vullen** of **Hele foto** (met een vage uitvergroting van zichzelf erachter). Zonder keuze krijgen staande foto's vanzelf "Hele foto".
+  - Bij **Vullen**: tik aan wat in beeld moet blijven, bijvoorbeeld Pips snoet.
+  - **Foto verwijderen.**
+- **Stijl:**
+  - wisselen elke 10 s, 20 s, 1 min of 5 min;
+  - nieuwste eerst of door elkaar;
+  - de standaardfoto wel of niet meenemen;
+  - rustig inzoomen terwijl een foto in beeld is.
+- **Bijwerken:** de Google Hub neemt wijzigingen binnen 5 minuten over.
+- **Opslag:** de foto's en de stijl staan op het servertje (`/api/fotos`, `/api/fotolijst`, Netlify Blobs), en alleen wie de kattenbak-code heeft kan erbij.
 
 **Geluid op de Google Hub**
 
