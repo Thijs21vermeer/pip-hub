@@ -208,20 +208,6 @@
       text-decoration: none;
     }
 
-    .media-status {
-      margin-top: 10px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    .media-status.ok {
-      color: var(--done);
-    }
-
-    .media-status.error {
-      color: var(--warn);
-    }
-
     .add-row {
       display: flex;
       gap: 8px;
@@ -285,18 +271,9 @@
       <a class="button secondary" href="fotos.html">Foto's beheren</a>
     </details>
 
-    <details id="meow-box">
-      <summary>Pips miauw</summary>
-      <p class="note">Neem Pip op, bijvoorbeeld met Dictafoon, en kies het bestand. Je hoort het als je haar aait in de ruststand op de Google Hub. Kort is het leukst: 1 tot 3 seconden.</p>
-      <input id="meow-input" type="file" accept="audio/*" hidden>
-      <button class="secondary" id="meow-add">Geluid kiezen</button>
-      <button class="secondary" id="meow-play" hidden>Afspelen</button>
-      <button class="secondary" id="meow-delete" hidden>Verwijderen</button>
-      <p class="media-status" id="meow-status"></p>
-    </details>
   </main>
 
-  <script src="config.js?v=20261029-24"></script>
+  <script src="config.js?v=20261029-25"></script>
   <script>
     (function () {
       "use strict";
@@ -437,86 +414,6 @@
           "Het kattenbak-servertje",
         ),
       });
-
-      // ---- Foto's van Pip en haar miauw (voor de ruststand op de Google Hub) ----
-
-      // Zelfde servertje en code als de kattenbak (hierboven gekoppeld). Foto's
-      // beheer je op fotos.html.
-      const meowUrl = serverUrl("geluid", config.meow && config.meow.url);
-      const MAX_MEOW_BYTES = 1024 * 1024;
-
-      function auth() {
-        return { Authorization: `Bearer ${kattenbakLink.stored()}` };
-      }
-
-      function statusLine(id, text, kind) {
-        const line = document.getElementById(id);
-        line.textContent = text || "";
-        line.className = `media-status ${kind || ""}`;
-      }
-
-      let meowPreview = null;
-
-      async function showMeow() {
-        const has = (yes) => {
-          document.getElementById("meow-play").hidden = !yes;
-          document.getElementById("meow-delete").hidden = !yes;
-          document.getElementById("meow-add").textContent = yes ? "Ander geluid kiezen" : "Geluid kiezen";
-        };
-        if (!kattenbakLink.stored()) {
-          has(false);
-          return statusLine("meow-status", "Koppel eerst de kattenbak hierboven.");
-        }
-        try {
-          const response = await fetch(`${meowUrl}?info=1`, { headers: auth() });
-          if (response.status === 404) {
-            has(false);
-            return statusLine("meow-status", "Nog geen miauw: de Google Hub laat Pip dan zacht spinnen.");
-          }
-          if (!response.ok) throw new Error(String(response.status));
-          const info = await response.json();
-          has(true);
-          statusLine("meow-status", `Pips miauw staat erop (${Math.round(info.bytes / 1024)} kB).`, "ok");
-        } catch (error) {
-          has(false);
-          statusLine("meow-status", "Het servertje is nu niet bereikbaar.", "error");
-        }
-      }
-
-      document.getElementById("meow-add").addEventListener("click", () => document.getElementById("meow-input").click());
-      document.getElementById("meow-input").addEventListener("change", async (event) => {
-        const file = event.target.files[0];
-        event.target.value = "";
-        if (!file) return;
-        if (file.size > MAX_MEOW_BYTES) return statusLine("meow-status", "Dat bestand is te groot. Neem een kort stukje op (1 tot 3 seconden).", "error");
-        statusLine("meow-status", "Versturen…");
-        try {
-          const response = await fetch(meowUrl, {
-            method: "PUT",
-            headers: { ...auth(), "Content-Type": file.type || "audio/mp4" },
-            body: file,
-          });
-          if (!response.ok) throw new Error(String(response.status));
-          await showMeow();
-        } catch (error) {
-          statusLine("meow-status", "Dat lukte niet. Is het een geluidsbestand?", "error");
-        }
-      });
-      document.getElementById("meow-play").addEventListener("click", async () => {
-        const response = await fetch(meowUrl, { headers: auth() });
-        if (!response.ok) return;
-        if (meowPreview) URL.revokeObjectURL(meowPreview.src);
-        meowPreview = new Audio(URL.createObjectURL(await response.blob()));
-        meowPreview.play().catch(() => statusLine("meow-status", "Afspelen lukt hier niet; op de Google Hub wel.", "error"));
-      });
-      document.getElementById("meow-delete").addEventListener("click", async () => {
-        if (!confirm("Pips miauw verwijderen?")) return;
-        await fetch(meowUrl, { method: "DELETE", headers: auth() });
-        showMeow();
-      });
-
-      // Pas laden als je het blokje openklapt.
-      document.getElementById("meow-box").addEventListener("toggle", (event) => { if (event.target.open) showMeow(); });
 
       // ---- Koppelen met de QR-code uit de ruststand op de Google Hub ----
 

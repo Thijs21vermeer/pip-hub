@@ -136,12 +136,10 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Bijwerken:** de Google Hub neemt wijzigingen binnen 5 minuten over.
 - **Opslag:** de foto's en de stijl staan op het servertje (`/api/fotos`, `/api/fotolijst`, Netlify Blobs), en alleen wie de kattenbak-code heeft kan erbij.
 
-**Geluid op de Google Hub**
+**Geluid op de Google Hub** (tikken op de ruststand opent het overzicht stil)
 
 - **Voersignaal:** na **Voeren** altijd dezelfde drie tonen. Pip leert zo dat dat geluid "eten" betekent.
 - **Feestje:** vink je de laatste taak van de dag af, dan klinkt een vrolijk loopje en schieten twee confettikanonnen in de hoeken onderaan confetti over het scherm.
-- **Aai Pip:** tik op de ruststand en Pip miauwt (soms spint ze). Het overzicht opent meteen; de miauw klinkt erdoorheen.
-- **Pips miauw:** zet je via **Pips miauw** op de startpagina (een geluidsbestand van hooguit 1 MB, het liefst 1 tot 3 seconden). Zonder miauw spint ze alleen.
 - **Volume:** vanaf 21:00 tot 07:00 zijn de geluiden zachter. Het volume zelf regel je op de Google Hub.
 
 ## Meldingen op je telefoon (ntfy)

@@ -485,7 +485,6 @@
     refreshKattenbak();
     pullSettings();
     refreshPhotos();
-    refreshMeow();
     els.restQrButton.hidden = !actionCode();
   }
 
@@ -1056,13 +1055,11 @@
     frontLayer = 1 - frontLayer;
   }
 
-  // ---- Geluid: voersignaal, feestje en Aai Pip ----
+  // ---- Geluid: voersignaal en feestje ----
 
-  // Alles gemaakt met Web Audio, behalve Pips miauw (via de startpagina). Een
-  // browser laat pas geluid toe na een tik; elke tik op het scherm maakt het wakker.
+  // Gemaakt met Web Audio. Een browser laat pas geluid toe na een tik; elke tik
+  // op het scherm maakt het wakker.
   let audioContext = null;
-  let meowBuffer = null;
-  let meowAt = null;
 
   function audio() {
     const Context = window.AudioContext || window.webkitAudioContext;
@@ -1106,74 +1103,6 @@
     const start = ctx.currentTime + 0.05;
     [523, 659, 784, 1047].forEach((frequency, index) => tone(ctx, frequency, start + index * 0.11, 0.35, 0.22, "triangle"));
     [523, 659, 784].forEach((frequency) => tone(ctx, frequency * 2, start + 0.5, 1.1, 0.12));
-  }
-
-  // Spinnen zonder opname: een laag gebrom dat 24 keer per seconde aanzwelt.
-  function playPurr() {
-    const ctx = audio();
-    if (!ctx) return;
-    const start = ctx.currentTime + 0.02;
-    const rumble = ctx.createOscillator();
-    const filter = ctx.createBiquadFilter();
-    const pulse = ctx.createGain();
-    const wobble = ctx.createOscillator();
-    const depth = ctx.createGain();
-    const envelope = ctx.createGain();
-    rumble.type = "sawtooth";
-    rumble.frequency.value = 55;
-    filter.type = "lowpass";
-    filter.frequency.value = 380;
-    pulse.gain.value = 0.18;
-    wobble.frequency.value = 24;
-    depth.gain.value = 0.18;
-    wobble.connect(depth).connect(pulse.gain);
-    envelope.gain.setValueAtTime(0.0001, start);
-    envelope.gain.exponentialRampToValueAtTime(loudness(), start + 0.3);
-    envelope.gain.setValueAtTime(loudness(), start + 1.4);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, start + 2);
-    rumble.connect(filter).connect(pulse).connect(envelope).connect(ctx.destination);
-    [rumble, wobble].forEach((node) => {
-      node.start(start);
-      node.stop(start + 2.1);
-    });
-  }
-
-  function meowUrl() {
-    return localOverride("geluid") || (config.meow && config.meow.url);
-  }
-
-  // Pips miauw ophalen, alleen als er een nieuwe is.
-  async function refreshMeow() {
-    if (!actionCode() || !meowUrl()) return;
-    try {
-      const info = await fetch(`${meowUrl()}?info=1`, { headers: authHeader(), cache: "no-store" });
-      if (info.status === 404) {
-        meowBuffer = null;
-        meowAt = null;
-        return;
-      }
-      if (!info.ok) return;
-      const { at } = await info.json();
-      if (at === meowAt) return;
-      const response = await fetch(meowUrl(), { headers: authHeader(), cache: "no-store" });
-      const ctx = audio();
-      if (!response.ok || !ctx) return;
-      meowBuffer = await ctx.decodeAudioData(await response.arrayBuffer());
-      meowAt = at;
-    } catch (error) {
-      // Geen miauw: dan spint ze.
-    }
-  }
-
-  function playMeow() {
-    const ctx = audio();
-    if (!ctx || !meowBuffer) return playPurr();
-    const source = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    source.buffer = meowBuffer;
-    gain.gain.value = loudness();
-    source.connect(gain).connect(ctx.destination);
-    source.start();
   }
 
   // ---- Telefoon koppelen met een QR-code in de ruststand ----
@@ -1228,13 +1157,6 @@
     els.restQr.hidden = true;
     els.restQrCode.innerHTML = "";
     els.restQrButton.hidden = !actionCode();
-  }
-
-  // Aai Pip: tik op de ruststand en ze miauwt (soms spint ze). Het overzicht
-  // opent meteen; de miauw klinkt erdoorheen.
-  function petPip() {
-    if (meowBuffer && Math.random() < 0.75) playMeow();
-    else playPurr();
   }
 
   // Feestje: alle taken van vandaag zijn af. Twee confettikanonnen in de hoeken
@@ -2082,7 +2004,6 @@
     } else if (action === "rest-qr-close") {
       hideRestQr();
     } else if (action === "wake") {
-      petPip();
       hideRest();
     } else if (action === "video-close") {
       closeVideo();
@@ -2187,9 +2108,7 @@
   setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
   setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
   refreshPhotos();
-  refreshMeow();
   setInterval(refreshPhotos, 5 * 60 * 1000); // wijzigingen op fotos.html binnen 5 minuten
-  setInterval(refreshMeow, 15 * 60 * 1000);
   scheduleSlide();
   // Lukte het eerste ophalen niet (geen netwerk), elke minuut opnieuw proberen.
   setInterval(() => {
