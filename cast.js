@@ -50,6 +50,9 @@
       if (data.type === "video-close") window.Pip.closeVideo();
     });
 
+    // Voor de knop "Google Hub": Pip sluit zichzelf, de Hub toont weer zijn eigen scherm.
+    window.PipCast = { stop: () => context.stop() };
+
     const options = new framework.CastReceiverOptions();
     options.disableIdleTimeout = true;
     options.statusText = "Pip";

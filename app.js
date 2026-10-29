@@ -45,13 +45,18 @@
   ];
   // Hoe vaak een taak terugkomt. De periode begint om resetHour: een weektaak op
   // maandag, een maandtaak op de 1e, een kwartaaltaak op 1 jan/apr/jul/okt.
+  // Met een vaste dag (task.day) begint de periode op die dag: een weekdag
+  // (0 = zo … 6 = za) bij week-taken, de zoveelste van de maand (1-28) bij
+  // maand- en kwartaaltaken.
   const REPEATS = {
     daily: { label: "Elke dag", todo: "Nog doen" },
-    weekly: { label: "Elke week", todo: "Deze week nog doen" },
-    biweekly: { label: "Om de week", todo: "Deze 2 weken nog doen" },
-    monthly: { label: "Elke maand", todo: "Deze maand nog doen" },
-    quarterly: { label: "Elk kwartaal", todo: "Dit kwartaal nog doen" },
+    weekly: { label: "Elke week", todo: "Deze week nog doen", days: "week" },
+    biweekly: { label: "Om de week", todo: "Deze 2 weken nog doen", days: "week" },
+    monthly: { label: "Elke maand", todo: "Deze maand nog doen", days: "month" },
+    quarterly: { label: "Elk kwartaal", todo: "Dit kwartaal nog doen", days: "month" },
   };
+  const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // keuze in de editor: ma t/m zo
+  const MAX_MONTH_DAY = 28; // elke maand heeft een 28e
   const DAYS_SHORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
   const MONTHS_SHORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
   // Schermtoetsenbord: de Hub heeft zelf geen toetsenbord voor apps.
@@ -89,6 +94,7 @@
     check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     minus: svg('<path d="M5 12h14"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
+    home: svg('<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>'),
   };
 
   // Zoals in Voerraad (components/ProductCard.tsx).
@@ -105,6 +111,7 @@
 
   const els = {
     logo: document.getElementById("logo"),
+    toGoogle: document.getElementById("to-google"),
     progressText: document.getElementById("progress-text"),
     progressBar: document.getElementById("progress-bar"),
     clock: document.getElementById("clock"),
@@ -163,27 +170,81 @@
     return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
   }
 
-  // In welke periode valt een moment? Gelijke sleutel = zelfde dag/week/maand.
-  function periodKey(repeat, date) {
-    const d = shifted(date);
-    const day = dayNumber(date);
-    if (repeat === "weekly") return `w${Math.floor((day + 3) / 7)}`; // weken beginnen op maandag
-    if (repeat === "biweekly") return `b${Math.floor((day + 3) / 14)}`;
-    if (repeat === "monthly") return `m${d.getFullYear()}-${d.getMonth()}`;
-    if (repeat === "quarterly") return `q${d.getFullYear()}-${Math.floor(d.getMonth() / 3)}`;
-    return `d${day}`;
+  function mod(value, by) {
+    return ((value % by) + by) % by;
+  }
+
+  // Weekdag van een dagnummer (0 = zo); dagnummer 0 was een donderdag.
+  function weekdayOf(day) {
+    return mod(day + 4, 7);
   }
 
   function repeatOf(task) {
     return REPEATS[task.repeat] ? task.repeat : "daily";
   }
 
+  // Vaste dag van de taak, of null als die er niet (meer) bij past.
+  function dayOf(task) {
+    const kind = REPEATS[repeatOf(task)].days;
+    const day = task.day;
+    if (!Number.isInteger(day)) return null;
+    if (kind === "week") return day >= 0 && day <= 6 ? day : null;
+    if (kind === "month") return day >= 1 && day <= MAX_MONTH_DAY ? day : null;
+    return null;
+  }
+
+  // Eerste dag (dagnummer) van de periode waarin `date` valt. "Om de week op
+  // zaterdag" telt vanaf de eerste zaterdag nadat die dag gekozen is (task.from).
+  function periodStart(task, date) {
+    const repeat = repeatOf(task);
+    const day = dayOf(task);
+    const today = dayNumber(date);
+    if (repeat === "daily") return today;
+    if (repeat === "weekly" || repeat === "biweekly") {
+      const weekday = day === null ? 1 : day; // zonder vaste dag: maandag
+      const anchor = repeat === "biweekly" && day !== null && Number.isInteger(task.from)
+        ? task.from + mod(weekday - weekdayOf(task.from), 7)
+        : weekday - 4;
+      return today - mod(today - anchor, repeat === "weekly" ? 7 : 14);
+    }
+    const d = shifted(date);
+    const first = day || 1;
+    let month = d.getMonth() - (d.getDate() < first ? 1 : 0);
+    if (repeat === "quarterly") month -= mod(month, 3);
+    return Math.floor(Date.UTC(d.getFullYear(), month, first) / 86400000);
+  }
+
+  function nextPeriodStart(task, start) {
+    const repeat = repeatOf(task);
+    if (repeat === "daily") return start + 1;
+    if (repeat === "weekly") return start + 7;
+    if (repeat === "biweekly") return start + 14;
+    const d = new Date(start * 86400000);
+    const months = repeat === "quarterly" ? 3 : 1;
+    return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, d.getUTCDate()) / 86400000);
+  }
+
+  // Net een vaste dag gekozen die nog moet komen? Dan het dagnummer van die dag:
+  // tot dan staat de taak nog niet open.
+  function upcomingDay(task) {
+    if (dayOf(task) === null || !Number.isInteger(task.from)) return null;
+    const start = periodStart(task, new Date());
+    return start < task.from ? nextPeriodStart(task, start) : null;
+  }
+
   // De laatste keer dat de taak gedaan is, als dat in de huidige periode was.
+  // Met een vaste dag telt de dag ervoor ook mee: de kattenbak op vrijdag al
+  // verschoond is goed voor zaterdag.
   function currentDone(task) {
     const entry = state.done[task.id];
     if (!entry) return null;
-    const repeat = repeatOf(task);
-    return periodKey(repeat, new Date(entry.at)) === periodKey(repeat, new Date()) ? entry : null;
+    const start = periodStart(task, new Date()) - (dayOf(task) === null ? 0 : 1);
+    return dayNumber(new Date(entry.at)) >= start ? entry : null;
+  }
+
+  // Taken die nu meetellen: niet de taken waarvan de vaste dag nog moet komen.
+  function dueTasks() {
+    return tasks().filter((task) => upcomingDay(task) === null);
   }
 
   function loadState() {
@@ -495,6 +556,8 @@
       });
       if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
+      // Pip is terug (vanzelf of via de startknop): de pauze is voorbij.
+      if (remote.away) putAway(null);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (error) {
@@ -505,6 +568,22 @@
       schedulePush(); // ook wat sinds de start op de Hub veranderde
     } catch (error) {
       // Niet bereikbaar: dan maar met de kopie op de Hub, later opnieuw.
+    }
+  }
+
+  // Pauze: tot wanneer Pip weg moet blijven. Het script op de Mac (start-pip.command
+  // --blijf) leest dit en zet Pip pas daarna terug. null = geen pauze.
+  async function putAway(until) {
+    if (!actionCode() || !settingsUrl()) return;
+    try {
+      await fetch(settingsUrl(), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${actionCode()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ away: until ? { until } : null }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+      });
+    } catch (error) {
+      // Niet bereikbaar: dan zet het script Pip na de gewone wachttijd terug.
     }
   }
 
@@ -519,7 +598,12 @@
   }
 
   function setTasks(list) {
-    const clean = list.map(({ id, title, icon, repeat }) => ({ id, title, icon, repeat: REPEATS[repeat] ? repeat : "daily" }));
+    const clean = list.map((task) => {
+      const item = { id: task.id, title: task.title, icon: task.icon, repeat: repeatOf(task) };
+      const day = dayOf(task);
+      if (day !== null) Object.assign(item, { day, from: task.from });
+      return item;
+    });
     saveSettings({ tasks: clean });
     // Weggehaalde taken ook uit de vinkjes van vandaag.
     Object.keys(state.done).forEach((id) => {
@@ -583,13 +667,41 @@
     return `op ${formatDate(date)} om ${formatTime(date)}`;
   }
 
+  // "za 1 nov" voor een dagnummer.
+  function dayLabel(day) {
+    const date = new Date(day * 86400000);
+    return `${DAYS_SHORT[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]}`;
+  }
+
+  // Wat er onder een open taak staat. Met een vaste dag: wanneer hij open ging
+  // ("Vandaag", "Sinds za 25 okt") of wanneer hij voor het eerst komt.
+  function todoText(task) {
+    if (dayOf(task) === null) return REPEATS[repeatOf(task)].todo;
+    const upcoming = upcomingDay(task);
+    if (upcoming !== null) return `Op ${dayLabel(upcoming)}`;
+    const start = periodStart(task, new Date());
+    const today = dayNumber(new Date());
+    if (start === today) return "Vandaag";
+    if (start === today - 1) return "Sinds gisteren";
+    return `Sinds ${dayLabel(start)}`;
+  }
+
+  // "Om de week · za" of "Elke maand · de 15e".
+  function repeatText(task) {
+    const day = dayOf(task);
+    const label = REPEATS[repeatOf(task)].label;
+    if (day === null) return label;
+    return `${label} · ${REPEATS[repeatOf(task)].days === "week" ? DAYS_SHORT[day] : `de ${day}e`}`;
+  }
+
   function taskCard(task) {
     const done = currentDone(task);
+    const later = !done && upcomingDay(task) !== null;
     const status = done
       ? `${escapeHtml(done.by)} · ${whenShort(done.at)}`
-      : REPEATS[repeatOf(task)].todo;
+      : todoText(task);
     return `
-      <button class="task${done ? " done" : ""}" data-action="task" data-id="${escapeHtml(task.id)}">
+      <button class="task${done ? " done" : ""}${later ? " later" : ""}" data-action="task" data-id="${escapeHtml(task.id)}">
         <span class="icon">${done ? ICONS.check : ICONS[task.icon] || ICONS.paw}</span>
         <span>
           <span class="title">${escapeHtml(task.title)}</span>
@@ -769,13 +881,17 @@
       });
   }
 
+  function restWhen(task) {
+    return dayOf(task) === null ? REST_WHEN[repeatOf(task)] : todoText(task).toLowerCase();
+  }
+
   function renderRest() {
-    const open = tasks().filter((task) => !currentDone(task));
+    const open = dueTasks().filter((task) => !currentDone(task));
     const stock = restStock();
     let html = "";
     if (open.length) {
       const rows = open.slice(0, REST_TASKS).map((task) =>
-        restRow(ICONS[task.icon] || ICONS.paw, task.title, REST_WHEN[repeatOf(task)]));
+        restRow(ICONS[task.icon] || ICONS.paw, task.title, restWhen(task)));
       if (open.length > REST_TASKS) rows.push(`<li class="more">+${open.length - REST_TASKS} meer</li>`);
       html += `<div class="rest-title">Nog te doen</div><ul class="rest-list">${rows.join("")}</ul>`;
     }
@@ -808,8 +924,9 @@
   function render() {
     renderClock();
     const list = tasks();
-    const total = list.length;
-    const doneCount = list.filter((task) => currentDone(task)).length;
+    const due = dueTasks(); // een vaste dag die nog moet komen telt nog niet mee
+    const total = due.length;
+    const doneCount = due.filter((task) => currentDone(task)).length;
     const allDone = total > 0 && doneCount === total;
     document.body.classList.toggle("all-done", allDone);
     els.progressText.textContent = allDone ? "Alles gedaan voor vandaag" : `${doneCount} van ${total} gedaan`;
@@ -830,7 +947,7 @@
         <span class="icon">${ICONS[task.icon] || ICONS.paw}</span>
         <span>
           <span class="title">${escapeHtml(task.title)}</span>
-          <span class="status">${REPEATS[repeatOf(task)].label} · ${index < HOME_TASKS ? "startscherm" : "onder meer"}</span>
+          <span class="status">${repeatText(task)} · ${index < HOME_TASKS ? "startscherm" : "onder meer"}</span>
         </span>
         <span class="edit-badge">${ICONS.pencil}</span>
       </button>`;
@@ -896,6 +1013,21 @@
       `<button class="icon-pick${name === editor.icon ? " selected" : ""}" data-action="kb-icon" data-icon="${name}" aria-label="${name}">${ICONS[name]}</button>`).join("");
     const repeats = Object.entries(REPEATS).map(([key, { label }]) =>
       `<button class="repeat-pick${key === editor.repeat ? " selected" : ""}" data-action="kb-repeat" data-repeat="${key}">${label}</button>`).join("");
+    const kind = REPEATS[editor.repeat].days;
+    const pick = (day, label) =>
+      `<button class="repeat-pick${day === null ? "" : " weekday"}${editor.day === day ? " selected" : ""}" data-action="kb-day" data-day="${day === null ? "" : day}">${label}</button>`;
+    let days = "";
+    if (kind === "week") {
+      days = WEEK_ORDER.map((day) => pick(day, DAYS_SHORT[day])).join("");
+    } else if (kind === "month") {
+      days = `
+        <button class="repeat-pick step" data-action="kb-day-step" data-delta="-1" aria-label="Eerder">${ICONS.left}</button>
+        <span class="month-day${editor.day === null ? " empty" : ""}">${editor.day === null ? "Kies een dag" : `Op de ${editor.day}e`}</span>
+        <button class="repeat-pick step" data-action="kb-day-step" data-delta="1" aria-label="Later">${ICONS.right}</button>`;
+    }
+    const dayRow = kind
+      ? `<div class="repeat-row"><span class="repeat-label">Welke dag</span>${pick(null, "Geen vaste dag")}${days}</div>`
+      : "";
     const manage = isNew ? "" : `
       <button class="choice warn small" data-action="kb-delete"${list.length <= 1 ? " disabled" : ""}>${editor.confirmDelete ? "Echt verwijderen?" : "Verwijderen"}</button>
       <button class="choice secondary small square" data-action="kb-move" data-delta="-1" aria-label="Eerder"${index <= 0 ? " disabled" : ""}>${ICONS.left}</button>
@@ -906,7 +1038,10 @@
       <div class="name-field${editor.title ? "" : " empty"}">${escapeHtml(editor.title) || "Naam van de taak"}<span class="caret"></span></div>
       ${chips ? `<div class="chips">${chips}</div>` : ""}
       <div class="icon-row">${icons}</div>
-      <div class="repeat-row"><span class="repeat-label">Hoe vaak</span>${repeats}</div>
+      <div class="schedule">
+        <div class="repeat-row"><span class="repeat-label">Hoe vaak</span>${repeats}</div>
+        ${dayRow}
+      </div>
       <div class="keyboard">${KEY_ROWS.map((row) => `<div class="kb-row">${row.map(keyButton).join("")}</div>`).join("")}</div>
       <div class="editor-actions">
         <div class="editor-manage">${manage}</div>
@@ -919,11 +1054,24 @@
 
   function openEditor(task) {
     const base = task
-      ? { id: task.id, title: task.title, icon: task.icon || "paw", repeat: repeatOf(task) }
-      : { id: null, title: "", icon: "paw", repeat: "daily" };
+      ? { id: task.id, title: task.title, icon: task.icon || "paw", repeat: repeatOf(task), day: dayOf(task) }
+      : { id: null, title: "", icon: "paw", repeat: "daily", day: null };
     openSheet(null, "", { wide: true });
     editor = { ...base, confirmDelete: false };
     refreshEditor();
+  }
+
+  // Andere herhaling: een weekdag past niet bij een maandtaak en andersom.
+  function setEditorRepeat(repeat) {
+    if (!REPEATS[repeat]) return;
+    if (REPEATS[repeat].days !== REPEATS[editor.repeat].days) editor.day = null;
+    editor.repeat = repeat;
+  }
+
+  // Dag van de maand verschuiven; zonder dag begint hij bij vandaag.
+  function stepMonthDay(delta) {
+    const today = Math.min(shifted(new Date()).getDate(), MAX_MONTH_DAY);
+    editor.day = editor.day === null ? today : mod(editor.day - 1 + delta, MAX_MONTH_DAY) + 1;
   }
 
   function refreshEditor() {
@@ -946,11 +1094,14 @@
     const title = editor.title.trim();
     if (!title) return;
     const list = tasks().map((task) => ({ ...task }));
+    const schedule = { repeat: editor.repeat, day: editor.day, from: dayNumber(new Date()) };
     if (editor.id) {
       const task = list.find((t) => t.id === editor.id);
-      if (task) Object.assign(task, { title, icon: editor.icon, repeat: editor.repeat });
+      // Zelfde herhaling en dag: dan blijft de taak lopen zoals hij liep.
+      const same = task && repeatOf(task) === editor.repeat && dayOf(task) === editor.day;
+      if (task) Object.assign(task, { title, icon: editor.icon }, same ? {} : schedule);
     } else {
-      list.push({ id: `t${Date.now().toString(36)}`, title, icon: editor.icon, repeat: editor.repeat });
+      list.push({ id: `t${Date.now().toString(36)}`, title, icon: editor.icon, ...schedule });
     }
     closeSheet();
     setTasks(list);
@@ -1006,6 +1157,73 @@
         <button class="choice secondary" data-action="close">Annuleren</button>
       </div>`);
     sheetAction = action;
+  }
+
+  // ---- Naar de Google Hub ----
+
+  // Pip gaat aan de kant voor de eigen software van de Google Hub (timers, weer,
+  // fotolijst). Het script op de Mac zet Pip daarna vanzelf terug.
+  const AWAY_CHOICES = { "15": "Over 15 min", "60": "Over 1 uur", morning: "Morgenochtend" };
+  const WATCHER_FRESH_MS = 12 * 60 * 1000; // het script meldt zich elke 5 minuten
+
+  // Draait het script op de Mac dat Pip terugzet? Anders niets beloven.
+  async function watcherAlive() {
+    if (!actionCode() || !settingsUrl()) return false;
+    try {
+      const response = await fetch(settingsUrl(), {
+        headers: { Authorization: `Bearer ${actionCode()}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+      });
+      const remote = response.ok ? await response.json() : {};
+      return Date.now() - (remote.watcherSeenAt || 0) < WATCHER_FRESH_MS;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function awayUntil(choice) {
+    if (choice !== "morning") return Date.now() + Number(choice) * 60 * 1000;
+    const morning = new Date();
+    if (morning.getHours() >= NIGHT_UNTIL) morning.setDate(morning.getDate() + 1);
+    morning.setHours(NIGHT_UNTIL, 0, 0, 0);
+    return morning.getTime();
+  }
+
+  async function askGoogle() {
+    if (!(await watcherAlive())) {
+      openSheet(null, `
+        <h3>Naar Google Hub</h3>
+        <p>Pip komt daarna niet vanzelf terug: het script op de Mac draait niet. Tik later op Start Pip op je telefoon.</p>
+        <div class="choices">
+          <button class="choice" data-action="google-go" data-choice="none">Naar Google Hub</button>
+          <button class="choice secondary" data-action="close">Annuleren</button>
+        </div>`);
+      return;
+    }
+    const buttons = Object.entries(AWAY_CHOICES).map(([choice, label]) =>
+      `<button class="choice" data-action="google-go" data-choice="${choice}">${label}</button>`).join("");
+    openSheet(null, `
+      <h3>Naar Google Hub</h3>
+      <p>Wanneer moet Pip terugkomen?</p>
+      <div class="choices">${buttons}</div>
+      <div class="choices"><button class="choice secondary" data-action="close">Annuleren</button></div>
+      <p class="hint">Eerder terug? Tik op Start Pip op je telefoon.</p>`);
+  }
+
+  async function goToGoogle(choice) {
+    closeSheet();
+    if (!window.PipCast) {
+      openSheet(null, `
+        <h3>Alleen op de Google Hub</h3>
+        <p>Hier is Pip een voorbeeld in de browser; er is geen Google Hub om naartoe te gaan.</p>
+        <div class="choices"><button class="choice secondary" data-action="close">Sluiten</button></div>`);
+      return;
+    }
+    els.toGoogle.disabled = true;
+    // Eerst opslaan: na stop() draait Pip niet meer.
+    if (choice !== "none") await putAway(awayUntil(choice));
+    window.PipCast.stop();
   }
 
   function showNotLinked() {
@@ -1145,6 +1363,10 @@
       hideRest();
     } else if (action === "video-close") {
       closeVideo();
+    } else if (action === "to-google") {
+      askGoogle();
+    } else if (action === "google-go") {
+      goToGoogle(target.dataset.choice);
     } else if (action === "all-tasks") {
       openPage();
     } else if (action === "page-close") {
@@ -1165,10 +1387,16 @@
     } else if (action === "kb-suggest" && editor) {
       editor.title = target.dataset.title;
       editor.icon = target.dataset.icon;
-      editor.repeat = target.dataset.repeat;
+      setEditorRepeat(target.dataset.repeat);
       refreshEditor();
     } else if (action === "kb-repeat" && editor) {
-      editor.repeat = target.dataset.repeat;
+      setEditorRepeat(target.dataset.repeat);
+      refreshEditor();
+    } else if (action === "kb-day" && editor) {
+      editor.day = target.dataset.day === "" ? null : Number(target.dataset.day);
+      refreshEditor();
+    } else if (action === "kb-day-step" && editor) {
+      stepMonthDay(Number(target.dataset.delta));
       refreshEditor();
     } else if (action === "kb-save" && editor) {
       saveEditor();
@@ -1206,6 +1434,7 @@
 
   // ---- Start ----
 
+  els.toGoogle.innerHTML = `${ICONS.home}<span>Google Hub</span>`;
   renderLogo();
   rollOverIfNewDay();
   saveState();

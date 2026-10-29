@@ -139,6 +139,41 @@ h1 {
   text-align: right;
 }
 
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+/* Naar de Google Hub-software: rustig, zodat hij niet met de taken concurreert. */
+.to-google {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.9rem;
+  padding: 0 1.1rem 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.to-google svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.to-google:active {
+  background: var(--accent-soft);
+}
+
+.sheet .hint {
+  margin-top: 0.9rem;
+  font-size: 0.95rem;
+}
+
 #clock {
   font-size: 2.7rem;
   font-weight: 600;
@@ -289,6 +324,15 @@ main {
 .task.done .status {
   color: var(--done);
   font-weight: 600;
+}
+
+/* Vaste dag die nog moet komen: rustig, nog niets te doen. */
+.task.later {
+  box-shadow: none;
+}
+
+.task.later .icon {
+  opacity: 0.55;
 }
 
 /* Actieknoppen: zelfde vorm als een taak, maar met een gevuld icoon. */
@@ -915,7 +959,6 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 0.2rem;
 }
 
 .editor-manage,
@@ -955,6 +998,13 @@ main {
   font-weight: 500;
 }
 
+/* "Hoe vaak" en "Welke dag" horen bij elkaar: dichter op elkaar. */
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .repeat-row {
   display: flex;
   align-items: center;
@@ -962,6 +1012,7 @@ main {
 }
 
 .repeat-label {
+  min-width: 5.6rem;
   margin-right: 0.3rem;
   color: var(--muted);
   font-size: 0.95rem;
@@ -983,6 +1034,34 @@ main {
   border-color: transparent;
   background: var(--accent);
   color: #fff;
+}
+
+.repeat-pick.weekday {
+  min-width: 3.2rem;
+}
+
+.repeat-pick.step {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  padding: 0;
+}
+
+.repeat-pick.step svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.month-day {
+  min-width: 7.5rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.month-day.empty {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 @keyframes blink {

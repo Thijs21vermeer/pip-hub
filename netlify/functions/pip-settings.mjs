@@ -3,7 +3,7 @@
 // voorraadtellers en de Voerraad-koppelcode. Bewaard in Netlify Blobs. Zelfde
 // code als het kattenbak-servertje (PIP_ACTION_CODE).
 //
-//   GET /api/pip-settings   { tasks?, people?, done?, stock?, voerraadCode?, updatedAt? }
+//   GET /api/pip-settings   { tasks?, people?, done?, stock?, voerraadCode?, away?, watcherSeenAt?, updatedAt? }
 //   PUT /api/pip-settings   werkt bij wat meegestuurd wordt
 
 import { getStore } from "@netlify/blobs";
@@ -27,12 +27,22 @@ function cleanTasks(list) {
     const title = text(item?.title, 30);
     if (!title || !/^[a-z0-9_-]+$/i.test(id) || seen.has(id)) continue;
     seen.add(id);
-    tasks.push({
+    const task = {
       id,
       title,
       icon: ICONS.has(item.icon) ? item.icon : "paw",
       repeat: REPEATS.has(item.repeat) ? item.repeat : "daily",
-    });
+    };
+    // Vaste dag: weekdag (0-6) bij week-taken, dag van de maand (1-28) bij
+    // maand- en kwartaaltaken. from = dagnummer waarop die dag gekozen is.
+    const week = task.repeat === "weekly" || task.repeat === "biweekly";
+    const month = task.repeat === "monthly" || task.repeat === "quarterly";
+    const day = item.day;
+    if (Number.isInteger(day) && ((week && day >= 0 && day <= 6) || (month && day >= 1 && day <= 28))) {
+      task.day = day;
+      if (Number.isInteger(item.from) && item.from > 0 && item.from < 100000) task.from = item.from;
+    }
+    tasks.push(task);
   }
   return tasks.length ? tasks : null;
 }
@@ -81,6 +91,18 @@ function cleanVoerraadCode(value) {
   return typeof value === "string" && /^vrh_[\w-]{20,80}$/.test(value) ? value : null;
 }
 
+// Pauze (knop "Google Hub" op Pip): { until: ms }. Het script op de Mac zet Pip
+// pas daarna terug. null = geen pauze. Fout = undefined.
+const MAX_AWAY_MS = 36 * 60 * 60 * 1000;
+
+function cleanAway(value) {
+  if (value === null) return null;
+  const now = Date.now();
+  const until = value && value.until;
+  if (!Number.isFinite(until) || until < now - 60 * 1000 || until > now + MAX_AWAY_MS) return undefined;
+  return { until: Math.round(until), at: now };
+}
+
 export default async (request) => {
   const headers = corsHeaders(request, "GET, PUT");
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
@@ -126,6 +148,15 @@ export default async (request) => {
       if (code) next.voerraadCode = code;
       else delete next.voerraadCode;
     }
+    if ("away" in body) {
+      const away = cleanAway(body.away);
+      if (away === undefined) return json(400, { error: "BAD_AWAY" }, headers);
+      if (away) next.away = away;
+      else delete next.away;
+    }
+    // Teken van leven van het script dat Pip terugzet; Pip kijkt daarnaar
+    // voordat hij belooft vanzelf terug te komen.
+    if (body.watcher === true) next.watcherSeenAt = Date.now();
     next.updatedAt = new Date().toISOString();
     await store.setJSON("settings", next);
     return json(200, next, headers);

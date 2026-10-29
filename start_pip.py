@@ -7,9 +7,11 @@
 """
 
 import argparse
+import json
 import re
 import sys
 import time
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -26,8 +28,12 @@ CODE_FILES = {
 }
 NAMESPACE = "urn:x-cast:nl.pip.hub"
 IDLE_APP_IDS = {None, "E8C28D3C"}  # E8C28D3C is de fotolijst ("Backdrop")
-CHECK_EVERY_SECONDS = 60
+CHECK_EVERY_SECONDS = 30
 ACTIVE_HOURS = (7, 23)  # met --blijf alleen tussen 07:00 en 23:00 terugzetten
+# Pip weg zonder de knop "Google Hub" (Hé Google, een timer, weggeveegd): zo lang
+# de Google Hub met rust laten voordat Pip terugkomt.
+GRACE_SECONDS = 5 * 60
+HEARTBEAT_SECONDS = 5 * 60  # zo vaak laat het script het servertje weten dat het draait
 DISCOVERY_SECONDS = 10
 
 
@@ -35,6 +41,34 @@ def read_setting(key):
     """Leest een tekstwaarde zoals castAppId: "..." uit config.js."""
     match = re.search(rf'{key}\s*:\s*"([^"]*)"', CONFIG_FILE.read_text(encoding="utf-8"))
     return match.group(1).strip() if match else ""
+
+
+def settings_request(body=None):
+    """Praat met het servertje (settings.url in config.js), met de kattenbak-code.
+
+    Geeft de instellingen terug, of {} als dat niet lukt.
+    """
+    match = re.search(r'settings\s*:\s*\{\s*url\s*:\s*"([^"]+)"', CONFIG_FILE.read_text(encoding="utf-8"))
+    code_file = CODE_FILES["kattenbak-code"]
+    if not match or not code_file.exists():
+        return {}
+    headers = {"Authorization": f"Bearer {code_file.read_text(encoding='utf-8').strip()}"}
+    data = None
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+        data = json.dumps(body).encode()
+    request = urllib.request.Request(match.group(1), data=data, headers=headers, method="PUT" if data else "GET")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return json.load(response)
+    except (OSError, ValueError):
+        return {}
+
+
+def away_until():
+    """Tot wanneer Pip weg moet blijven (knop "Google Hub"), in seconden; 0 = geen pauze."""
+    away = settings_request().get("away") or {}
+    return away.get("until", 0) / 1000
 
 
 def now():
@@ -113,14 +147,34 @@ def keep_pip_on(hub, app_id, pip):
     start, end = ACTIVE_HOURS
     print(f"Pip blijft aan op {hub.cast_info.friendly_name} tussen {start}:00 en {end}:00.")
     print("Laat dit venster open; sluit het om te stoppen.")
+    was_on = hub.app_id == app_id
+    wait_until = 0  # Pip niet eerder terugzetten dan dit moment
+    told_pause = 0
+    last_heartbeat = 0
     while True:
-        if start <= datetime.now().hour < end and hub.app_id in IDLE_APP_IDS:
-            print(f"{now()} Google Hub is vrij, Pip wordt gestart.")
-            try:
-                hub.start_app(app_id)
-                send_codes(hub, pip)
-            except PyChromecastError as error:
-                print(f"{now()} Starten lukte niet ({error!r}), over een minuut opnieuw.")
+        if time.time() - last_heartbeat >= HEARTBEAT_SECONDS:
+            settings_request({"watcher": True})  # Pip weet dan dat hij terug kan komen
+            last_heartbeat = time.time()
+        on = hub.app_id == app_id
+        if was_on and not on:
+            # Via de knop "Google Hub" staat er een pauze op het servertje; zonder
+            # knop (Hé Google, een timer, weggeveegd) geldt de gewone wachttijd.
+            wait_until = time.time() + GRACE_SECONDS
+            print(f"{now()} Pip is weg, de Google Hub krijgt even de ruimte.")
+        was_on = on
+        if not on and start <= datetime.now().hour < end and hub.app_id in IDLE_APP_IDS:
+            away = away_until()
+            back = max(wait_until, away)
+            if time.time() >= back:
+                print(f"{now()} Google Hub is vrij, Pip wordt gestart.")
+                try:
+                    hub.start_app(app_id)
+                    send_codes(hub, pip)
+                except PyChromecastError as error:
+                    print(f"{now()} Starten lukte niet ({error!r}), zo meteen opnieuw.")
+            elif away > time.time() and away != told_pause:
+                print(f"{now()} Pauze via de knop: Pip komt om {datetime.fromtimestamp(away):%H:%M} terug.")
+                told_pause = away
         time.sleep(CHECK_EVERY_SECONDS)
 
 

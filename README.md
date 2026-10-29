@@ -11,7 +11,8 @@ Een checklist voor Pip op je Google Nest Hub: taken afvinken (wie en hoe laat), 
 | `config.js` | **Hier pas je alles aan:** taken, namen, voorraad, App-ID |
 | `start.html` | Startknop voor Chrome op Android of je Mac |
 | `start-pip.command` | Dubbelklik op je Mac om Pip te starten |
-| `houd-pip-aan.command` | Dubbelklik: zet Pip steeds terug zolang je Mac aan staat |
+| `houd-pip-aan.command` | Dubbelklik: zet Pip steeds terug zolang dat venster openstaat |
+| `pip-altijd-aan.command` | Dubbelklik: zet Pip steeds terug op de achtergrond, ook na een herstart van de Mac (nog een keer = uit) |
 | `pip.png` | Icoon, ook gebruikt voor de wakker-houd-truc |
 
 ## 1. Online via GitHub Pages
@@ -48,6 +49,15 @@ Zet de map daarna opnieuw online.
 - **Pip steeds terugzetten:** dubbelklik op `houd-pip-aan.command`. Zolang dat venster openstaat en je Mac wakker is, kijkt hij elke minuut of de Google Hub vrij is en zet hij Pip terug (tussen 07:00 en 23:00).
 - **iPhone:** Safari kan niet casten naar eigen apps. Start Pip vanaf je Mac.
 
+### Wisselen tussen Pip en de Google Hub
+
+- **Naar Google:** tik rechtsboven op **Google Hub** en kies wanneer Pip terugkomt: over 15 minuten, over 1 uur of morgenochtend. Pip gaat aan de kant en je ziet meteen het scherm van Google (timers, weer, fotolijst).
+- **Terug naar Pip:** dat gaat vanzelf als de pauze voorbij is en de Google Hub niets anders speelt. Eerder terug? Tik op **Start Pip** op je telefoon.
+- **Zonder de knop:** zegt iemand "Hé Google", loopt er een timer af of veegt iemand Pip weg? Dan komt Pip 5 minuten nadat de Google Hub weer vrij is terug. Speelt er muziek of een video, dan wacht Pip tot die klaar is.
+- **Daarvoor moet het script op de Mac draaien:** dubbelklik één keer op `pip-altijd-aan.command`. Het draait dan op de achtergrond, ook na een herstart van de Mac, zolang de Mac wakker is. Nog een keer dubbelklikken zet het uit. Wat het doet staat in `~/Library/Logs/pip-blijf.log`.
+- **Script uit?** Dan zegt Pip dat bij de knop, en moet je Pip daarna zelf weer starten.
+- **Waarom op tijd en niet "zodra je klaar bent":** de Google Hub meldt in zijn eigen scherm altijd hetzelfde ("Backdrop"), of je hem nu gebruikt of niet. Het script kan dus niet zien of iemand nog met Google bezig is.
+
 Welke Cast-apparaten ziet je Mac? Dat check je in Terminal met:
 
 ```bash
@@ -72,6 +82,10 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Daarachter** zit de pagina **Alle taken**: daar vink je alle taken af. Met **Bewerken** wijzig, verplaats of verwijder je een taak, of voeg je er een toe (maximaal 12).
 - **Typen** gaat met het schermtoetsenbord van Pip, want de Google Hub heeft geen eigen toetsenbord. Er staan ook suggesties klaar, zoals "Nagels knippen" of "Medicijn geven".
 - **Volgorde:** met ‹ en › verplaats je een taak. Wat op plek 1 t/m 4 staat, komt op het startscherm.
+- **Hoe vaak en welke dag:** kies elke dag, week, om de week, maand of kwartaal. Bij week-taken kun je een vaste dag kiezen ("om de week op zaterdag"), bij maand- en kwartaaltaken een datum ("elke maand op de 15e").
+  - De taak gaat op die dag open en blijft open tot hij gedaan is ("Vandaag", "Sinds za 1 nov").
+  - Een dag eerder gedaan telt ook mee.
+  - Kies je een dag die nog moet komen, dan staat er eerst "Op za 1 nov". Tot die dag telt de taak niet mee in "x van y gedaan".
 - **Opslag:** de lijst wordt op de Google Hub bewaard en op het servertje (`/api/pip-settings`, Netlify Blobs), met dezelfde kattenbak-code. Zo overleeft hij een herstart van de Google Hub. Ook de huisgenoten van de startpagina komen daar terecht.
 - `config.js` bevat alleen de standaardlijst voor als er nog niets is opgeslagen.
 
@@ -122,5 +136,5 @@ Open daarna http://localhost:8000 in je browser.
 ## Goed om te weten
 
 - **Wakker houden:** de Google Hub sluit een cast-app na ongeveer 10 minuten als er geen media speelt. `cast.js` "speelt" daarom elke 9 minuten onzichtbaar `pip.png` af, dezelfde truc als Home Assistant Cast. Niet officieel, dus een update van Google kan dit breken.
-- **Na een timer, muziek of "Hé Google"** verdwijnt Pip. Start hem dan opnieuw, of laat `houd-pip-aan.command` dat doen.
+- **Na een timer, muziek of "Hé Google"** verdwijnt Pip. `pip-altijd-aan.command` (of `houd-pip-aan.command` met een open venster) zet hem terug; zie "Wisselen tussen Pip en de Google Hub".
 - **Opslag:** de vinkjes en de voorraad worden op de Google Hub zelf bewaard. Je telefoon ziet ze niet, en bij een herstart van de Google Hub kunnen ze kwijt zijn. Synchroniseren met je telefoon vraagt een online database (bijvoorbeeld Supabase).
