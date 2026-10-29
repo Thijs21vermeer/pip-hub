@@ -52,6 +52,7 @@ Zet de map daarna opnieuw online.
 ### Wisselen tussen Pip en de Google Hub
 
 - **Naar Google:** tik rechtsboven op **Google Hub** en kies wanneer Pip terugkomt: over 15 minuten, over 1 uur of morgenochtend. Pip gaat aan de kant en je ziet meteen het scherm van Google (timers, weer, fotolijst).
+- **Zelf kiezen:** onder de vaste tijden stel je met −1 uur, −15 min, +15 min en +1 uur zelf een tijdstip in (tussen 5 minuten en 24 uur vooruit). Valt dat na 23:00, dan komt Pip de volgende ochtend om 07:00 terug.
 - **Terug naar Pip:** dat gaat vanzelf als de pauze voorbij is en de Google Hub niets anders speelt. Eerder terug? Tik op **Start Pip** op je telefoon.
 - **Zonder de knop:** zegt iemand "Hé Google", loopt er een timer af of veegt iemand Pip weg? Dan komt Pip 5 minuten nadat de Google Hub weer vrij is terug. Speelt er muziek of een video, dan wacht Pip tot die klaar is.
 - **Daarvoor moet het script op de Mac draaien:** dubbelklik één keer op `pip-altijd-aan.command`. Het draait dan op de achtergrond, ook na een herstart van de Mac, zolang de Mac wakker is. Nog een keer dubbelklikken zet het uit. Wat het doet staat in `~/Library/Logs/pip-blijf.log`.

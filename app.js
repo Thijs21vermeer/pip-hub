@@ -1182,7 +1182,57 @@
     }
   }
 
+  // Zelf kiezen: een tijdstip, met knoppen een kwartier of uur verschuiven.
+  const AWAY_STEP_MS = 15 * 60 * 1000;
+  const AWAY_MIN_MS = 5 * 60 * 1000;
+  const AWAY_MAX_MS = 24 * 60 * 60 * 1000;
+  let awayPick = 0;
+
+  function clampAway(at) {
+    return Math.min(Math.max(at, Date.now() + AWAY_MIN_MS), Date.now() + AWAY_MAX_MS);
+  }
+
+  // "over 45 min" of "over 2 uur 15 min".
+  function awayDuration(at) {
+    const minutes = Math.max(1, Math.round((at - Date.now()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    if (!hours) return `over ${rest} min`;
+    return `over ${hours} uur${rest ? ` ${rest} min` : ""}`;
+  }
+
+  function customAwayHtml() {
+    const at = new Date(awayPick);
+    const day = at.toDateString() === new Date().toDateString() ? "" : "morgen ";
+    const step = (delta, label) =>
+      `<button class="away-step" data-action="google-step" data-delta="${delta}">${label}</button>`;
+    return `
+      <h3>Wanneer komt Pip terug?</h3>
+      <div class="away-pick">
+        ${step(-60, "−1 uur")}${step(-15, "−15 min")}
+        <div class="away-time"><strong>${day}${formatTime(at)}</strong><span>${awayDuration(awayPick)}</span></div>
+        ${step(15, "+15 min")}${step(60, "+1 uur")}
+      </div>
+      <div class="choices">
+        <button class="choice" data-action="google-go" data-choice="custom">Naar Google Hub</button>
+        <button class="choice secondary" data-action="to-google">Terug</button>
+      </div>`;
+  }
+
+  function openCustomAway() {
+    // Begin een half uur vooruit, afgerond op het volgende kwartier.
+    awayPick = clampAway(Math.ceil((Date.now() + 30 * 60 * 1000) / AWAY_STEP_MS) * AWAY_STEP_MS);
+    openSheet(null, customAwayHtml());
+  }
+
+  function stepCustomAway(minutes) {
+    // Weer op een heel kwartier uitkomen, ook na de grens van 5 min of 24 uur.
+    awayPick = clampAway(Math.round((awayPick + minutes * 60 * 1000) / AWAY_STEP_MS) * AWAY_STEP_MS);
+    openSheet(null, customAwayHtml()); // opnieuw openen houdt het venster ook langer open
+  }
+
   function awayUntil(choice) {
+    if (choice === "custom") return clampAway(awayPick);
     if (choice !== "morning") return Date.now() + Number(choice) * 60 * 1000;
     const morning = new Date();
     if (morning.getHours() >= NIGHT_UNTIL) morning.setDate(morning.getDate() + 1);
@@ -1207,7 +1257,10 @@
       <h3>Naar Google Hub</h3>
       <p>Wanneer moet Pip terugkomen?</p>
       <div class="choices">${buttons}</div>
-      <div class="choices"><button class="choice secondary" data-action="close">Annuleren</button></div>
+      <div class="choices">
+        <button class="choice secondary" data-action="google-custom">Zelf kiezen</button>
+        <button class="choice secondary" data-action="close">Annuleren</button>
+      </div>
       <p class="hint">Eerder terug? Tik op Start Pip op je telefoon.</p>`);
   }
 
@@ -1365,6 +1418,10 @@
       closeVideo();
     } else if (action === "to-google") {
       askGoogle();
+    } else if (action === "google-custom") {
+      openCustomAway();
+    } else if (action === "google-step") {
+      stepCustomAway(Number(target.dataset.delta));
     } else if (action === "google-go") {
       goToGoogle(target.dataset.choice);
     } else if (action === "all-tasks") {
