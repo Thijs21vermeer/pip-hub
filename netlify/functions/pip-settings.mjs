@@ -1,9 +1,10 @@
-// Instellingen die je op de Hub zelf wijzigt (taken) of via de startpagina
-// doorgeeft (huisgenoten). Bewaard in Netlify Blobs, zodat ze een herstart van
-// de Hub overleven. Zelfde code als het kattenbak-servertje (PIP_ACTION_CODE).
+// Alles wat Pip na een herstart van de Google Hub terug moet hebben: de taken,
+// de huisgenoten, de vinkjes van vandaag, de handmatige voorraadtellers en de
+// Voerraad-koppelcode. Bewaard in Netlify Blobs. Zelfde code als het
+// kattenbak-servertje (PIP_ACTION_CODE).
 //
-//   GET /api/pip-settings                     { tasks?, people?, updatedAt? }
-//   PUT /api/pip-settings  { tasks?, people? }  werkt bij wat meegestuurd wordt
+//   GET /api/pip-settings   { tasks?, people?, today?, stock?, voerraadCode?, updatedAt? }
+//   PUT /api/pip-settings   werkt bij wat meegestuurd wordt
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
@@ -36,6 +37,37 @@ function cleanPeople(list) {
   return people.length ? people : null;
 }
 
+// Vinkjes van één dag: { day: "2026-10-29", done: { taakId: { by, at, took } } }.
+function cleanToday(value) {
+  if (!value || typeof value !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(value.day)) return null;
+  const done = {};
+  for (const [id, entry] of Object.entries(value.done || {}).slice(0, MAX_TASKS)) {
+    if (!/^[a-z0-9_-]{1,40}$/i.test(id) || !entry || typeof entry.at !== "number") continue;
+    done[id] = {
+      by: text(entry.by, 20) || "Gedaan",
+      at: entry.at,
+      took: Number.isInteger(entry.took) && entry.took >= 0 && entry.took < 100 ? entry.took : 0,
+    };
+  }
+  return { day: value.day, done };
+}
+
+// Handmatige voorraadtellers: { natvoer: 13, ... }.
+function cleanStock(value) {
+  if (!value || typeof value !== "object") return null;
+  const stock = {};
+  for (const [id, amount] of Object.entries(value).slice(0, 20)) {
+    if (/^[a-z0-9_-]{1,40}$/i.test(id) && Number.isInteger(amount) && amount >= 0 && amount < 1000) stock[id] = amount;
+  }
+  return stock;
+}
+
+// Voerraad-koppelcode (alleen-lezen); leeg = ontkoppeld.
+function cleanVoerraadCode(value) {
+  if (value === "") return "";
+  return typeof value === "string" && /^vrh_[\w-]{20,80}$/.test(value) ? value : null;
+}
+
 export default async (request) => {
   const headers = corsHeaders(request, "GET, PUT");
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
@@ -59,6 +91,22 @@ export default async (request) => {
       const people = cleanPeople(body.people);
       if (!people) return json(400, { error: "BAD_PEOPLE" }, headers);
       next.people = people;
+    }
+    if ("today" in body) {
+      const today = cleanToday(body.today);
+      if (!today) return json(400, { error: "BAD_TODAY" }, headers);
+      next.today = today;
+    }
+    if ("stock" in body) {
+      const stock = cleanStock(body.stock);
+      if (!stock) return json(400, { error: "BAD_STOCK" }, headers);
+      next.stock = stock;
+    }
+    if ("voerraadCode" in body) {
+      const code = cleanVoerraadCode(body.voerraadCode);
+      if (code === null) return json(400, { error: "BAD_VOERRAAD_CODE" }, headers);
+      if (code) next.voerraadCode = code;
+      else delete next.voerraadCode;
     }
     next.updatedAt = new Date().toISOString();
     await store.setJSON("settings", next);

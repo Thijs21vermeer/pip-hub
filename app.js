@@ -119,6 +119,7 @@
   const busyActions = new Set();
   let settings = loadSettingsCache(); // { tasks?, people? } van de Hub of het servertje
   let pushTimer = null;
+  let synced = false; // al een keer met het servertje gelijkgetrokken?
   let editor = null; // taak die nu gewijzigd wordt: { id, title, icon, confirmDelete }
   let pageOpen = false;
   let pageEditing = false;
@@ -152,12 +153,15 @@
     return loaded;
   }
 
+  // De Google Hub gooit zijn opslag weg als Pip herstart, dus de vinkjes en
+  // tellers gaan ook naar het servertje (zie pushSettings/pullSettings).
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
-      // Geen opslag beschikbaar: de lijst werkt, maar onthoudt niets na herstart.
+      // Geen opslag beschikbaar: dan alleen het servertje.
     }
+    schedulePush();
   }
 
   function rollOverIfNewDay() {
@@ -391,13 +395,22 @@
   function saveSettings(patch) {
     settings = { ...settings, ...patch };
     writeStorage(SETTINGS_KEY, JSON.stringify(settings));
+    schedulePush();
+  }
+
+  function schedulePush() {
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushSettings, 800);
   }
 
   async function pushSettings() {
-    if (!actionCode() || !settingsUrl()) return;
-    const body = {};
+    // Pas na het eerste ophalen: anders overschrijft een verse start de vinkjes.
+    if (!synced || !actionCode() || !settingsUrl()) return;
+    const body = {
+      today: { day: state.day, done: state.done },
+      stock: state.stock,
+      voerraadCode: voerraadCode(),
+    };
     if (settings.tasks) body.tasks = settings.tasks;
     if (settings.people) body.people = settings.people;
     try {
@@ -421,14 +434,23 @@
       if (!response.ok) return;
       const remote = await response.json();
       if (remote.tasks || remote.people) {
-        settings = { ...settings, ...remote };
+        settings = { ...settings, tasks: remote.tasks || settings.tasks, people: remote.people || settings.people };
         writeStorage(SETTINGS_KEY, JSON.stringify(settings));
-        render();
-      } else if (settings.tasks || settings.people) {
-        pushSettings();
       }
+      // Vinkjes van vandaag terug; wat sinds de start al is afgevinkt blijft staan.
+      if (remote.today && remote.today.day === state.day) state.done = { ...remote.today.done, ...state.done };
+      if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
+      if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (error) {
+        // Geen opslag: het servertje heeft het.
+      }
+      synced = true;
+      render();
+      schedulePush(); // ook wat sinds de start op de Hub veranderde
     } catch (error) {
-      // Niet bereikbaar: dan maar met de kopie op de Hub.
+      // Niet bereikbaar: dan maar met de kopie op de Hub, later opnieuw.
     }
   }
 
@@ -460,6 +482,7 @@
       writeStorage(VOERRAAD_CACHE_KEY, null);
       voerraad = null;
       renderStock();
+      schedulePush(); // het servertje onthoudt de code voor na een herstart
     }
     refreshVoerraad();
   }
@@ -1024,6 +1047,10 @@
   pullSettings();
   setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
   setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
+  // Lukte het eerste ophalen niet (geen netwerk), elke minuut opnieuw proberen.
+  setInterval(() => {
+    if (!synced) pullSettings();
+  }, 60 * 1000);
   setInterval(() => {
     if (rollOverIfNewDay()) {
       closeSheet();
