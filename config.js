@@ -7,6 +7,7 @@ window.PIP_CONFIG = {
   hubName: "hub",
 
   // Wie kan een taak afvinken? Met één naam wordt een taak direct afgevinkt.
+  // Dit is de standaard: op de startpagina pas je de huisgenoten aan.
   people: ["Thijs", "Huisgenoot"],
 
   // Hoe laat de lijst weer leeg begint (24-uursklok). 4 betekent om 04:00 's nachts.
@@ -23,7 +24,13 @@ window.PIP_CONFIG = {
     { id: "aandacht", title: "Spelen & borstelen", icon: "heart" },
   ],
 
-  // Voorraad. amount = beginvoorraad, low = vanaf dit aantal staat er "Bijna op".
+  // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
+  // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is
+  // openbaar): je vult hem in op de startpagina of in voerraad-code.txt.
+  voerraad: { url: "https://voerraad.nl", refreshMinutes: 15, maxItems: 4 },
+
+  // Voorraad zonder Voerraad-koppeling. amount = beginvoorraad, low = vanaf dit
+  // aantal staat er "Bijna op".
   stock: [
     { id: "natvoer", title: "Natvoer", units: ["zakje", "zakjes"], amount: 14, low: 4 },
     { id: "brokjes", title: "Brokjes", units: ["zak", "zakken"], amount: 1, low: 1 },

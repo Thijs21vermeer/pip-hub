@@ -14,9 +14,13 @@ from datetime import datetime
 from pathlib import Path
 
 import pychromecast
+from pychromecast.controllers import BaseController
 from pychromecast.error import PyChromecastError
 
 CONFIG_FILE = Path(__file__).with_name("config.js")
+# Voerraad-koppelcode: alleen op deze Mac, niet in config.js (die is openbaar).
+CODE_FILE = Path(__file__).with_name("voerraad-code.txt")
+NAMESPACE = "urn:x-cast:nl.pip.hub"
 IDLE_APP_IDS = {None, "E8C28D3C"}  # E8C28D3C is de fotolijst ("Backdrop")
 CHECK_EVERY_SECONDS = 60
 ACTIVE_HOURS = (7, 23)  # met --blijf alleen tussen 07:00 en 23:00 terugzetten
@@ -55,23 +59,51 @@ def pick_hub(casts, name):
     return None
 
 
-def launch(hub, app_id):
+class PipController(BaseController):
+    """Praat met Pip op de Hub over het eigen kanaal (voor de Voerraad-koppelcode)."""
+
+    def __init__(self, app_id):
+        super().__init__(NAMESPACE, app_id)
+
+    def receive_message(self, _message, _data):
+        return True
+
+
+def send_voerraad_code(hub, pip):
+    """Stuurt de code uit voerraad-code.txt naar Pip, als dat bestand er is."""
+    code = CODE_FILE.read_text(encoding="utf-8").strip() if CODE_FILE.exists() else ""
+    if not code:
+        return
+    # Pip luistert pas als de pagina geladen is; wacht tot het kanaal er is.
+    deadline = time.time() + 20
+    while NAMESPACE not in (hub.status.namespaces if hub.status else []) and time.time() < deadline:
+        time.sleep(0.5)
+    try:
+        pip.send_message({"type": "voerraad-code", "code": code})
+        time.sleep(1)  # de socket even de tijd geven voordat het script stopt
+        print("Voerraad-koppelcode naar de Hub gestuurd.")
+    except PyChromecastError as error:
+        print(f"Koppelcode versturen lukte niet ({error!r}).")
+
+
+def launch(hub, app_id, pip):
     name = hub.cast_info.friendly_name
     if hub.app_id == app_id:
         print(f"Pip staat al aan op {name}.")
-        return True
-    print(f"Pip starten op {name}…")
-    try:
-        hub.start_app(app_id)
-    except PyChromecastError as error:
-        print(f"Starten lukte niet ({error!r}).")
-        print("Is je Hub geregistreerd in de Cast Developer Console en daarna herstart? Zie README.")
-        return False
-    print("Klaar.")
+    else:
+        print(f"Pip starten op {name}…")
+        try:
+            hub.start_app(app_id)
+        except PyChromecastError as error:
+            print(f"Starten lukte niet ({error!r}).")
+            print("Is je Hub geregistreerd in de Cast Developer Console en daarna herstart? Zie README.")
+            return False
+        print("Klaar.")
+    send_voerraad_code(hub, pip)
     return True
 
 
-def keep_pip_on(hub, app_id):
+def keep_pip_on(hub, app_id, pip):
     start, end = ACTIVE_HOURS
     print(f"Pip blijft aan op {hub.cast_info.friendly_name} tussen {start}:00 en {end}:00.")
     print("Laat dit venster open; sluit het om te stoppen.")
@@ -80,6 +112,7 @@ def keep_pip_on(hub, app_id):
             print(f"{now()} Hub is vrij, Pip wordt gestart.")
             try:
                 hub.start_app(app_id)
+                send_voerraad_code(hub, pip)
             except PyChromecastError as error:
                 print(f"{now()} Starten lukte niet ({error!r}), over een minuut opnieuw.")
         time.sleep(CHECK_EVERY_SECONDS)
@@ -107,10 +140,12 @@ def main():
         if hub is None:
             return 1
         hub.wait(timeout=10)
+        pip = PipController(app_id)
+        hub.register_handler(pip)
 
         if args.blijf:
-            keep_pip_on(hub, app_id)
-        return 0 if launch(hub, app_id) else 1
+            keep_pip_on(hub, app_id, pip)
+        return 0 if launch(hub, app_id, pip) else 1
     except KeyboardInterrupt:
         print("\nGestopt.")
         return 0

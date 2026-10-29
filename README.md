@@ -54,6 +54,18 @@ Welke Cast-apparaten ziet je Mac? Dat check je in Terminal met:
 ./start-pip.command --zoek
 ```
 
+## Voerraad koppelen
+
+Met een koppeling laat het Voorraad-blok zien wat Voerraad weet: per product hoeveel dagen nog, "Bijna op" en "Besteld". Pip kan daar alleen lezen, niets wijzigen.
+
+1. Ga in Voerraad naar **Instellingen → Huishouden → Scherm in huis** en tik op **Koppelcode maken**. Kopieer de code; je ziet hem maar één keer.
+2. Geef de code aan Pip, op een van deze twee manieren:
+   - **Startpagina:** open `start.html`, klap **Voerraad koppelen** open, plak de code en tik op **Code opslaan**. De pagina controleert de code bij Voerraad en stuurt hem bij elke start mee naar de Hub.
+   - **Mac:** zet de code in een bestand `voerraad-code.txt` naast `start-pip.command`. Dat bestand gaat niet naar GitHub.
+3. Start Pip. Het blok haalt de voorraad meteen op, en daarna elk kwartier.
+
+De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitgelekt? Maak in Voerraad een nieuwe code (de oude werkt dan niet meer) of kies **Ontkoppelen**.
+
 ## 5. Eerste test op de Hub
 
 - [ ] Pip verschijnt op de Hub

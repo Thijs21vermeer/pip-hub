@@ -6,27 +6,28 @@
   <title>Start Pip</title>
   <link rel="icon" href="pip.png">
   <link rel="apple-touch-icon" href="pip.png">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <style>
+    /* Kleuren en lettertype van Voerraad, net als het Pip-scherm. */
     :root {
-      --bg: #f6f1ea;
-      --line: #eadfd3;
-      --text: #2b2420;
-      --muted: #8a7f76;
-      --accent: #e07a3a;
-      --done: #2f8a5b;
-      --warn: #a86f00;
+      --bg: #fbf7f2;
+      --line: #eee7de;
+      --text: #1a1612;
+      --muted: #7c7264;
+      --accent: #a9642f;
+      --done: #5c7f52;
+      --warn: #a8701f;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #14110e;
-        --line: #3a322b;
+        --line: #332b24;
         --text: #f3ece4;
-        --muted: #a3978c;
-        --accent: #f0975a;
-        --done: #5cc28f;
-        --warn: #f2b84b;
+        --muted: #a89c8e;
+        --accent: #d08a50;
+        --done: #8db27f;
+        --warn: #e2ae5e;
       }
     }
 
@@ -42,7 +43,7 @@
       padding: 24px 16px;
       background: var(--bg);
       color: var(--text);
-      font-family: "Nunito", system-ui, -apple-system, sans-serif;
+      font-family: "Outfit", system-ui, -apple-system, sans-serif;
     }
 
     main {
@@ -59,7 +60,7 @@
     h1 {
       margin-top: 16px;
       font-size: 2rem;
-      font-weight: 800;
+      font-weight: 700;
     }
 
     #status {
@@ -88,7 +89,7 @@
       color: #fff;
       font: inherit;
       font-size: 1.3rem;
-      font-weight: 800;
+      font-weight: 700;
       cursor: pointer;
     }
 
@@ -112,6 +113,104 @@
       font-size: 0.95rem;
       line-height: 1.45;
     }
+
+    details {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 2px solid var(--line);
+      text-align: left;
+    }
+
+    summary {
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    details .note {
+      margin-top: 10px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 14px;
+      padding: 0 14px;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 1rem;
+    }
+
+    #code-status,
+    #people-status {
+      margin-top: 10px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    #code-status.ok,
+    #people-status.ok {
+      color: var(--done);
+    }
+
+    #code-status.error,
+    #people-status.error {
+      color: var(--warn);
+    }
+
+    .people {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .people li {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 4px 4px 14px;
+      border: 2px solid var(--line);
+      border-radius: 99px;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .people li button {
+      width: 36px;
+      min-height: 36px;
+      margin: 0;
+      padding: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.3rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .add-row input {
+      flex: 1;
+      min-width: 0;
+      margin-top: 0;
+    }
+
+    .add-row button {
+      width: auto;
+      margin-top: 0;
+      padding: 0 18px;
+    }
   </style>
 </head>
 <body>
@@ -122,6 +221,26 @@
     <button id="start" disabled>Start Pip</button>
     <button id="stop" class="secondary" hidden>Stop Pip op de Hub</button>
     <p class="note">Werkt in Chrome op Android of op je Mac, op hetzelfde wifi als de Hub. Kies na het tikken je Nest Hub in de lijst.</p>
+
+    <details id="people-box">
+      <summary>Huisgenoten</summary>
+      <p class="note">Wie kan op de Hub een taak afvinken? Een wijziging gaat meteen naar Pip als die draait, en anders bij de volgende start.</p>
+      <ul id="people" class="people"></ul>
+      <div class="add-row">
+        <input id="new-person" type="text" maxlength="20" autocomplete="off" placeholder="Naam toevoegen">
+        <button id="add-person" class="secondary">Toevoegen</button>
+      </div>
+      <p id="people-status"></p>
+    </details>
+
+    <details id="voerraad">
+      <summary id="voerraad-title">Voerraad koppelen</summary>
+      <p class="note">Maak in Voerraad een koppelcode (Instellingen → Huishouden → Scherm in huis) en plak hem hier. De code blijft alleen op dit apparaat en gaat bij elke start mee naar de Hub.</p>
+      <input id="code" type="password" autocomplete="off" spellcheck="false" placeholder="vrh_…">
+      <button id="save-code" class="secondary">Code opslaan</button>
+      <button id="clear-code" class="secondary" hidden>Ontkoppelen</button>
+      <p id="code-status"></p>
+    </details>
   </main>
 
   <script src="config.js"></script>
@@ -129,16 +248,169 @@
     (function () {
       "use strict";
 
-      const appId = window.PIP_CONFIG.castAppId;
+      const config = window.PIP_CONFIG;
+      const appId = config.castAppId;
+      const NAMESPACE = "urn:x-cast:nl.pip.hub";
+      const CODE_KEY = "pip-voerraad-code";
       const status = document.getElementById("status");
       const startButton = document.getElementById("start");
       const stopButton = document.getElementById("stop");
+      const codeInput = document.getElementById("code");
+      const codeStatus = document.getElementById("code-status");
+      const clearButton = document.getElementById("clear-code");
       let castLoaded = false;
 
       function show(text, kind) {
         status.textContent = text;
         status.className = kind || "";
       }
+
+      // ---- Voerraad-koppelcode: alleen op dit apparaat, nooit in config.js ----
+
+      function storedCode() {
+        try {
+          return localStorage.getItem(CODE_KEY) || "";
+        } catch (error) {
+          return "";
+        }
+      }
+
+      function storeCode(code) {
+        try {
+          if (code) localStorage.setItem(CODE_KEY, code);
+          else localStorage.removeItem(CODE_KEY);
+        } catch (error) {
+          // Geen opslag: de code gaat alleen deze keer mee.
+        }
+      }
+
+      function voerraadUrl() {
+        // Alleen bij lokaal testen mag een andere server, bv. ?voerraad=http://localhost:3000
+        const override = new URLSearchParams(location.search).get("voerraad");
+        const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+        return (local && override) || config.voerraad.url;
+      }
+
+      function showCode(text, kind) {
+        codeStatus.textContent = text;
+        codeStatus.className = kind || "";
+        const linked = !!storedCode();
+        clearButton.hidden = !linked;
+        document.getElementById("voerraad-title").textContent = linked ? "Voerraad gekoppeld" : "Voerraad koppelen";
+      }
+
+      // Stuurt een bericht naar Pip op de Hub, als die nu verbonden is.
+      function send(message) {
+        if (!castLoaded || !window.cast || !cast.framework) return false;
+        const session = cast.framework.CastContext.getInstance().getCurrentSession();
+        if (!session) return false;
+        session.sendMessage(NAMESPACE, message).catch(() => {});
+        return true;
+      }
+
+      // Leeg = ontkoppelen.
+      function sendCode() {
+        return send({ type: "voerraad-code", code: storedCode() });
+      }
+
+      async function saveCode() {
+        const code = codeInput.value.trim();
+        if (!code) return showCode("Plak eerst een koppelcode.", "error");
+        showCode("Code controleren…");
+        try {
+          const response = await fetch(`${voerraadUrl()}/api/hub`, { headers: { Authorization: `Bearer ${code}` } });
+          if (response.status === 401) return showCode("Deze code werkt niet. Maak een nieuwe in Voerraad.", "error");
+          if (!response.ok) throw new Error(String(response.status));
+          const data = await response.json();
+          storeCode(code);
+          codeInput.value = "";
+          sendCode();
+          showCode(`Gekoppeld: ${data.items.length} producten uit Voerraad.`, "ok");
+        } catch (error) {
+          showCode("Voerraad is nu niet bereikbaar. Probeer het zo nog eens.", "error");
+        }
+      }
+
+      function clearCode() {
+        storeCode("");
+        sendCode();
+        showCode("Ontkoppeld.");
+      }
+
+      document.getElementById("save-code").addEventListener("click", saveCode);
+      clearButton.addEventListener("click", clearCode);
+      showCode(storedCode() ? "De code gaat bij elke start mee naar de Hub." : "");
+
+      // ---- Huisgenoten: wie op de Hub kan afvinken ----
+
+      const PEOPLE_KEY = "pip-people";
+      const MAX_PEOPLE = 6;
+      const peopleList = document.getElementById("people");
+      const newPerson = document.getElementById("new-person");
+      const peopleStatus = document.getElementById("people-status");
+
+      // null = nog nooit aangepast: dan houdt de Hub zijn eigen lijst.
+      function customPeople() {
+        try {
+          const list = JSON.parse(localStorage.getItem(PEOPLE_KEY));
+          return Array.isArray(list) && list.length ? list : null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function currentPeople() {
+        return customPeople() || config.people.slice();
+      }
+
+      function sendPeople() {
+        return send({ type: "people", people: currentPeople() });
+      }
+
+      function renderPeople(text, kind) {
+        const list = currentPeople();
+        peopleList.replaceChildren(...list.map((name, index) => {
+          const item = document.createElement("li");
+          item.append(name);
+          const remove = document.createElement("button");
+          remove.textContent = "×";
+          remove.setAttribute("aria-label", `${name} verwijderen`);
+          remove.disabled = list.length === 1;
+          remove.addEventListener("click", () => changePeople(list.filter((_, i) => i !== index)));
+          item.append(remove);
+          return item;
+        }));
+        newPerson.disabled = list.length >= MAX_PEOPLE;
+        newPerson.placeholder = newPerson.disabled ? `Maximaal ${MAX_PEOPLE} namen` : "Naam toevoegen";
+        peopleStatus.textContent = text || "";
+        peopleStatus.className = kind || "";
+      }
+
+      function changePeople(list) {
+        try {
+          localStorage.setItem(PEOPLE_KEY, JSON.stringify(list));
+        } catch (error) {
+          // Geen opslag: de lijst gaat alleen nu mee.
+        }
+        renderPeople(sendPeople() ? "Bijgewerkt op de Hub." : "Opgeslagen. Gaat mee bij de volgende start.", "ok");
+      }
+
+      function addPerson() {
+        const name = newPerson.value.trim().slice(0, 20);
+        const list = currentPeople();
+        if (!name) return;
+        if (list.some((existing) => existing.toLowerCase() === name.toLowerCase())) {
+          return renderPeople(`${name} staat er al bij.`, "error");
+        }
+        newPerson.value = "";
+        changePeople([...list, name]);
+      }
+
+      document.getElementById("add-person").addEventListener("click", addPerson);
+      newPerson.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") addPerson();
+      });
+      renderPeople();
 
       // Het Cast-script roept deze functie aan zodra het geladen is.
       window.__onGCastApiAvailable = function (isAvailable) {
@@ -151,7 +423,16 @@
           receiverApplicationId: appId,
           autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
         });
-        context.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, updateStatus);
+        context.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, (event) => {
+          const { SESSION_STARTED, SESSION_RESUMED } = cast.framework.SessionState;
+          // Alleen wat hier is ingesteld: anders zou een telefoon zonder code de
+          // koppeling van de Mac weer wissen.
+          if (event.sessionState === SESSION_STARTED || event.sessionState === SESSION_RESUMED) {
+            if (storedCode()) sendCode();
+            if (customPeople()) sendPeople();
+          }
+          updateStatus();
+        });
         startButton.addEventListener("click", start);
         stopButton.addEventListener("click", () => context.endCurrentSession(true));
         startButton.disabled = false;

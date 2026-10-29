@@ -7,6 +7,10 @@
   const NIGHT_FROM = 21; // vanaf 21:00 een donker scherm
   const NIGHT_UNTIL = 7; // tot 07:00
   const SHEET_TIMEOUT_MS = 20000; // keuzevenster sluit vanzelf als niemand kiest
+  const VOERRAAD_CODE_KEY = "pip-hub-voerraad-code";
+  const VOERRAAD_CACHE_KEY = "pip-hub-voerraad-cache";
+  const PEOPLE_KEY = "pip-hub-people";
+  const MAX_PEOPLE = 6;
 
   const DAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
   const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
@@ -24,10 +28,23 @@
     box: svg('<path d="M3 10h18l-1.8 8.2a2 2 0 0 1-2 1.8H6.8a2 2 0 0 1-2-1.8z"/><path d="M8 14.5h.01M12 15.5h.01M16 14.5h.01"/>'),
     bowl: svg('<path d="M3 12h18a9 7 0 0 1-18 0z"/><path d="M9 8.5h.01M12 7h.01M15 8.5h.01"/>'),
     heart: svg('<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>'),
+    pill: svg('<path d="M10.5 20.5l-7-7a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>'),
     check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     minus: svg('<path d="M5 12h14"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
   };
+
+  // Zoals in Voerraad (components/ProductCard.tsx).
+  const CATEGORIES = {
+    food: { label: "Voer", icon: "bowl" },
+    litter: { label: "Bakvulling", icon: "box" },
+    medication: { label: "Medicatie", icon: "pill" },
+    care: { label: "Verzorging", icon: "heart" },
+    treats: { label: "Snacks", icon: "paw" },
+    toys: { label: "Speelgoed", icon: "paw" },
+    other: { label: "Overig", icon: "paw" },
+  };
+  const LOW_STOCK_DAYS = 5;
 
   const els = {
     logo: document.getElementById("logo"),
@@ -42,6 +59,7 @@
   };
 
   let state = loadState();
+  let voerraad = loadVoerraadCache();
   let sheetTask = null;
   let sheetTimer = null;
 
@@ -91,7 +109,8 @@
 
   function markDone(task, person) {
     const entry = { by: person, at: Date.now(), took: 0 };
-    if (task.stock && task.stock.id in state.stock) {
+    // Met Voerraad gekoppeld telt Voerraad zelf de dagen af.
+    if (task.stock && !voerraadCode() && task.stock.id in state.stock) {
       const before = state.stock[task.stock.id];
       state.stock[task.stock.id] = Math.max(0, before - task.stock.amount);
       entry.took = before - state.stock[task.stock.id];
@@ -114,6 +133,112 @@
     state.stock[id] = Math.max(0, (state.stock[id] || 0) + delta);
     saveState();
     render();
+  }
+
+  // ---- Voerraad ----
+
+  // Zodra de Hub een koppelcode heeft, komt de voorraad uit Voerraad (alleen
+  // lezen). De code staat niet in config.js, want die is openbaar: de startknop
+  // stuurt hem via cast.js en de Hub bewaart hem hier.
+
+  function readStorage(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch (error) {
+      // Geen opslag: werkt tot de volgende herstart.
+    }
+  }
+
+  function voerraadCode() {
+    return readStorage(VOERRAAD_CODE_KEY) || "";
+  }
+
+  function voerraadUrl() {
+    // Alleen bij lokaal testen mag een andere server, bv. ?voerraad=http://localhost:3000
+    const override = new URLSearchParams(location.search).get("voerraad");
+    const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    return (local && override) || config.voerraad.url;
+  }
+
+  function loadVoerraadCache() {
+    try {
+      return JSON.parse(readStorage(VOERRAAD_CACHE_KEY)) || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async function refreshVoerraad() {
+    const code = voerraadCode();
+    if (!code) return;
+    try {
+      const response = await fetch(`${voerraadUrl()}/api/hub`, {
+        headers: { Authorization: `Bearer ${code}` },
+        cache: "no-store",
+      });
+      if (response.status === 401) {
+        voerraad = { ...voerraad, error: "code" };
+      } else if (!response.ok) {
+        throw new Error(String(response.status));
+      } else {
+        const data = await response.json();
+        voerraad = { items: data.items, fetchedAt: Date.now(), error: null };
+        writeStorage(VOERRAAD_CACHE_KEY, JSON.stringify(voerraad));
+      }
+    } catch (error) {
+      voerraad = { ...voerraad, error: "offline" };
+    }
+    renderStock();
+  }
+
+  // ---- Huisgenoten ----
+
+  // Wie er kan afvinken. Standaard uit config.js; op de startpagina aan te
+  // passen, die stuurt de lijst via cast.js en de Hub bewaart hem hier.
+
+  function cleanPeople(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((name) => typeof name === "string")
+      .map((name) => name.trim().slice(0, 20))
+      .filter(Boolean)
+      .slice(0, MAX_PEOPLE);
+  }
+
+  function people() {
+    let saved = [];
+    try {
+      saved = cleanPeople(JSON.parse(readStorage(PEOPLE_KEY)));
+    } catch (error) {
+      saved = [];
+    }
+    return saved.length ? saved : config.people;
+  }
+
+  function setPeople(list) {
+    const clean = cleanPeople(list);
+    writeStorage(PEOPLE_KEY, clean.length ? JSON.stringify(clean) : null);
+    closeSheet();
+  }
+
+  function setVoerraadCode(code) {
+    const clean = String(code || "").trim();
+    if (clean !== voerraadCode()) {
+      writeStorage(VOERRAAD_CODE_KEY, clean || null);
+      writeStorage(VOERRAAD_CACHE_KEY, null);
+      voerraad = null;
+      renderStock();
+    }
+    refreshVoerraad();
   }
 
   // ---- Weergave ----
@@ -172,6 +297,69 @@
       </div>`;
   }
 
+  // Kleur zoals de productkaart in Voerraad: honing bij bijna op, klei bij op,
+  // grijs als er al iets besteld is (dan hoeft er niets meer).
+  function voerraadKind(item) {
+    if (item.ordered) return "ordered";
+    if (item.daysLeft <= 0) return "empty";
+    return item.daysLeft <= LOW_STOCK_DAYS ? "low" : "";
+  }
+
+  function voerraadRow(item) {
+    const kind = voerraadKind(item);
+    const category = CATEGORIES[item.category] || CATEGORIES.other;
+    const name = item.brand && !item.name.toLowerCase().includes(item.brand.toLowerCase())
+      ? `${item.brand} ${item.name}`
+      : item.name;
+    const sub = [item.pets.join(", "), category.label].filter(Boolean).join(" · ");
+    const photo = item.imageUrl ? `<img src="${escapeHtml(item.imageUrl)}" alt="" loading="lazy">` : "";
+    const value = item.daysLeft <= 0 ? (item.dosing ? "Nu" : "Op") : item.daysLeft;
+    const label = item.ordered ? "Besteld" : item.daysLeft <= 0 ? (item.dosing ? "geven" : "") : "dgn";
+    return `
+      <div class="vr-row">
+        <div class="thumb${photo ? " has-img" : ""}">${ICONS[category.icon]}${photo}</div>
+        <div class="vr-text">
+          <div class="vr-name">${escapeHtml(name)}</div>
+          <div class="vr-sub">${escapeHtml(sub)}</div>
+        </div>
+        <div class="days${kind ? ` ${kind}` : ""}">
+          <span class="days-value">${value}</span>
+          ${label ? `<span class="days-label">${label}</span>` : ""}
+        </div>
+        <div class="bar${kind ? ` ${kind}` : ""}"><span style="width: ${Math.max(4, item.percent || 0)}%"></span></div>
+      </div>`;
+  }
+
+  function voerraadPanel() {
+    if (!voerraad || !voerraad.items) {
+      const text = !voerraad || !voerraad.error
+        ? "Voorraad ophalen…"
+        : voerraad.error === "code"
+          ? "De koppelcode werkt niet. Maak een nieuwe in Voerraad."
+          : "Voerraad is nu niet bereikbaar.";
+      return `<p class="vr-empty">${text}</p>`;
+    }
+    const shown = voerraad.items.slice(0, config.voerraad.maxItems);
+    const more = voerraad.items.length - shown.length;
+    const rows = shown.length
+      ? `<div class="vr-list">${shown.map(voerraadRow).join("")}</div>`
+      : '<p class="vr-empty">Nog niets in Voerraad.</p>';
+    const time = formatTime(new Date(voerraad.fetchedAt));
+    let foot = voerraad.error === "code"
+      ? "Koppelcode werkt niet meer"
+      : voerraad.error
+        ? `Niet bijgewerkt sinds ${time}`
+        : `Uit Voerraad · ${time}`;
+    if (more > 0) foot = `+${more} meer · ${foot}`;
+    return `${rows}<p class="vr-foot${voerraad.error ? " warn" : ""}">${escapeHtml(foot)}</p>`;
+  }
+
+  function renderStock() {
+    const linked = !!voerraadCode();
+    els.stock.classList.toggle("from-voerraad", linked);
+    els.stock.innerHTML = linked ? voerraadPanel() : config.stock.map(stockRow).join("");
+  }
+
   function renderClock() {
     const now = new Date();
     document.documentElement.dataset.theme = isNight(now) ? "dark" : "light";
@@ -188,7 +376,7 @@
     els.progressText.textContent = allDone ? "Alles gedaan voor vandaag" : `${doneCount} van ${total} gedaan`;
     els.progressBar.style.width = total ? `${(doneCount / total) * 100}%` : "0";
     els.tasks.innerHTML = config.tasks.map(taskCard).join("");
-    els.stock.innerHTML = config.stock.map(stockRow).join("");
+    renderStock();
   }
 
   // ---- Keuzevenster ----
@@ -208,12 +396,12 @@
   }
 
   function askWho(task) {
-    const people = config.people.map((person) =>
+    const buttons = people().map((person) =>
       `<button class="choice" data-action="person" data-person="${escapeHtml(person)}">${escapeHtml(person)}</button>`).join("");
     openSheet(task, `
       <h3>${escapeHtml(task.title)}</h3>
       <p>Wie heeft het gedaan?</p>
-      <div class="choices">${people}</div>
+      <div class="choices">${buttons}</div>
       <div class="choices"><button class="choice secondary" data-action="close">Annuleren</button></div>`);
   }
 
@@ -228,6 +416,11 @@
       </div>`);
   }
 
+  // Laadt een productfoto niet, dan blijft het categorie-icoon eronder zichtbaar.
+  els.stock.addEventListener("error", (event) => {
+    if (event.target.tagName === "IMG") event.target.closest(".thumb").classList.remove("has-img");
+  }, true);
+
   document.addEventListener("click", (event) => {
     const target = event.target.closest("[data-action]");
     if (!target) {
@@ -238,7 +431,7 @@
     if (action === "task") {
       const task = config.tasks.find((t) => t.id === id);
       if (state.done[task.id]) showDone(task);
-      else if (config.people.length <= 1) markDone(task, config.people[0] || "Gedaan");
+      else if (people().length <= 1) markDone(task, people()[0] || "Gedaan");
       else askWho(task);
     } else if (action === "person" && sheetTask) {
       markDone(sheetTask, target.dataset.person);
@@ -259,12 +452,18 @@
   rollOverIfNewDay();
   saveState();
   render();
+  refreshVoerraad();
+  setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
   setInterval(() => {
     if (rollOverIfNewDay()) {
       closeSheet();
       render();
+      refreshVoerraad();
     } else {
       renderClock();
     }
   }, 10000);
+
+  // Voor cast.js: de startknop stuurt de koppelcode en de huisgenoten naar de Hub.
+  window.Pip = { setVoerraadCode, setPeople };
 })();

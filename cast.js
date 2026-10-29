@@ -7,6 +7,9 @@
   const SDK_URL = "https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js";
   const KEEPALIVE_MS = 9 * 60 * 1000;
   const KEEPALIVE_IMAGE = new URL("pip.png", location.href).href;
+  // Kanaal waarover de startknop de Voerraad-koppelcode (niet in config.js: die is
+  // openbaar) en de huisgenoten stuurt.
+  const NAMESPACE = "urn:x-cast:nl.pip.hub";
 
   // In een gewone browser is dit alleen een voorbeeld; de Cast-code draait alleen op de Hub.
   if (!/CrKey|Fuchsia/.test(navigator.userAgent)) return;
@@ -33,9 +36,17 @@
       setInterval(playDummyMedia, KEEPALIVE_MS);
     });
 
+    context.addCustomMessageListener(NAMESPACE, (event) => {
+      const data = event.data || {};
+      if (!window.Pip) return;
+      if (data.type === "voerraad-code" && typeof data.code === "string") window.Pip.setVoerraadCode(data.code);
+      if (data.type === "people" && Array.isArray(data.people)) window.Pip.setPeople(data.people);
+    });
+
     const options = new framework.CastReceiverOptions();
     options.disableIdleTimeout = true;
     options.statusText = "Pip";
+    options.customNamespaces = { [NAMESPACE]: framework.system.MessageType.JSON };
     context.start(options);
 
     function playDummyMedia() {
