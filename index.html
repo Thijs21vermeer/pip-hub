@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <!-- ?v= bij elke nieuwe versie ophogen: GitHub Pages laat bestanden 10 minuten cachen,
        zonder nieuw nummer draait de Google Hub dan nog half de oude versie. -->
-  <link rel="stylesheet" href="style.css?v=20261029-7">
+  <link rel="stylesheet" href="style.css?v=20261029-8">
 </head>
 <body>
   <header class="top">
@@ -22,8 +22,9 @@
       </div>
     </div>
     <div class="top-right">
-      <!-- Naar de eigen software van de Google Hub; Pip komt vanzelf terug. -->
-      <button class="to-google" id="to-google" data-action="to-google"></button>
+      <!-- Naar de eigen software van de Google Hub; Pip komt vanzelf terug.
+           Alleen zichtbaar als het script draait dat Pip terugzet (zie app.js). -->
+      <button class="to-google" id="to-google" data-action="to-google" hidden></button>
       <div class="when">
         <div id="clock"></div>
         <div id="date"></div>
@@ -65,7 +66,7 @@
   <!-- Ruststand: foto van Pip met de klok. Tik ergens om het dashboard te openen;
        na 2 minuten niets doen komt de ruststand vanzelf terug. -->
   <section class="rest" id="rest" data-action="wake" aria-label="Ruststand">
-    <img src="pip-foto.jpg?v=20261029-7" alt="Pip">
+    <img src="pip-foto.jpg?v=20261029-8" alt="Pip">
     <div class="rest-card" id="rest-card" hidden></div>
     <div class="rest-info">
       <div class="rest-clock" id="rest-clock"></div>
@@ -87,8 +88,8 @@
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
   </div>
 
-  <script src="config.js?v=20261029-7"></script>
-  <script src="app.js?v=20261029-7"></script>
-  <script src="cast.js?v=20261029-7"></script>
+  <script src="config.js?v=20261029-8"></script>
+  <script src="app.js?v=20261029-8"></script>
+  <script src="cast.js?v=20261029-8"></script>
 </body>
 </html>

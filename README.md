@@ -51,12 +51,17 @@ Zet de map daarna opnieuw online.
 
 ### Wisselen tussen Pip en de Google Hub
 
+Pip draait gewoon zonder Mac of ander apparaat dat aan moet blijven. Alleen terugkomen nadat Pip weg is gegaan, kan niet vanuit de cloud: Google laat een eigen Cast-app alleen starten door een apparaat in je eigen wifi. Daarom zijn er twee standen.
+
+- **Zonder apparaat (standaard):** Pip blijft staan tot iets hem wegdrukt: muziek, een video die je naar de Hub stuurt, soms een timer of "Hé Google". Dan start je Pip zelf weer met **Start Pip** op je telefoon (Android) of `start-pip.command` op de Mac. De knop **Google Hub** staat er dan niet, zodat niemand Pip per ongeluk wegtikt.
+- **Met het script (optioneel):** draait `pip-altijd-aan.command` op een Mac (of later een Raspberry Pi), dan verschijnt de knop **Google Hub** en komt Pip vanzelf terug. Hieronder hoe dat werkt.
+
 - **Naar Google:** tik rechtsboven op **Google Hub** en kies wanneer Pip terugkomt: over 15 minuten, over 1 uur of morgenochtend. Pip gaat aan de kant en je ziet meteen het scherm van Google (timers, weer, fotolijst).
 - **Zelf kiezen:** onder de vaste tijden stel je met −1 uur, −15 min, +15 min en +1 uur zelf een tijdstip in (tussen 5 minuten en 24 uur vooruit). Valt dat na 23:00, dan komt Pip de volgende ochtend om 07:00 terug.
 - **Terug naar Pip:** dat gaat vanzelf als de pauze voorbij is en de Google Hub niets anders speelt. Eerder terug? Tik op **Start Pip** op je telefoon.
 - **Zonder de knop:** zegt iemand "Hé Google", loopt er een timer af of veegt iemand Pip weg? Dan komt Pip 5 minuten nadat de Google Hub weer vrij is terug. Speelt er muziek of een video, dan wacht Pip tot die klaar is.
 - **Daarvoor moet het script op de Mac draaien:** dubbelklik één keer op `pip-altijd-aan.command`. Het draait dan op de achtergrond, ook na een herstart van de Mac, zolang de Mac wakker is. Nog een keer dubbelklikken zet het uit. Wat het doet staat in `~/Library/Logs/pip-blijf.log`.
-- **Script uit?** Dan zegt Pip dat bij de knop, en moet je Pip daarna zelf weer starten.
+- **Script uit?** Dan verdwijnt de knop binnen ongeveer 20 minuten. Wie hem in de tussentijd gebruikt, krijgt te zien dat Pip niet vanzelf terugkomt.
 - **Waarom op tijd en niet "zodra je klaar bent":** de Google Hub meldt in zijn eigen scherm altijd hetzelfde ("Backdrop"), of je hem nu gebruikt of niet. Het script kan dus niet zien of iemand nog met Google bezig is.
 
 Welke Cast-apparaten ziet je Mac? Dat check je in Terminal met:

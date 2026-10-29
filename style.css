@@ -160,6 +160,10 @@ h1 {
   font-weight: 600;
 }
 
+.to-google[hidden] {
+  display: none;
+}
+
 .to-google svg {
   width: 1.3rem;
   height: 1.3rem;

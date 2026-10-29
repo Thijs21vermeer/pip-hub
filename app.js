@@ -558,6 +558,7 @@
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
       // Pip is terug (vanzelf of via de startknop): de pauze is voorbij.
       if (remote.away) putAway(null);
+      showGoogleButton(Date.now() - (remote.watcherSeenAt || 0) < WATCHER_FRESH_MS);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch (error) {
@@ -1182,6 +1183,16 @@
     }
   }
 
+  // Zonder dat script zou de knop Pip wegzetten tot iemand hem opnieuw start.
+  // Dan liever geen knop: Pip blijft zo veel mogelijk staan.
+  function showGoogleButton(alive) {
+    els.toGoogle.hidden = !alive;
+  }
+
+  async function refreshGoogleButton() {
+    showGoogleButton(await watcherAlive());
+  }
+
   // Zelf kiezen: een tijdstip, met knoppen een kwartier of uur verschuiven.
   const AWAY_STEP_MS = 15 * 60 * 1000;
   const AWAY_MIN_MS = 5 * 60 * 1000;
@@ -1502,6 +1513,7 @@
   pullSettings();
   setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
   setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
+  setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
   // Lukte het eerste ophalen niet (geen netwerk), elke minuut opnieuw proberen.
   setInterval(() => {
     if (!synced) pullSettings();
