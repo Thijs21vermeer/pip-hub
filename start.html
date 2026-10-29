@@ -321,7 +321,7 @@
     </details>
   </main>
 
-  <script src="config.js?v=20261029-18"></script>
+  <script src="config.js?v=20261029-19"></script>
   <script>
     (function () {
       "use strict";
@@ -404,24 +404,33 @@
           element.querySelector("summary").textContent = stored() ? linkedTitle : unlinkedTitle;
         }
 
-        element.querySelector('[data-role="save"]').addEventListener("click", async () => {
-          const code = input.value.trim();
-          if (!code) return showLine("Plak eerst een code.", "error");
+        // Controleren bij de server en dan bewaren; ook voor een code uit een QR-code.
+        async function save(code) {
+          if (!code) {
+            showLine("Plak eerst een code.", "error");
+            return false;
+          }
           showLine("Code controleren…");
           const result = await check(code);
-          if (!result.ok) return showLine(result.text, "error");
+          if (!result.ok) {
+            showLine(result.text, "error");
+            return false;
+          }
           store(code);
           input.value = "";
           sendCode();
           showLine(result.text, "ok");
-        });
+          return true;
+        }
+
+        element.querySelector('[data-role="save"]').addEventListener("click", () => save(input.value.trim()));
         clear.addEventListener("click", () => {
           store("");
           sendCode();
           showLine("Ontkoppeld.");
         });
         showLine(stored() ? "De code gaat bij elke start mee naar de Google Hub." : "");
-        return { stored, sendCode };
+        return { stored, sendCode, save };
       }
 
       const voerraadLink = codeLink({
@@ -621,6 +630,24 @@
       // Pas laden als je het blokje openklapt.
       document.getElementById("photos-box").addEventListener("toggle", (event) => { if (event.target.open) showPhotos(); });
       document.getElementById("meow-box").addEventListener("toggle", (event) => { if (event.target.open) showMeow(); });
+
+      // ---- Koppelen met de QR-code uit de ruststand op de Google Hub ----
+
+      // De QR-code opent start.html#koppel=<code>. Het deel na # gaat nooit naar
+      // een server; we halen het meteen uit de adresbalk, controleren de code en
+      // bewaren hem op deze telefoon.
+      (async function linkFromQr() {
+        const code = new URLSearchParams(location.hash.slice(1)).get("koppel");
+        if (!code) return;
+        history.replaceState(null, "", location.pathname + location.search);
+        const box = document.getElementById("kattenbak-box");
+        box.open = true;
+        if (!(await kattenbakLink.save(code.trim()))) return;
+        const photos = document.getElementById("photos-box");
+        photos.open = true; // laadt ook de foto's
+        photos.scrollIntoView({ behavior: "smooth", block: "start" });
+        statusLine("photo-status", "Gekoppeld! Tik op Foto's kiezen.", "ok");
+      })();
 
       // ---- Huisgenoten: wie op de Google Hub kan afvinken ----
 

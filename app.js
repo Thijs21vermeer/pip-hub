@@ -105,6 +105,7 @@
     minus: svg('<path d="M5 12h14"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
     home: svg('<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>'),
+    qr: svg('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20v.01M17 20h3v-3"/>'),
   };
 
   // Zoals in Voerraad (components/ProductCard.tsx).
@@ -139,6 +140,9 @@
     restDate: document.getElementById("rest-date"),
     restCard: document.getElementById("rest-card"),
     restPhotos: [...document.querySelectorAll(".rest-photo")],
+    restQrButton: document.getElementById("rest-qr-button"),
+    restQr: document.getElementById("rest-qr"),
+    restQrCode: document.getElementById("rest-qr-code"),
     video: document.getElementById("video"),
     videoTitle: document.getElementById("video-title"),
     videoFrame: document.getElementById("video-frame"),
@@ -482,6 +486,7 @@
     pullSettings();
     refreshPhotos();
     refreshMeow();
+    els.restQrButton.hidden = !actionCode();
   }
 
   // ---- Huisgenoten ----
@@ -1105,6 +1110,60 @@
     source.start();
   }
 
+  // ---- Telefoon koppelen met een QR-code in de ruststand ----
+
+  // De QR-code opent de startpagina met de koppelcode achter het #: dat deel gaat
+  // nooit naar een server, en de startpagina haalt het meteen uit de adresbalk.
+  // De QR-bibliotheek komt pas als je hem nodig hebt, met een vaste versie.
+  const QR_LIBRARY = {
+    src: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js",
+    integrity: "sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1",
+  };
+  const QR_OPEN_MS = 2 * 60 * 1000;
+  let qrTimer = null;
+
+  function loadQrLibrary() {
+    if (window.qrcode) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = QR_LIBRARY.src;
+      script.integrity = QR_LIBRARY.integrity;
+      script.crossOrigin = "anonymous";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  function linkUrl() {
+    return `${new URL("start.html", location.href).href}#koppel=${encodeURIComponent(actionCode())}`;
+  }
+
+  async function showRestQr() {
+    if (!actionCode()) return;
+    try {
+      await loadQrLibrary();
+    } catch (error) {
+      return; // geen internet: dan geen QR-code
+    }
+    const code = window.qrcode(0, "M");
+    code.addData(linkUrl());
+    code.make();
+    els.restQrCode.innerHTML = code.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    els.restQr.hidden = false;
+    els.restQrButton.hidden = true;
+    clearTimeout(qrTimer);
+    qrTimer = setTimeout(hideRestQr, QR_OPEN_MS);
+    scheduleRest(); // de ruststand niet ondertussen opnieuw opbouwen
+  }
+
+  function hideRestQr() {
+    clearTimeout(qrTimer);
+    els.restQr.hidden = true;
+    els.restQrCode.innerHTML = "";
+    els.restQrButton.hidden = !actionCode();
+  }
+
   // Aai Pip: tik op de ruststand en ze miauwt (soms spint ze). Het overzicht
   // opent meteen; de miauw klinkt erdoorheen.
   function petPip() {
@@ -1253,6 +1312,7 @@
   }
 
   function hideRest() {
+    hideRestQr();
     els.rest.hidden = true;
     scheduleRest();
   }
@@ -1951,7 +2011,11 @@
       return;
     }
     const { action, id } = target.dataset;
-    if (action === "wake") {
+    if (action === "rest-qr") {
+      showRestQr();
+    } else if (action === "rest-qr-close") {
+      hideRestQr();
+    } else if (action === "wake") {
       petPip();
       hideRest();
     } else if (action === "video-close") {
@@ -2043,6 +2107,8 @@
   // ---- Start ----
 
   els.toGoogle.innerHTML = `${ICONS.home}<span>Google Hub</span>`;
+  els.restQrButton.innerHTML = ICONS.qr;
+  els.restQrButton.hidden = !actionCode(); // zonder koppelcode valt er niets te koppelen
   renderLogo();
   rollOverIfNewDay();
   saveState();

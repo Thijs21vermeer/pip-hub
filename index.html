@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
   <!-- ?v= bij elke nieuwe versie ophogen: GitHub Pages laat bestanden 10 minuten cachen,
        zonder nieuw nummer draait de Google Hub dan nog half de oude versie. -->
-  <link rel="stylesheet" href="style.css?v=20261029-18">
+  <link rel="stylesheet" href="style.css?v=20261029-19">
 </head>
 <body>
   <header class="top">
@@ -84,9 +84,19 @@
   <section class="rest" id="rest" data-action="wake" aria-label="Ruststand">
     <!-- Twee lagen die in elkaar overvloeien: de standaardfoto en de foto's die
          jullie via de startpagina sturen. -->
-    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261029-18" alt="Pip"></div>
+    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261029-19" alt="Pip"></div>
     <div class="rest-photo"><img class="rest-bg" alt=""><img class="rest-fg" alt="Pip"></div>
     <div class="rest-card" id="rest-card" hidden></div>
+    <!-- Telefoon koppelen: QR-knopje linksonder; de QR-code klapt daar open. Hij
+         bevat de koppelcode, dus hij staat alleen open als je erom vraagt. -->
+    <button class="rest-qr-button" id="rest-qr-button" data-action="rest-qr" aria-label="QR-code om een telefoon te koppelen"></button>
+    <div class="rest-qr" id="rest-qr" data-action="rest-qr-close" hidden>
+      <div class="rest-qr-code" id="rest-qr-code"></div>
+      <div class="rest-qr-text">
+        <strong>Foto's toevoegen</strong>
+        <span>Scan met de camera van je telefoon. Tik om te sluiten.</span>
+      </div>
+    </div>
     <div class="rest-info">
       <div class="rest-clock" id="rest-clock"></div>
       <div class="rest-date" id="rest-date"></div>
@@ -107,8 +117,8 @@
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
   </div>
 
-  <script src="config.js?v=20261029-18"></script>
-  <script src="app.js?v=20261029-18"></script>
-  <script src="cast.js?v=20261029-18"></script>
+  <script src="config.js?v=20261029-19"></script>
+  <script src="app.js?v=20261029-19"></script>
+  <script src="cast.js?v=20261029-19"></script>
 </body>
 </html>

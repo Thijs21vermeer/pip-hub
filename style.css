@@ -1498,6 +1498,84 @@ main {
   filter: blur(32px) brightness(0.3);
 }
 
+/* Telefoon koppelen: glazen QR-knopje linksonder, de QR-code klapt daar open. */
+.rest-qr-button {
+  position: absolute;
+  z-index: 2;
+  left: 2rem;
+  bottom: 2rem;
+  display: grid;
+  place-items: center;
+  width: 3.6rem;
+  height: 3.6rem;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.26);
+  backdrop-filter: blur(14px);
+  color: #fff;
+}
+
+.rest-qr-button[hidden] {
+  display: none;
+}
+
+.rest-qr-button svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.rest-qr {
+  position: absolute;
+  z-index: 3;
+  left: 2rem;
+  bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  max-width: 26rem;
+  padding: 1.1rem 1.4rem 1.1rem 1.1rem;
+  border-radius: 1.4rem;
+  background: #fbf7f2;
+  color: #1a1612;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.3);
+  transform-origin: bottom left;
+  animation: qr-open 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+
+.rest-qr[hidden] {
+  display: none;
+}
+
+.rest-qr-code {
+  flex: none;
+  width: 10.5rem;
+  height: 10.5rem;
+}
+
+.rest-qr-code svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rest-qr-text strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.rest-qr-text span {
+  display: block;
+  margin-top: 0.4rem;
+  color: #6b5f54;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+@keyframes qr-open {
+  from { opacity: 0; transform: scale(0.3); }
+}
+
 /* Feestje als alles af is: confetti uit twee kanonnen (app.js, celebrate). */
 .confetti {
   position: fixed;

@@ -120,6 +120,10 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 
 **Fotolijst in de ruststand.** De ruststand wisselt elke 20 seconden tussen de standaardfoto en de foto's die jullie sturen, met de nieuwste eerst.
 
+- **Telefoon koppelen met de QR-code:** tik in de ruststand linksonder op het QR-knopje. De QR-code klapt open; scan hem met de camera van je telefoon.
+  - De startpagina gaat dan open en de telefoon is meteen gekoppeld.
+  - De QR-code bevat de kattenbak-code, en daarmee kun je ook de kattenbak en de voerbak bedienen. Daarom staat hij alleen open als je erom vraagt; hij sluit vanzelf na 2 minuten, of als je erop tikt.
+  - De code zit in de link achter het `#`. Dat deel gaat nooit naar een server, en de startpagina haalt het meteen uit de adresbalk.
 - **Foto's toevoegen:** open op je telefoon de startpagina, klap **Foto's van Pip** open en tik op **Foto's kiezen**. Dat werkt ook op een iPhone.
   - De foto wordt op je telefoon eerst verkleind (langste kant 1600 pixels).
   - De Google Hub haalt nieuwe foto's elk kwartier op.
