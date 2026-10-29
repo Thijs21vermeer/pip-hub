@@ -103,6 +103,9 @@
     pageGrid: document.getElementById("page-grid"),
     pageHint: document.getElementById("page-hint"),
     pageEdit: document.getElementById("page-edit"),
+    video: document.getElementById("video"),
+    videoTitle: document.getElementById("video-title"),
+    videoFrame: document.getElementById("video-frame"),
     actions: document.getElementById("actions"),
     stock: document.getElementById("stock"),
     sheet: document.getElementById("sheet"),
@@ -849,6 +852,96 @@
       </div>`);
   }
 
+  // ---- Video (gestuurd vanaf de startpagina) ----
+
+  // Alleen onbeveiligde video: YouTube-filmpjes en gewone videolinks. Wat er
+  // gebeurt (laden, spelen, fout) gaat terug naar de zender via report().
+
+  const YOUTUBE_STATES = { [-1]: "unstarted", 0: "ended", 1: "playing", 2: "paused", 3: "buffering", 5: "cued" };
+  let youtubeApi = null;
+  let youtubePlayer = null;
+  let videoProgressTimer = null;
+
+  function loadYouTubeApi() {
+    if (!youtubeApi) {
+      youtubeApi = new Promise((resolve, reject) => {
+        window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+        const script = document.createElement("script");
+        script.src = "https://www.youtube.com/iframe_api";
+        script.onerror = () => reject(new Error("YT_API_LOAD"));
+        document.head.appendChild(script);
+        setTimeout(() => reject(new Error("YT_API_TIMEOUT")), 15000);
+      }).catch((error) => {
+        youtubeApi = null;
+        throw error;
+      });
+    }
+    return youtubeApi;
+  }
+
+  async function playYouTube(id, report) {
+    try {
+      const YT = await loadYouTubeApi();
+      const holder = document.createElement("div");
+      els.videoFrame.appendChild(holder);
+      youtubePlayer = new YT.Player(holder, {
+        videoId: id,
+        width: "100%",
+        height: "100%",
+        playerVars: { autoplay: 1, playsinline: 1, rel: 0, origin: location.origin },
+        events: {
+          onReady: (event) => {
+            report({ state: "ready" });
+            event.target.playVideo();
+          },
+          onStateChange: (event) => report({ state: YOUTUBE_STATES[event.data] || String(event.data) }),
+          onError: (event) => report({ state: "error", detail: `YT_${event.data}` }),
+        },
+      });
+      videoProgressTimer = setTimeout(() => {
+        if (youtubePlayer && youtubePlayer.getCurrentTime) report({ state: "progress", time: youtubePlayer.getCurrentTime() });
+      }, 8000);
+    } catch (error) {
+      report({ state: "error", detail: error.message });
+    }
+  }
+
+  function playUrl(url, report) {
+    const video = document.createElement("video");
+    video.src = url;
+    video.autoplay = true;
+    video.controls = true;
+    video.playsInline = true;
+    video.addEventListener("playing", () => report({ state: "playing" }));
+    video.addEventListener("ended", () => report({ state: "ended" }));
+    video.addEventListener("error", () => report({ state: "error", detail: `MEDIA_${video.error ? video.error.code : "?"}` }));
+    els.videoFrame.appendChild(video);
+    videoProgressTimer = setTimeout(() => report({ state: "progress", time: video.currentTime }), 8000);
+  }
+
+  function closeVideo() {
+    clearTimeout(videoProgressTimer);
+    if (youtubePlayer && youtubePlayer.destroy) youtubePlayer.destroy();
+    youtubePlayer = null;
+    els.videoFrame.innerHTML = "";
+    els.video.hidden = true;
+  }
+
+  function playVideo(request, report = () => {}) {
+    closeVideo();
+    closeSheet();
+    els.videoTitle.textContent = String(request.title || "Video").slice(0, 60);
+    els.video.hidden = false;
+    if (request.kind === "youtube" && /^[\w-]{11}$/.test(request.id || "")) {
+      playYouTube(request.id, report);
+    } else if (request.kind === "url" && /^https:\/\//.test(request.url || "")) {
+      playUrl(request.url, report);
+    } else {
+      closeVideo();
+      report({ state: "error", detail: "BAD_REQUEST" });
+    }
+  }
+
   // Laadt een productfoto niet, dan blijft het categorie-icoon eronder zichtbaar.
   els.stock.addEventListener("error", (event) => {
     if (event.target.tagName === "IMG") event.target.closest(".thumb").classList.remove("has-img");
@@ -863,7 +956,9 @@
       return;
     }
     const { action, id } = target.dataset;
-    if (action === "all-tasks") {
+    if (action === "video-close") {
+      closeVideo();
+    } else if (action === "all-tasks") {
       openPage();
     } else if (action === "page-close") {
       closePage();
@@ -941,5 +1036,5 @@
   }, 10000);
 
   // Voor cast.js: de startknop stuurt de codes en de huisgenoten naar de Hub.
-  window.Pip = { setVoerraadCode, setActionCode, setPeople };
+  window.Pip = { setVoerraadCode, setActionCode, setPeople, playVideo, closeVideo };
 })();

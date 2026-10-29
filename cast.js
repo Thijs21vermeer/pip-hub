@@ -42,6 +42,12 @@
       if (data.type === "voerraad-code" && typeof data.code === "string") window.Pip.setVoerraadCode(data.code);
       if (data.type === "kattenbak-code" && typeof data.code === "string") window.Pip.setActionCode(data.code);
       if (data.type === "people" && Array.isArray(data.people)) window.Pip.setPeople(data.people);
+      // Video: Pip meldt terug hoe het afspelen gaat (laden, spelen, fout).
+      if (data.type === "video") {
+        window.Pip.playVideo(data, (status) =>
+          context.sendCustomMessage(NAMESPACE, event.senderId, { type: "video-status", ...status }));
+      }
+      if (data.type === "video-close") window.Pip.closeVideo();
     });
 
     const options = new framework.CastReceiverOptions();
