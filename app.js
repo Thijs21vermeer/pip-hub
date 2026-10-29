@@ -139,7 +139,6 @@
     restDate: document.getElementById("rest-date"),
     restCard: document.getElementById("rest-card"),
     restPhotos: [...document.querySelectorAll(".rest-photo")],
-    restPet: document.getElementById("rest-pet"),
     restHearts: document.getElementById("rest-hearts"),
     video: document.getElementById("video"),
     videoTitle: document.getElementById("video-title"),
@@ -1107,39 +1106,104 @@
     source.start();
   }
 
-  // Aai Pip: hartjes, en meestal een miauw; soms spint ze.
-  function petPip() {
+  // Aai Pip: tik op de ruststand en ze miauwt (soms spint ze), met hartjes die
+  // opstijgen waar je tikt. Daarna opent het overzicht, net als eerst.
+  const PET_TO_DASHBOARD_MS = 900;
+  let petting = false;
+
+  function petPip(x, y) {
+    if (petting) return;
+    petting = true;
     if (meowBuffer && Math.random() < 0.75) playMeow();
     else playPurr();
     for (let index = 0; index < 5; index++) {
       const heart = document.createElement("span");
       heart.innerHTML = ICONS.heart;
+      heart.style.left = `${x}px`;
+      heart.style.top = `${y}px`;
       heart.style.setProperty("--drift", `${Math.round((Math.random() - 0.5) * 90)}px`);
-      heart.style.animationDelay = `${index * 0.12}s`;
+      heart.style.animationDelay = `${index * 0.1}s`;
       els.restHearts.appendChild(heart);
       setTimeout(() => heart.remove(), 2400);
     }
-    scheduleRest(); // aaien telt als iets doen
+    setTimeout(() => {
+      petting = false;
+      hideRest();
+    }, PET_TO_DASHBOARD_MS);
   }
 
-  // Feestje: alle taken van vandaag zijn af.
+  // Feestje: alle taken van vandaag zijn af. Twee confettikanonnen in de hoeken
+  // onderaan schieten schuin omhoog; daarna dwarrelt alles naar beneden.
+  const CONFETTI_COLORS = ["#a9642f", "#5b7f4f", "#e0a43a", "#f26b7a", "#6aa6c8", "#f3ece4"];
+  const CONFETTI_PER_SIDE = 90;
+  const CONFETTI_MS = 5000;
+
   function celebrate() {
     playParty();
-    const colors = ["#a9642f", "#5b7f4f", "#e0a43a", "#f26b7a", "#6aa6c8", "#f3ece4"];
-    const layer = document.createElement("div");
-    layer.className = "confetti";
-    for (let index = 0; index < 70; index++) {
-      const piece = document.createElement("span");
-      piece.style.left = `${Math.random() * 100}%`;
-      piece.style.background = colors[index % colors.length];
-      piece.style.setProperty("--fall", `${1.8 + Math.random() * 1.4}s`);
-      piece.style.setProperty("--delay", `${Math.random() * 0.5}s`);
-      piece.style.setProperty("--drift", `${Math.round((Math.random() - 0.5) * 160)}px`);
-      piece.style.setProperty("--spin", `${Math.round(Math.random() * 720 - 360)}deg`);
-      layer.appendChild(piece);
+    const canvas = document.createElement("canvas");
+    const ratio = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.className = "confetti";
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    document.body.appendChild(canvas);
+    const draw = canvas.getContext("2d");
+    draw.scale(ratio, ratio);
+
+    const pieces = [];
+    [1, -1].forEach((direction) => { // 1 = kanon links (schiet naar rechts), -1 = rechts
+      for (let index = 0; index < CONFETTI_PER_SIDE; index++) {
+        const angle = ((52 + Math.random() * 28) * Math.PI) / 180; // schuin omhoog
+        const speed = 13 + Math.random() * 11; // pixels per beeldje (60 per seconde)
+        pieces.push({
+          x: direction === 1 ? -10 : width + 10,
+          y: height + 10,
+          vx: Math.cos(angle) * speed * direction,
+          vy: -Math.sin(angle) * speed,
+          delay: Math.random() * 250, // niet allemaal tegelijk uit de loop
+          spin: Math.random() * Math.PI * 2,
+          spinSpeed: (Math.random() - 0.5) * 0.4,
+          flip: Math.random() * Math.PI * 2,
+          size: 8 + Math.random() * 7,
+          color: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
+        });
+      }
+    });
+
+    const started = performance.now();
+    let last = started;
+    function frame(now) {
+      const step = Math.min(3, (now - last) / (1000 / 60)); // gelijk tempo, ook bij haperen
+      last = now;
+      draw.clearRect(0, 0, width, height);
+      let visible = 0;
+      for (const piece of pieces) {
+        if (now - started < piece.delay) {
+          visible += 1;
+          continue;
+        }
+        piece.vy += 0.38 * step; // zwaartekracht
+        piece.vx *= Math.pow(0.985, step); // luchtweerstand
+        if (piece.vy > 3.2) piece.vy = 3.2; // eenmaal vallend: dwarrelen
+        piece.x += (piece.vx + (piece.vy > 0 ? Math.sin(piece.flip) * 0.8 : 0)) * step;
+        piece.y += piece.vy * step;
+        piece.spin += piece.spinSpeed * step;
+        piece.flip += 0.12 * step;
+        if (piece.y > height + 20) continue;
+        visible += 1;
+        draw.save();
+        draw.translate(piece.x, piece.y);
+        draw.rotate(piece.spin);
+        draw.scale(1, Math.cos(piece.flip)); // omdraaien, zoals echte snippers
+        draw.fillStyle = piece.color;
+        draw.fillRect(-piece.size / 2, -piece.size * 0.35, piece.size, piece.size * 0.7);
+        draw.restore();
+      }
+      if (visible && now - started < CONFETTI_MS) requestAnimationFrame(frame);
+      else canvas.remove();
     }
-    document.body.appendChild(layer);
-    setTimeout(() => layer.remove(), 4000);
+    requestAnimationFrame(frame);
   }
 
   // ---- Ruststand ----
@@ -1907,10 +1971,8 @@
       return;
     }
     const { action, id } = target.dataset;
-    if (action === "pet") {
-      petPip();
-    } else if (action === "wake") {
-      hideRest();
+    if (action === "wake") {
+      petPip(event.clientX, event.clientY);
     } else if (action === "video-close") {
       closeVideo();
     } else if (action === "to-google") {
@@ -2000,7 +2062,6 @@
   // ---- Start ----
 
   els.toGoogle.innerHTML = `${ICONS.home}<span>Google Hub</span>`;
-  els.restPet.innerHTML = ICONS.paw;
   renderLogo();
   rollOverIfNewDay();
   saveState();
