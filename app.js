@@ -1212,17 +1212,20 @@
     return `over ${hours} uur${rest ? ` ${rest} min` : ""}`;
   }
 
+  // Rustig: alleen de tijd, met − en + (een kwartier; ingedrukt houden gaat sneller).
   function customAwayHtml() {
-    const at = new Date(awayPick);
-    const day = at.toDateString() === new Date().toDateString() ? "" : "morgen ";
-    const step = (delta, label) =>
-      `<button class="away-step" data-action="google-step" data-delta="${delta}">${label}</button>`;
+    const step = (delta, icon, label) =>
+      `<button class="away-step" data-action="google-step" data-delta="${delta}" aria-label="${label}">${icon}</button>`;
     return `
-      <h3>Wanneer komt Pip terug?</h3>
+      <p class="away-label">Pip komt terug om</p>
       <div class="away-pick">
-        ${step(-60, "−1 uur")}${step(-15, "−15 min")}
-        <div class="away-time"><strong>${day}${formatTime(at)}</strong><span>${awayDuration(awayPick)}</span></div>
-        ${step(15, "+15 min")}${step(60, "+1 uur")}
+        ${step(-15, ICONS.minus, "Kwartier eerder")}
+        <div class="away-time">
+          <span class="away-day" id="away-day">morgen</span>
+          <strong id="away-clock"></strong>
+          <span class="away-left" id="away-left"></span>
+        </div>
+        ${step(15, ICONS.plus, "Kwartier later")}
       </div>
       <div class="choices">
         <button class="choice" data-action="google-go" data-choice="custom">Naar Google Hub</button>
@@ -1230,17 +1233,55 @@
       </div>`;
   }
 
+  // Alleen de tekst bijwerken, niet het hele venster: dan blijft ingedrukt houden werken.
+  function renderAwayTime() {
+    const clock = document.getElementById("away-clock");
+    if (!clock) return;
+    const at = new Date(awayPick);
+    document.getElementById("away-day").classList.toggle("shown", at.toDateString() !== new Date().toDateString());
+    clock.textContent = formatTime(at);
+    document.getElementById("away-left").textContent = awayDuration(awayPick);
+  }
+
   function openCustomAway() {
     // Begin een half uur vooruit, afgerond op het volgende kwartier.
     awayPick = clampAway(Math.ceil((Date.now() + 30 * 60 * 1000) / AWAY_STEP_MS) * AWAY_STEP_MS);
     openSheet(null, customAwayHtml());
+    els.sheetBody.classList.add("away");
+    renderAwayTime();
   }
 
   function stepCustomAway(minutes) {
     // Weer op een heel kwartier uitkomen, ook na de grens van 5 min of 24 uur.
     awayPick = clampAway(Math.round((awayPick + minutes * 60 * 1000) / AWAY_STEP_MS) * AWAY_STEP_MS);
-    openSheet(null, customAwayHtml()); // opnieuw openen houdt het venster ook langer open
+    renderAwayTime();
+    clearTimeout(sheetTimer); // zolang je verschuift, blijft het venster open
+    sheetTimer = setTimeout(closeSheet, SHEET_TIMEOUT_MS);
   }
+
+  // − of + ingedrukt houden: na een halve seconde steeds sneller verschuiven.
+  let holdTimer = null;
+  let held = false;
+
+  function stopHold() {
+    clearTimeout(holdTimer);
+  }
+
+  els.sheet.addEventListener("pointerdown", (event) => {
+    const button = event.target.closest('[data-action="google-step"]');
+    if (!button) return;
+    held = false;
+    const delta = Number(button.dataset.delta);
+    const repeat = (wait) => {
+      holdTimer = setTimeout(() => {
+        held = true;
+        stepCustomAway(delta);
+        repeat(Math.max(70, wait * 0.8));
+      }, wait);
+    };
+    repeat(450);
+  });
+  ["pointerup", "pointercancel"].forEach((type) => document.addEventListener(type, stopHold));
 
   function awayUntil(choice) {
     if (choice === "custom") return clampAway(awayPick);
@@ -1432,7 +1473,8 @@
     } else if (action === "google-custom") {
       openCustomAway();
     } else if (action === "google-step") {
-      stepCustomAway(Number(target.dataset.delta));
+      if (held) held = false; // ingedrukt gehouden: de tik is al verwerkt
+      else stepCustomAway(Number(target.dataset.delta));
     } else if (action === "google-go") {
       goToGoogle(target.dataset.choice);
     } else if (action === "all-tasks") {
