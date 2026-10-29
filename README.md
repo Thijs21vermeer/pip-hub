@@ -116,6 +116,27 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Opslag:** de lijst wordt op de Google Hub bewaard en op het servertje (`/api/pip-settings`, Netlify Blobs), met dezelfde kattenbak-code. Zo overleeft hij een herstart van de Google Hub. Ook de huisgenoten van de startpagina komen daar terecht.
 - `config.js` bevat alleen de standaardlijst voor als er nog niets is opgeslagen.
 
+## Meldingen op je telefoon (ntfy)
+
+Voor natvoer krijgt iedereen in huis een melding op de telefoon:
+
+- **Om 22:00**, als nog niemand **Natvoer geven** heeft afgevinkt: "Nog doen: Natvoer geven".
+- **Zodra iemand hem afvinkt**: "Gedaan: Natvoer geven · Bou om 22:03". Zo weet je wie het deed.
+
+Hoe het werkt:
+
+- **Geen apparaat thuis nodig.** Netlify kijkt elke 5 minuten (`netlify/functions/herinnering.mjs`), en de opslag (`pip-settings.mjs`) meldt een nieuw vinkje meteen.
+- **Instellen per taak** gebeurt op het servertje, niet op de Google Hub:
+  - `notify: true` geeft een melding als de taak gedaan is.
+  - `remind: "22:00"` geeft een seintje als hij dan nog open staat (alleen dagtaken, één keer per dag, tot 2 uur na die tijd).
+  - In **Alle taken → Bewerken** zie je het als "seintje 22:00".
+- **De meldingen gaan via ntfy.sh** naar een geheim onderwerp: `NTFY_TOPIC` in Netlify, en op de Mac in `~/.config/pip/ntfy-topic.txt`. Wie dat onderwerp kent, kan meelezen; zet het dus niet in GitHub.
+
+Meldingen aanzetten, op elke telefoon:
+
+1. Installeer de app **ntfy** (App Store of Google Play).
+2. Tik op **+**, vul het onderwerp in (laat de server op ntfy.sh staan) en tik op **Abonneren**.
+
 ## Acties: kattenbak draaien en voeren
 
 Onder **Acties** staan twee knoppen:

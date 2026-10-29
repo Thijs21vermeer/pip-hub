@@ -5,9 +5,14 @@
 //
 //   GET /api/pip-settings   { tasks?, people?, done?, stock?, voerraadCode?, away?, watcherSeenAt?, updatedAt? }
 //   PUT /api/pip-settings   werkt bij wat meegestuurd wordt
+//
+// Een taak met notify: true geeft een melding op de telefoon (ntfy) zodra iemand
+// hem afvinkt; remind: "22:00" geeft een seintje als hij dan nog open staat
+// (zie herinnering.mjs).
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
+import { localTime, notify } from "../lib/notify.mjs";
 
 const ICONS = new Set(["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"]);
 const REPEATS = new Set(["daily", "weekly", "biweekly", "monthly", "quarterly"]);
@@ -33,6 +38,9 @@ function cleanTasks(list) {
       icon: ICONS.has(item.icon) ? item.icon : "paw",
       repeat: REPEATS.has(item.repeat) ? item.repeat : "daily",
     };
+    // Melding als hij gedaan is, en een seintje op een vaste tijd (alleen dagtaken).
+    if (item.notify === true) task.notify = true;
+    if (task.repeat === "daily" && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.remind || "")) task.remind = item.remind;
     // Vaste dag: weekdag (0-6) bij week-taken, dag van de maand (1-28) bij
     // maand- en kwartaaltaken. from = dagnummer waarop die dag gekozen is.
     const week = task.repeat === "weekly" || task.repeat === "biweekly";
@@ -103,6 +111,24 @@ function cleanAway(value) {
   return { until: Math.round(until), at: now };
 }
 
+// Net afgevinkt (nieuwer dan wat er stond) bij een taak met notify: melden wie het
+// deed. Alleen verse vinkjes: een herstart van Pip stuurt oude vinkjes opnieuw mee.
+const FRESH_MS = 6 * 60 * 60 * 1000;
+
+async function announceDone(before, after) {
+  const tasks = after.tasks || before.tasks || [];
+  for (const task of tasks.filter((t) => t.notify)) {
+    const entry = (after.done || {})[task.id];
+    const old = (before.done || {})[task.id];
+    if (!entry || (old && old.at >= entry.at) || entry.at < Date.now() - FRESH_MS) continue;
+    await notify({
+      title: `Gedaan: ${task.title}`,
+      message: `${entry.by} om ${localTime(entry.at).time}`,
+      tags: ["white_check_mark", "cat"],
+    });
+  }
+}
+
 export default async (request) => {
   const headers = corsHeaders(request, "GET, PUT");
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
@@ -159,6 +185,7 @@ export default async (request) => {
     if (body.watcher === true) next.watcherSeenAt = Date.now();
     next.updatedAt = new Date().toISOString();
     await store.setJSON("settings", next);
+    await announceDone(current, next).catch(() => {}); // een melding mag het opslaan nooit tegenhouden
     return json(200, next, headers);
   } catch (error) {
     console.error(JSON.stringify({ event: "pip-settings.error", code: error.code || error.name || "UNKNOWN" }));

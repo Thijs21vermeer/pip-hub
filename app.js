@@ -155,6 +155,10 @@
   let settings = loadSettingsCache(); // { tasks?, people? } van de Hub of het servertje
   let pushTimer = null;
   let synced = false; // al een keer met het servertje gelijkgetrokken?
+  // Alleen een zelf gewijzigde takenlijst gaat mee naar het servertje: zo
+  // overschrijft een oude kopie op de Hub geen instellingen die daar staan
+  // (zoals een seintje om 22:00).
+  let tasksChanged = false;
   let editor = null; // taak die nu gewijzigd wordt: { id, title, icon, confirmDelete }
   let pageOpen = false;
   let pageEditing = false;
@@ -542,14 +546,16 @@
       stock: state.stock,
       voerraadCode: voerraadCode(),
     };
-    if (settings.tasks) body.tasks = settings.tasks;
+    const sendTasks = tasksChanged && settings.tasks;
+    if (sendTasks) body.tasks = settings.tasks;
     if (settings.people) body.people = settings.people;
     try {
-      await fetch(settingsUrl(), {
+      const response = await fetch(settingsUrl(), {
         method: "PUT",
         headers: { Authorization: `Bearer ${actionCode()}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (sendTasks && response.ok) tasksChanged = false;
     } catch (error) {
       // Niet bereikbaar: de Hub houdt zijn eigen kopie, de volgende wijziging probeert opnieuw.
     }
@@ -622,8 +628,12 @@
       const item = { id: task.id, title: task.title, icon: task.icon, repeat: repeatOf(task) };
       const day = dayOf(task);
       if (day !== null) Object.assign(item, { day, from: task.from });
+      // Melding als hij gedaan is en een seintje op een vaste tijd (op het servertje ingesteld).
+      if (task.notify) item.notify = true;
+      if (task.remind) item.remind = task.remind;
       return item;
     });
+    tasksChanged = true;
     saveSettings({ tasks: clean });
     // Weggehaalde taken ook uit de vinkjes van vandaag.
     Object.keys(state.done).forEach((id) => {
@@ -988,7 +998,7 @@
         <span class="icon">${ICONS[task.icon] || ICONS.paw}</span>
         <span>
           <span class="title">${escapeHtml(task.title)}</span>
-          <span class="status">${repeatText(task)}</span>
+          <span class="status">${repeatText(task)}${task.remind ? ` · seintje ${task.remind}` : ""}</span>
         </span>
         <span class="edit-badge">${ICONS.pencil}</span>
       </button>`;
