@@ -33,15 +33,26 @@
   const PAGE_TIMEOUT_MS = 90 * 1000; // pagina "Alle taken" sluit vanzelf
   const TASK_ICONS = ["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"];
   const SUGGESTIONS = [
-    { title: "Kattenbak verschonen", icon: "box" },
-    { title: "Borstelen", icon: "heart" },
-    { title: "Spelen", icon: "ball" },
-    { title: "Nagels knippen", icon: "scissors" },
-    { title: "Medicijn geven", icon: "pill" },
-    { title: "Fontein schoonmaken", icon: "drop" },
-    { title: "Tanden poetsen", icon: "heart" },
-    { title: "Vlooienmiddel", icon: "pill" },
+    { title: "Kattenbak verschonen", icon: "box", repeat: "weekly" },
+    { title: "Borstelen", icon: "heart", repeat: "weekly" },
+    { title: "Spelen", icon: "ball", repeat: "daily" },
+    { title: "Nagels knippen", icon: "scissors", repeat: "biweekly" },
+    { title: "Medicijn geven", icon: "pill", repeat: "daily" },
+    { title: "Fontein schoonmaken", icon: "drop", repeat: "weekly" },
+    { title: "Vlooienmiddel", icon: "pill", repeat: "monthly" },
+    { title: "Ontwormen", icon: "pill", repeat: "quarterly" },
   ];
+  // Hoe vaak een taak terugkomt. De periode begint om resetHour: een weektaak op
+  // maandag, een maandtaak op de 1e, een kwartaaltaak op 1 jan/apr/jul/okt.
+  const REPEATS = {
+    daily: { label: "Elke dag", todo: "Nog doen" },
+    weekly: { label: "Elke week", todo: "Deze week nog doen" },
+    biweekly: { label: "Om de week", todo: "Deze 2 weken nog doen" },
+    monthly: { label: "Elke maand", todo: "Deze maand nog doen" },
+    quarterly: { label: "Elk kwartaal", todo: "Dit kwartaal nog doen" },
+  };
+  const DAYS_SHORT = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+  const MONTHS_SHORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
   // Schermtoetsenbord: de Hub heeft zelf geen toetsenbord voor apps.
   const KEY_ROWS = [
     ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
@@ -131,9 +142,42 @@
   // ---- Opslag ----
 
   // De "dag" begint om resetHour, zodat iets om 01:00 nog bij gisteren hoort.
+  function shifted(date) {
+    return new Date(date.getTime() - config.resetHour * 3600 * 1000);
+  }
+
   function logicalDay(date) {
-    const shifted = new Date(date.getTime() - config.resetHour * 3600 * 1000);
-    return `${shifted.getFullYear()}-${pad(shifted.getMonth() + 1)}-${pad(shifted.getDate())}`;
+    const d = shifted(date);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  // Dagnummer sinds 1-1-1970 (een donderdag), handig voor weken.
+  function dayNumber(date) {
+    const d = shifted(date);
+    return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  }
+
+  // In welke periode valt een moment? Gelijke sleutel = zelfde dag/week/maand.
+  function periodKey(repeat, date) {
+    const d = shifted(date);
+    const day = dayNumber(date);
+    if (repeat === "weekly") return `w${Math.floor((day + 3) / 7)}`; // weken beginnen op maandag
+    if (repeat === "biweekly") return `b${Math.floor((day + 3) / 14)}`;
+    if (repeat === "monthly") return `m${d.getFullYear()}-${d.getMonth()}`;
+    if (repeat === "quarterly") return `q${d.getFullYear()}-${Math.floor(d.getMonth() / 3)}`;
+    return `d${day}`;
+  }
+
+  function repeatOf(task) {
+    return REPEATS[task.repeat] ? task.repeat : "daily";
+  }
+
+  // De laatste keer dat de taak gedaan is, als dat in de huidige periode was.
+  function currentDone(task) {
+    const entry = state.done[task.id];
+    if (!entry) return null;
+    const repeat = repeatOf(task);
+    return periodKey(repeat, new Date(entry.at)) === periodKey(repeat, new Date()) ? entry : null;
   }
 
   function loadState() {
@@ -164,11 +208,12 @@
     schedulePush();
   }
 
+  // Een nieuwe dag wist niets meer: per taak bepaalt de periode of hij weer open
+  // staat (zie currentDone). Wel opnieuw tekenen, zodat dat zichtbaar wordt.
   function rollOverIfNewDay() {
     const today = logicalDay(new Date());
     if (state.day === today) return false;
     state.day = today;
-    state.done = {};
     saveState();
     return true;
   }
@@ -407,7 +452,7 @@
     // Pas na het eerste ophalen: anders overschrijft een verse start de vinkjes.
     if (!synced || !actionCode() || !settingsUrl()) return;
     const body = {
-      today: { day: state.day, done: state.done },
+      done: state.done,
       stock: state.stock,
       voerraadCode: voerraadCode(),
     };
@@ -437,8 +482,11 @@
         settings = { ...settings, tasks: remote.tasks || settings.tasks, people: remote.people || settings.people };
         writeStorage(SETTINGS_KEY, JSON.stringify(settings));
       }
-      // Vinkjes van vandaag terug; wat sinds de start al is afgevinkt blijft staan.
-      if (remote.today && remote.today.day === state.day) state.done = { ...remote.today.done, ...state.done };
+      // Vinkjes terug: per taak de laatste keer (vroegere versies stuurden "today").
+      const remoteDone = { ...((remote.today && remote.today.done) || {}), ...(remote.done || {}) };
+      Object.entries(remoteDone).forEach(([id, entry]) => {
+        if (!state.done[id] || state.done[id].at < entry.at) state.done[id] = entry;
+      });
       if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
       try {
@@ -465,7 +513,7 @@
   }
 
   function setTasks(list) {
-    const clean = list.map(({ id, title, icon }) => ({ id, title, icon }));
+    const clean = list.map(({ id, title, icon, repeat }) => ({ id, title, icon, repeat: REPEATS[repeat] ? repeat : "daily" }));
     saveSettings({ tasks: clean });
     // Weggehaalde taken ook uit de vinkjes van vandaag.
     Object.keys(state.done).forEach((id) => {
@@ -511,11 +559,29 @@
     return hour >= NIGHT_FROM || hour < NIGHT_UNTIL;
   }
 
+  // "vandaag 14:02", "gisteren 18:10" of "ma 27 okt".
+  function whenShort(at) {
+    const date = new Date(at);
+    const daysAgo = dayNumber(new Date()) - dayNumber(date);
+    if (daysAgo === 0) return `vandaag ${formatTime(date)}`;
+    if (daysAgo === 1) return `gisteren ${formatTime(date)}`;
+    return `${DAYS_SHORT[date.getDay()]} ${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}`;
+  }
+
+  // "vandaag om 14:02" of "op maandag 27 oktober om 14:02".
+  function whenLong(at) {
+    const date = new Date(at);
+    const daysAgo = dayNumber(new Date()) - dayNumber(date);
+    if (daysAgo === 0) return `vandaag om ${formatTime(date)}`;
+    if (daysAgo === 1) return `gisteren om ${formatTime(date)}`;
+    return `op ${formatDate(date)} om ${formatTime(date)}`;
+  }
+
   function taskCard(task) {
-    const done = state.done[task.id];
+    const done = currentDone(task);
     const status = done
-      ? `${escapeHtml(done.by)} · ${formatTime(new Date(done.at))}`
-      : "Nog doen";
+      ? `${escapeHtml(done.by)} · ${whenShort(done.at)}`
+      : REPEATS[repeatOf(task)].todo;
     return `
       <button class="task${done ? " done" : ""}" data-action="task" data-id="${escapeHtml(task.id)}">
         <span class="icon">${done ? ICONS.check : ICONS[task.icon] || ICONS.paw}</span>
@@ -653,7 +719,7 @@
     renderClock();
     const list = tasks();
     const total = list.length;
-    const doneCount = list.filter((task) => state.done[task.id]).length;
+    const doneCount = list.filter((task) => currentDone(task)).length;
     const allDone = total > 0 && doneCount === total;
     document.body.classList.toggle("all-done", allDone);
     els.progressText.textContent = allDone ? "Alles gedaan voor vandaag" : `${doneCount} van ${total} gedaan`;
@@ -674,7 +740,7 @@
         <span class="icon">${ICONS[task.icon] || ICONS.paw}</span>
         <span>
           <span class="title">${escapeHtml(task.title)}</span>
-          <span class="status">${index < HOME_TASKS ? "Op startscherm" : "Onder meer"}</span>
+          <span class="status">${REPEATS[repeatOf(task)].label} · ${index < HOME_TASKS ? "startscherm" : "onder meer"}</span>
         </span>
         <span class="edit-badge">${ICONS.pencil}</span>
       </button>`;
@@ -735,9 +801,11 @@
     const taken = new Set(list.map((task) => task.title.toLowerCase()));
     const suggestions = isNew ? SUGGESTIONS.filter((s) => !taken.has(s.title.toLowerCase())).slice(0, 6) : [];
     const chips = suggestions.map((s) =>
-      `<button class="chip" data-action="kb-suggest" data-title="${escapeHtml(s.title)}" data-icon="${s.icon}">${escapeHtml(s.title)}</button>`).join("");
+      `<button class="chip" data-action="kb-suggest" data-title="${escapeHtml(s.title)}" data-icon="${s.icon}" data-repeat="${s.repeat}">${escapeHtml(s.title)}</button>`).join("");
     const icons = TASK_ICONS.map((name) =>
       `<button class="icon-pick${name === editor.icon ? " selected" : ""}" data-action="kb-icon" data-icon="${name}" aria-label="${name}">${ICONS[name]}</button>`).join("");
+    const repeats = Object.entries(REPEATS).map(([key, { label }]) =>
+      `<button class="repeat-pick${key === editor.repeat ? " selected" : ""}" data-action="kb-repeat" data-repeat="${key}">${label}</button>`).join("");
     const manage = isNew ? "" : `
       <button class="choice warn small" data-action="kb-delete"${list.length <= 1 ? " disabled" : ""}>${editor.confirmDelete ? "Echt verwijderen?" : "Verwijderen"}</button>
       <button class="choice secondary small square" data-action="kb-move" data-delta="-1" aria-label="Eerder"${index <= 0 ? " disabled" : ""}>${ICONS.left}</button>
@@ -748,6 +816,7 @@
       <div class="name-field${editor.title ? "" : " empty"}">${escapeHtml(editor.title) || "Naam van de taak"}<span class="caret"></span></div>
       ${chips ? `<div class="chips">${chips}</div>` : ""}
       <div class="icon-row">${icons}</div>
+      <div class="repeat-row"><span class="repeat-label">Hoe vaak</span>${repeats}</div>
       <div class="keyboard">${KEY_ROWS.map((row) => `<div class="kb-row">${row.map(keyButton).join("")}</div>`).join("")}</div>
       <div class="editor-actions">
         <div class="editor-manage">${manage}</div>
@@ -759,7 +828,9 @@
   }
 
   function openEditor(task) {
-    const base = task ? { id: task.id, title: task.title, icon: task.icon || "paw" } : { id: null, title: "", icon: "paw" };
+    const base = task
+      ? { id: task.id, title: task.title, icon: task.icon || "paw", repeat: repeatOf(task) }
+      : { id: null, title: "", icon: "paw", repeat: "daily" };
     openSheet(null, "", { wide: true });
     editor = { ...base, confirmDelete: false };
     refreshEditor();
@@ -787,9 +858,9 @@
     const list = tasks().map((task) => ({ ...task }));
     if (editor.id) {
       const task = list.find((t) => t.id === editor.id);
-      if (task) Object.assign(task, { title, icon: editor.icon });
+      if (task) Object.assign(task, { title, icon: editor.icon, repeat: editor.repeat });
     } else {
-      list.push({ id: `t${Date.now().toString(36)}`, title, icon: editor.icon });
+      list.push({ id: `t${Date.now().toString(36)}`, title, icon: editor.icon, repeat: editor.repeat });
     }
     closeSheet();
     setTasks(list);
@@ -865,10 +936,10 @@
   }
 
   function showDone(task) {
-    const done = state.done[task.id];
+    const done = currentDone(task);
     openSheet(task, `
       <h3>${escapeHtml(task.title)}</h3>
-      <p>Gedaan door ${escapeHtml(done.by)} om ${formatTime(new Date(done.at))}</p>
+      <p>Gedaan door ${escapeHtml(done.by)} ${whenLong(done.at)}</p>
       <div class="choices">
         <button class="choice warn" data-action="undo">Toch niet gedaan</button>
         <button class="choice secondary" data-action="close">Sluiten</button>
@@ -1001,6 +1072,10 @@
     } else if (action === "kb-suggest" && editor) {
       editor.title = target.dataset.title;
       editor.icon = target.dataset.icon;
+      editor.repeat = target.dataset.repeat;
+      refreshEditor();
+    } else if (action === "kb-repeat" && editor) {
+      editor.repeat = target.dataset.repeat;
       refreshEditor();
     } else if (action === "kb-save" && editor) {
       saveEditor();
@@ -1011,7 +1086,7 @@
     } else if (action === "task") {
       const task = tasks().find((t) => t.id === id);
       if (!task) return;
-      if (state.done[task.id]) showDone(task);
+      if (currentDone(task)) showDone(task);
       else if (people().length <= 1) markDone(task, people()[0] || "Gedaan");
       else askWho(task);
     } else if (action === "person" && sheetTask) {

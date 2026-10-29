@@ -1,15 +1,16 @@
 // Alles wat Pip na een herstart van de Google Hub terug moet hebben: de taken,
-// de huisgenoten, de vinkjes van vandaag, de handmatige voorraadtellers en de
-// Voerraad-koppelcode. Bewaard in Netlify Blobs. Zelfde code als het
-// kattenbak-servertje (PIP_ACTION_CODE).
+// de huisgenoten, wanneer elke taak voor het laatst gedaan is, de handmatige
+// voorraadtellers en de Voerraad-koppelcode. Bewaard in Netlify Blobs. Zelfde
+// code als het kattenbak-servertje (PIP_ACTION_CODE).
 //
-//   GET /api/pip-settings   { tasks?, people?, today?, stock?, voerraadCode?, updatedAt? }
+//   GET /api/pip-settings   { tasks?, people?, done?, stock?, voerraadCode?, updatedAt? }
 //   PUT /api/pip-settings   werkt bij wat meegestuurd wordt
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
 
 const ICONS = new Set(["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"]);
+const REPEATS = new Set(["daily", "weekly", "biweekly", "monthly", "quarterly"]);
 const MAX_TASKS = 12;
 const MAX_PEOPLE = 6;
 
@@ -26,7 +27,12 @@ function cleanTasks(list) {
     const title = text(item?.title, 30);
     if (!title || !/^[a-z0-9_-]+$/i.test(id) || seen.has(id)) continue;
     seen.add(id);
-    tasks.push({ id, title, icon: ICONS.has(item.icon) ? item.icon : "paw" });
+    tasks.push({
+      id,
+      title,
+      icon: ICONS.has(item.icon) ? item.icon : "paw",
+      repeat: REPEATS.has(item.repeat) ? item.repeat : "daily",
+    });
   }
   return tasks.length ? tasks : null;
 }
@@ -37,11 +43,12 @@ function cleanPeople(list) {
   return people.length ? people : null;
 }
 
-// Vinkjes van één dag: { day: "2026-10-29", done: { taakId: { by, at, took } } }.
-function cleanToday(value) {
-  if (!value || typeof value !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(value.day)) return null;
+// Laatste keer dat een taak gedaan is: { taakId: { by, at, took } }. Pip rekent
+// zelf uit of dat nog binnen de periode (dag, week, maand…) van die taak valt.
+function cleanDone(value) {
+  if (!value || typeof value !== "object") return null;
   const done = {};
-  for (const [id, entry] of Object.entries(value.done || {}).slice(0, MAX_TASKS)) {
+  for (const [id, entry] of Object.entries(value).slice(0, 30)) {
     if (!/^[a-z0-9_-]{1,40}$/i.test(id) || !entry || typeof entry.at !== "number") continue;
     done[id] = {
       by: text(entry.by, 20) || "Gedaan",
@@ -49,7 +56,13 @@ function cleanToday(value) {
       took: Number.isInteger(entry.took) && entry.took >= 0 && entry.took < 100 ? entry.took : 0,
     };
   }
-  return { day: value.day, done };
+  return done;
+}
+
+// Oudere vorm (alleen de vinkjes van één dag): { day: "2026-10-29", done: {...} }.
+function cleanToday(value) {
+  if (!value || typeof value !== "object" || !/^\d{4}-\d{2}-\d{2}$/.test(value.day)) return null;
+  return { day: value.day, done: cleanDone(value.done || {}) };
 }
 
 // Handmatige voorraadtellers: { natvoer: 13, ... }.
@@ -91,6 +104,11 @@ export default async (request) => {
       const people = cleanPeople(body.people);
       if (!people) return json(400, { error: "BAD_PEOPLE" }, headers);
       next.people = people;
+    }
+    if ("done" in body) {
+      const done = cleanDone(body.done);
+      if (!done) return json(400, { error: "BAD_DONE" }, headers);
+      next.done = done;
     }
     if ("today" in body) {
       const today = cleanToday(body.today);
