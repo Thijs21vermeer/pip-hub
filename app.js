@@ -11,6 +11,19 @@
   const VOERRAAD_CACHE_KEY = "pip-hub-voerraad-cache";
   const PEOPLE_KEY = "pip-hub-people";
   const MAX_PEOPLE = 6;
+  const ACTION_CODE_KEY = "pip-hub-kattenbak-code";
+  const FEEDBACK_MS = 2 * 60 * 1000; // zo lang blijft "Gestart om …" staan
+
+  // Foutcodes van het kattenbak-servertje, zoals Pip ze laat zien.
+  const ACTION_ERRORS = {
+    CAT_INSIDE: "Pip zit erin, later opnieuw",
+    OFFLINE: "Kattenbak is offline",
+    TOO_SOON: "Draaide net al",
+    TUYA_EXPIRED: "Tuya-abonnement verlopen",
+    UNAUTHORIZED: "Koppelcode werkt niet",
+    NOT_CONFIGURED: "Servertje nog niet ingesteld",
+    UNREACHABLE: "Servertje niet bereikbaar",
+  };
 
   const DAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
   const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
@@ -29,6 +42,7 @@
     bowl: svg('<path d="M3 12h18a9 7 0 0 1-18 0z"/><path d="M9 8.5h.01M12 7h.01M15 8.5h.01"/>'),
     heart: svg('<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>'),
     pill: svg('<path d="M10.5 20.5l-7-7a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>'),
+    wind: svg('<path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>'),
     check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
     minus: svg('<path d="M5 12h14"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
@@ -53,6 +67,7 @@
     clock: document.getElementById("clock"),
     date: document.getElementById("date"),
     tasks: document.getElementById("tasks"),
+    actions: document.getElementById("actions"),
     stock: document.getElementById("stock"),
     sheet: document.getElementById("sheet"),
     sheetBody: document.getElementById("sheet-body"),
@@ -60,7 +75,11 @@
 
   let state = loadState();
   let voerraad = loadVoerraadCache();
+  let kattenbak = null; // laatste status van het servertje
+  const actionFeedback = {}; // per actie: { text, kind, until }
+  const busyActions = new Set();
   let sheetTask = null;
+  let sheetAction = null;
   let sheetTimer = null;
 
   // ---- Opslag ----
@@ -162,11 +181,14 @@
     return readStorage(VOERRAAD_CODE_KEY) || "";
   }
 
-  function voerraadUrl() {
-    // Alleen bij lokaal testen mag een andere server, bv. ?voerraad=http://localhost:3000
-    const override = new URLSearchParams(location.search).get("voerraad");
+  // Alleen bij lokaal testen mag een andere server, bv. ?voerraad=http://localhost:3000
+  function localOverride(name) {
     const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-    return (local && override) || config.voerraad.url;
+    return local ? new URLSearchParams(location.search).get(name) : null;
+  }
+
+  function voerraadUrl() {
+    return localOverride("voerraad") || config.voerraad.url;
   }
 
   function loadVoerraadCache() {
@@ -198,6 +220,68 @@
       voerraad = { ...voerraad, error: "offline" };
     }
     renderStock();
+  }
+
+  // ---- Kattenbak (acties) ----
+
+  // De knoppen praten met het servertje op Netlify, dat de Tuya-sleutels heeft.
+  // De code voor dat servertje komt, net als de Voerraad-code, via de startknop.
+
+  function actionCode() {
+    return readStorage(ACTION_CODE_KEY) || "";
+  }
+
+  function kattenbakUrl() {
+    return localOverride("kattenbak") || config.kattenbak.url;
+  }
+
+  function kattenbakLinked() {
+    return !!(actionCode() && kattenbakUrl());
+  }
+
+  async function refreshKattenbak() {
+    if (!kattenbakLinked()) return renderActions();
+    try {
+      const response = await fetch(kattenbakUrl(), {
+        headers: { Authorization: `Bearer ${actionCode()}` },
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      kattenbak = response.ok ? data : { error: data.error || "UNREACHABLE" };
+    } catch (error) {
+      kattenbak = { error: "UNREACHABLE" };
+    }
+    renderActions();
+  }
+
+  async function runAction(action) {
+    busyActions.add(action.id);
+    renderActions();
+    let result;
+    try {
+      const response = await fetch(kattenbakUrl(), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${actionCode()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: action.id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      result = response.ok
+        ? { text: `Gestart om ${formatTime(new Date())}`, kind: "ok" }
+        : { text: ACTION_ERRORS[data.error] || "Niet gelukt", kind: "warn" };
+    } catch (error) {
+      result = { text: ACTION_ERRORS.UNREACHABLE, kind: "warn" };
+    }
+    busyActions.delete(action.id);
+    actionFeedback[action.id] = { ...result, until: Date.now() + FEEDBACK_MS };
+    renderActions();
+    refreshKattenbak();
+  }
+
+  function setActionCode(code) {
+    const clean = String(code || "").trim();
+    writeStorage(ACTION_CODE_KEY, clean || null);
+    kattenbak = null;
+    refreshKattenbak();
   }
 
   // ---- Huisgenoten ----
@@ -278,6 +362,42 @@
           <span class="status">${status}</span>
         </span>
       </button>`;
+  }
+
+  // Regel onder een actieknop: wat er net gebeurde, anders de stand van de bak.
+  function actionStatus(action) {
+    const feedback = actionFeedback[action.id];
+    if (busyActions.has(action.id)) return { text: "Bezig…", kind: "" };
+    if (feedback && feedback.until > Date.now()) return feedback;
+    if (!kattenbakLinked()) return { text: "Nog niet gekoppeld", kind: "" };
+    if (!kattenbak) return { text: "Status ophalen…", kind: "" };
+    if (kattenbak.error) return { text: ACTION_ERRORS[kattenbak.error] || "Niet bereikbaar", kind: "warn" };
+    if (!kattenbak.online) return { text: ACTION_ERRORS.OFFLINE, kind: "warn" };
+    if (action.id === "clean") {
+      if (kattenbak.catInside) return { text: "Pip zit erin", kind: "warn" };
+      const parts = [];
+      if (kattenbak.catWeightKg) parts.push(`Pip ${String(kattenbak.catWeightKg).replace(".", ",")} kg`);
+      if (typeof kattenbak.visitsToday === "number") parts.push(`vandaag ${kattenbak.visitsToday}×`);
+      return { text: parts.join(" · ") || "Klaar", kind: "" };
+    }
+    return kattenbak.binFull ? { text: "Opvangbak vol", kind: "warn" } : { text: "Opvangbak ok", kind: "" };
+  }
+
+  function actionCard(action) {
+    const status = actionStatus(action);
+    const classes = ["task", "action", kattenbakLinked() ? "" : "off", busyActions.has(action.id) ? "busy" : ""];
+    return `
+      <button class="${classes.filter(Boolean).join(" ")}" data-action="act" data-id="${escapeHtml(action.id)}">
+        <span class="icon">${ICONS[action.icon] || ICONS.paw}</span>
+        <span>
+          <span class="title">${escapeHtml(action.title)}</span>
+          <span class="status${status.kind ? ` ${status.kind}` : ""}">${escapeHtml(status.text)}</span>
+        </span>
+      </button>`;
+  }
+
+  function renderActions() {
+    els.actions.innerHTML = (config.actions || []).map(actionCard).join("");
   }
 
   function stockRow(item) {
@@ -376,6 +496,7 @@
     els.progressText.textContent = allDone ? "Alles gedaan voor vandaag" : `${doneCount} van ${total} gedaan`;
     els.progressBar.style.width = total ? `${(doneCount / total) * 100}%` : "0";
     els.tasks.innerHTML = config.tasks.map(taskCard).join("");
+    renderActions();
     renderStock();
   }
 
@@ -391,8 +512,27 @@
 
   function closeSheet() {
     sheetTask = null;
+    sheetAction = null;
     els.sheet.hidden = true;
     clearTimeout(sheetTimer);
+  }
+
+  function confirmAction(action) {
+    openSheet(null, `
+      <h3>${escapeHtml(action.title)}</h3>
+      <p>${escapeHtml(action.confirm)}</p>
+      <div class="choices">
+        <button class="choice" data-action="act-confirm">${escapeHtml(action.button)}</button>
+        <button class="choice secondary" data-action="close">Annuleren</button>
+      </div>`);
+    sheetAction = action;
+  }
+
+  function showNotLinked() {
+    openSheet(null, `
+      <h3>Nog niet gekoppeld</h3>
+      <p>Vul de kattenbak-code in op de startpagina van Pip.</p>
+      <div class="choices"><button class="choice secondary" data-action="close">Sluiten</button></div>`);
   }
 
   function askWho(task) {
@@ -439,6 +579,15 @@
     } else if (action === "undo" && sheetTask) {
       undo(sheetTask);
       closeSheet();
+    } else if (action === "act") {
+      const act = (config.actions || []).find((a) => a.id === id);
+      if (!act || busyActions.has(act.id)) return;
+      if (kattenbakLinked()) confirmAction(act);
+      else showNotLinked();
+    } else if (action === "act-confirm" && sheetAction) {
+      const act = sheetAction;
+      closeSheet();
+      runAction(act);
     } else if (action === "close") {
       closeSheet();
     } else if (action === "stock") {
@@ -453,7 +602,9 @@
   saveState();
   render();
   refreshVoerraad();
+  refreshKattenbak();
   setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
+  setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
   setInterval(() => {
     if (rollOverIfNewDay()) {
       closeSheet();
@@ -461,9 +612,10 @@
       refreshVoerraad();
     } else {
       renderClock();
+      renderActions(); // "Gestart om …" verloopt vanzelf
     }
   }, 10000);
 
-  // Voor cast.js: de startknop stuurt de koppelcode en de huisgenoten naar de Hub.
-  window.Pip = { setVoerraadCode, setPeople };
+  // Voor cast.js: de startknop stuurt de codes en de huisgenoten naar de Hub.
+  window.Pip = { setVoerraadCode, setActionCode, setPeople };
 })();

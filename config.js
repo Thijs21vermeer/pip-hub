@@ -13,16 +13,25 @@ window.PIP_CONFIG = {
   // Hoe laat de lijst weer leeg begint (24-uursklok). 4 betekent om 04:00 's nachts.
   resetHour: 4,
 
-  // Dagelijkse taken. icon: sun, moon, drop, box, bowl, heart of paw.
+  // Dagelijkse taken (vier passen er). icon: sun, moon, drop, box, bowl, heart of paw.
   // stock: haalt bij afvinken automatisch iets van de voorraad af.
   tasks: [
     { id: "ontbijt", title: "Ontbijt", icon: "sun", stock: { id: "natvoer", amount: 1 } },
     { id: "avondeten", title: "Avondeten", icon: "moon", stock: { id: "natvoer", amount: 1 } },
     { id: "water", title: "Water verversen", icon: "drop" },
-    { id: "kattenbak", title: "Kattenbak aanzetten", icon: "box" },
     { id: "brokjes", title: "Brokjes bijvullen", icon: "bowl" },
-    { id: "aandacht", title: "Spelen & borstelen", icon: "heart" },
   ],
+
+  // Acties: knoppen die de kattenbak iets laten doen, via het servertje op
+  // Netlify (netlify/functions/kattenbak.mjs). id = actie op dat servertje.
+  actions: [
+    { id: "clean", title: "Kattenbak draaien", icon: "box", confirm: "Kattenbak nu laten draaien?", button: "Ja, draaien" },
+    { id: "odourless", title: "Ontgeuren", icon: "wind", confirm: "Kattenbak nu ontgeuren?", button: "Ja, ontgeuren" },
+  ],
+
+  // Adres van dat servertje. De code om het te gebruiken staat NIET hier (deze
+  // map is openbaar): die vul je in op de startpagina.
+  kattenbak: { url: "https://pip-kattenbak.netlify.app/api/kattenbak", refreshMinutes: 15 },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is

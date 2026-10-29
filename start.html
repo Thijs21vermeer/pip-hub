@@ -144,19 +144,19 @@
       font-size: 1rem;
     }
 
-    #code-status,
+    .code-status,
     #people-status {
       margin-top: 10px;
       color: var(--muted);
       font-weight: 600;
     }
 
-    #code-status.ok,
+    .code-status.ok,
     #people-status.ok {
       color: var(--done);
     }
 
-    #code-status.error,
+    .code-status.error,
     #people-status.error {
       color: var(--warn);
     }
@@ -233,13 +233,22 @@
       <p id="people-status"></p>
     </details>
 
-    <details id="voerraad">
-      <summary id="voerraad-title">Voerraad koppelen</summary>
+    <details id="voerraad-box">
+      <summary>Voerraad koppelen</summary>
       <p class="note">Maak in Voerraad een koppelcode (Instellingen → Huishouden → Scherm in huis) en plak hem hier. De code blijft alleen op dit apparaat en gaat bij elke start mee naar de Hub.</p>
-      <input id="code" type="password" autocomplete="off" spellcheck="false" placeholder="vrh_…">
-      <button id="save-code" class="secondary">Code opslaan</button>
-      <button id="clear-code" class="secondary" hidden>Ontkoppelen</button>
-      <p id="code-status"></p>
+      <input type="password" autocomplete="off" spellcheck="false" placeholder="vrh_…">
+      <button class="secondary" data-role="save">Code opslaan</button>
+      <button class="secondary" data-role="clear" hidden>Ontkoppelen</button>
+      <p class="code-status"></p>
+    </details>
+
+    <details id="kattenbak-box">
+      <summary>Kattenbak koppelen</summary>
+      <p class="note">Plak de kattenbak-code. Die staat op je Mac in ~/.config/pip/kattenbak-code.txt. Ook deze code blijft alleen op dit apparaat en gaat bij elke start mee naar de Hub.</p>
+      <input type="password" autocomplete="off" spellcheck="false" placeholder="pip_…">
+      <button class="secondary" data-role="save">Code opslaan</button>
+      <button class="secondary" data-role="clear" hidden>Ontkoppelen</button>
+      <p class="code-status"></p>
     </details>
   </main>
 
@@ -251,52 +260,14 @@
       const config = window.PIP_CONFIG;
       const appId = config.castAppId;
       const NAMESPACE = "urn:x-cast:nl.pip.hub";
-      const CODE_KEY = "pip-voerraad-code";
       const status = document.getElementById("status");
       const startButton = document.getElementById("start");
       const stopButton = document.getElementById("stop");
-      const codeInput = document.getElementById("code");
-      const codeStatus = document.getElementById("code-status");
-      const clearButton = document.getElementById("clear-code");
       let castLoaded = false;
 
       function show(text, kind) {
         status.textContent = text;
         status.className = kind || "";
-      }
-
-      // ---- Voerraad-koppelcode: alleen op dit apparaat, nooit in config.js ----
-
-      function storedCode() {
-        try {
-          return localStorage.getItem(CODE_KEY) || "";
-        } catch (error) {
-          return "";
-        }
-      }
-
-      function storeCode(code) {
-        try {
-          if (code) localStorage.setItem(CODE_KEY, code);
-          else localStorage.removeItem(CODE_KEY);
-        } catch (error) {
-          // Geen opslag: de code gaat alleen deze keer mee.
-        }
-      }
-
-      function voerraadUrl() {
-        // Alleen bij lokaal testen mag een andere server, bv. ?voerraad=http://localhost:3000
-        const override = new URLSearchParams(location.search).get("voerraad");
-        const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-        return (local && override) || config.voerraad.url;
-      }
-
-      function showCode(text, kind) {
-        codeStatus.textContent = text;
-        codeStatus.className = kind || "";
-        const linked = !!storedCode();
-        clearButton.hidden = !linked;
-        document.getElementById("voerraad-title").textContent = linked ? "Voerraad gekoppeld" : "Voerraad koppelen";
       }
 
       // Stuurt een bericht naar Pip op de Hub, als die nu verbonden is.
@@ -308,38 +279,111 @@
         return true;
       }
 
-      // Leeg = ontkoppelen.
-      function sendCode() {
-        return send({ type: "voerraad-code", code: storedCode() });
+      // Alleen bij lokaal testen mag een andere server, bv. ?voerraad=http://localhost:3000
+      function serverUrl(name, fallback) {
+        const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+        return (local && new URLSearchParams(location.search).get(name)) || fallback;
       }
 
-      async function saveCode() {
-        const code = codeInput.value.trim();
-        if (!code) return showCode("Plak eerst een koppelcode.", "error");
-        showCode("Code controleren…");
+      // Controleert een code bij de server voordat we hem bewaren.
+      async function checkCode(url, code, describe, wrongText, name) {
+        if (!url) return { ok: false, text: `${name} staat nog niet in config.js.` };
         try {
-          const response = await fetch(`${voerraadUrl()}/api/hub`, { headers: { Authorization: `Bearer ${code}` } });
-          if (response.status === 401) return showCode("Deze code werkt niet. Maak een nieuwe in Voerraad.", "error");
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${code}` } });
+          if (response.status === 401) return { ok: false, text: wrongText };
           if (!response.ok) throw new Error(String(response.status));
-          const data = await response.json();
-          storeCode(code);
-          codeInput.value = "";
-          sendCode();
-          showCode(`Gekoppeld: ${data.items.length} producten uit Voerraad.`, "ok");
+          return { ok: true, text: describe(await response.json()) };
         } catch (error) {
-          showCode("Voerraad is nu niet bereikbaar. Probeer het zo nog eens.", "error");
+          return { ok: false, text: `${name} is nu niet bereikbaar. Probeer het zo nog eens.` };
         }
       }
 
-      function clearCode() {
-        storeCode("");
-        sendCode();
-        showCode("Ontkoppeld.");
+      // ---- Koppelcodes: alleen op dit apparaat, nooit in config.js (die is openbaar) ----
+
+      function codeLink({ box, key, messageType, linkedTitle, unlinkedTitle, check }) {
+        const element = document.getElementById(box);
+        const input = element.querySelector("input");
+        const line = element.querySelector(".code-status");
+        const clear = element.querySelector('[data-role="clear"]');
+
+        function stored() {
+          try {
+            return localStorage.getItem(key) || "";
+          } catch (error) {
+            return "";
+          }
+        }
+
+        function store(code) {
+          try {
+            if (code) localStorage.setItem(key, code);
+            else localStorage.removeItem(key);
+          } catch (error) {
+            // Geen opslag: de code gaat alleen deze keer mee.
+          }
+        }
+
+        // Leeg = ontkoppelen.
+        function sendCode() {
+          return send({ type: messageType, code: stored() });
+        }
+
+        function showLine(text, kind) {
+          line.textContent = text || "";
+          line.className = `code-status ${kind || ""}`;
+          clear.hidden = !stored();
+          element.querySelector("summary").textContent = stored() ? linkedTitle : unlinkedTitle;
+        }
+
+        element.querySelector('[data-role="save"]').addEventListener("click", async () => {
+          const code = input.value.trim();
+          if (!code) return showLine("Plak eerst een code.", "error");
+          showLine("Code controleren…");
+          const result = await check(code);
+          if (!result.ok) return showLine(result.text, "error");
+          store(code);
+          input.value = "";
+          sendCode();
+          showLine(result.text, "ok");
+        });
+        clear.addEventListener("click", () => {
+          store("");
+          sendCode();
+          showLine("Ontkoppeld.");
+        });
+        showLine(stored() ? "De code gaat bij elke start mee naar de Hub." : "");
+        return { stored, sendCode };
       }
 
-      document.getElementById("save-code").addEventListener("click", saveCode);
-      clearButton.addEventListener("click", clearCode);
-      showCode(storedCode() ? "De code gaat bij elke start mee naar de Hub." : "");
+      const voerraadLink = codeLink({
+        box: "voerraad-box",
+        key: "pip-voerraad-code",
+        messageType: "voerraad-code",
+        linkedTitle: "Voerraad gekoppeld",
+        unlinkedTitle: "Voerraad koppelen",
+        check: (code) => checkCode(
+          `${serverUrl("voerraad", config.voerraad.url)}/api/hub`,
+          code,
+          (data) => `Gekoppeld: ${data.items.length} producten uit Voerraad.`,
+          "Deze code werkt niet. Maak een nieuwe in Voerraad.",
+          "Voerraad",
+        ),
+      });
+
+      const kattenbakLink = codeLink({
+        box: "kattenbak-box",
+        key: "pip-kattenbak-code",
+        messageType: "kattenbak-code",
+        linkedTitle: "Kattenbak gekoppeld",
+        unlinkedTitle: "Kattenbak koppelen",
+        check: (code) => checkCode(
+          serverUrl("kattenbak", config.kattenbak.url),
+          code,
+          (data) => `Gekoppeld: de kattenbak is ${data.online ? "online" : "offline"}.`,
+          "Deze kattenbak-code werkt niet.",
+          "Het kattenbak-servertje",
+        ),
+      });
 
       // ---- Huisgenoten: wie op de Hub kan afvinken ----
 
@@ -428,7 +472,8 @@
           // Alleen wat hier is ingesteld: anders zou een telefoon zonder code de
           // koppeling van de Mac weer wissen.
           if (event.sessionState === SESSION_STARTED || event.sessionState === SESSION_RESUMED) {
-            if (storedCode()) sendCode();
+            if (voerraadLink.stored()) voerraadLink.sendCode();
+            if (kattenbakLink.stored()) kattenbakLink.sendCode();
             if (customPeople()) sendPeople();
           }
           updateStatus();

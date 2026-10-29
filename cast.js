@@ -40,6 +40,7 @@
       const data = event.data || {};
       if (!window.Pip) return;
       if (data.type === "voerraad-code" && typeof data.code === "string") window.Pip.setVoerraadCode(data.code);
+      if (data.type === "kattenbak-code" && typeof data.code === "string") window.Pip.setActionCode(data.code);
       if (data.type === "people" && Array.isArray(data.people)) window.Pip.setPeople(data.people);
     });
 

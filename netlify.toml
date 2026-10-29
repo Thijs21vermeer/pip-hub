@@ -1,0 +1,6 @@
+# Netlify draait alleen het servertje voor de actieknoppen (netlify/functions).
+# Pip zelf staat op GitHub Pages; geen build nodig, en alleen een lege pagina
+# wordt gepubliceerd (niet deze hele map).
+[build]
+  publish = "netlify/public"
+  functions = "netlify/functions"
