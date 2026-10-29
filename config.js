@@ -45,6 +45,9 @@ window.PIP_CONFIG = {
   // openbaar): je vult hem in op de startpagina of in voerraad-code.txt.
   voerraad: { url: "https://voerraad.nl", refreshMinutes: 15, maxItems: 4 },
 
+  // Welk dier uit Voerraad linksboven in beeld komt (met de profielfoto).
+  petName: "Pip",
+
   // Voorraad zonder Voerraad-koppeling. amount = beginvoorraad, low = vanaf dit
   // aantal staat er "Bijna op".
   stock: [

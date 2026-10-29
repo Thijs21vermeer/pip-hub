@@ -315,7 +315,7 @@
         throw new Error(String(response.status));
       } else {
         const data = await response.json();
-        voerraad = { items: data.items, fetchedAt: Date.now(), error: null };
+        voerraad = { items: data.items, pets: data.pets || [], fetchedAt: Date.now(), error: null };
         writeStorage(VOERRAAD_CACHE_KEY, JSON.stringify(voerraad));
       }
     } catch (error) {
@@ -712,6 +712,22 @@
     const linked = !!voerraadCode();
     els.stock.classList.toggle("from-voerraad", linked);
     els.stock.innerHTML = linked ? voerraadPanel() : config.stock.map(stockRow).join("");
+    renderLogo();
+    renderRest(); // seintjes uit Voerraad meteen in de ruststand
+  }
+
+  // Linksboven: de profielfoto uit Voerraad (het dier uit config.petName, anders
+  // het eerste met een foto). Zonder koppeling of foto het pootje.
+  function renderLogo() {
+    const pets = (voerraadCode() && voerraad && voerraad.pets) || [];
+    const wanted = String(config.petName || "").toLowerCase();
+    const pet = pets.find((p) => p.photo && p.name.toLowerCase() === wanted) || pets.find((p) => p.photo);
+    const html = pet ? `<img src="${escapeHtml(pet.photo)}" alt="${escapeHtml(pet.name)}">` : ICONS.paw;
+    if (els.logo.dataset.src !== (pet ? pet.photo.slice(-40) : "paw")) {
+      els.logo.innerHTML = html;
+      els.logo.dataset.src = pet ? pet.photo.slice(-40) : "paw";
+      els.logo.classList.toggle("photo", !!pet);
+    }
   }
 
   function renderClock() {
@@ -730,9 +746,10 @@
     const parts = [];
     const open = tasks().filter((task) => !currentDone(task)).length;
     if (open) parts.push(`${open} ${open === 1 ? "taak" : "taken"} open`);
+    // Alleen een seintje uit Voerraad, niet van de handmatige standaardvoorraad.
     const low = voerraadCode() && voerraad && voerraad.items
       ? voerraad.items.filter((item) => !item.ordered && item.daysLeft <= LOW_STOCK_DAYS).map((item) => item.name)
-      : config.stock.filter((item) => state.stock[item.id] <= item.low).map((item) => item.title);
+      : [];
     if (low.length) parts.push(low.length === 1 ? `${low[0]} bijna op` : `${low.length} producten bijna op`);
     if (kattenbak && kattenbak.binFull) parts.push("Opvangbak vol");
     return parts.join(" · ");
@@ -1164,7 +1181,7 @@
 
   // ---- Start ----
 
-  els.logo.innerHTML = ICONS.paw;
+  renderLogo();
   rollOverIfNewDay();
   saveState();
   render();
