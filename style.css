@@ -982,7 +982,7 @@ main {
 .video {
   position: fixed;
   inset: 0;
-  z-index: 6;
+  z-index: 8;
   display: flex;
   flex-direction: column;
   padding: 1.3rem 1.5rem;
@@ -1008,4 +1008,96 @@ main {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+/* Ruststand: foto van Pip met de klok, boven alles behalve video en vensters */
+
+.rest {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+  animation: fade 0.5s ease-out;
+}
+
+.rest[hidden] {
+  display: none;
+}
+
+.rest img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 62%;
+  transition: filter 0.6s;
+}
+
+/* Zachte lichte waas rechtsboven, zodat de klok op de deken goed leesbaar is. */
+.rest::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 92% 8%, rgb(251 247 242 / 0.6) 0%, rgb(251 247 242 / 0) 55%);
+  pointer-events: none;
+}
+
+.rest-info {
+  position: absolute;
+  top: 2.2rem;
+  right: 2.6rem;
+  color: #1a1612;
+  text-align: right;
+}
+
+.rest-clock {
+  font-size: 7.5rem;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-date {
+  margin-top: 0.5rem;
+  font-size: 1.55rem;
+  font-weight: 500;
+  color: #4a4038;
+}
+
+.rest-hint {
+  display: inline-block;
+  margin-top: 1.1rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 99px;
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(8px);
+  color: #a8701f;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.rest-hint[hidden] {
+  display: none;
+}
+
+/* 's Nachts: foto gedimd, witte klok. */
+:root[data-theme="dark"] .rest img {
+  filter: brightness(0.42);
+}
+
+:root[data-theme="dark"] .rest::before {
+  background: none;
+}
+
+:root[data-theme="dark"] .rest-info,
+:root[data-theme="dark"] .rest-date {
+  color: #f3ece4;
+}
+
+:root[data-theme="dark"] .rest-hint {
+  background: rgb(0 0 0 / 0.45);
+  color: #e2ae5e;
 }

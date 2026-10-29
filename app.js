@@ -31,6 +31,7 @@
   const MAX_TASKS = 12;
   const MAX_TITLE = 30;
   const PAGE_TIMEOUT_MS = 90 * 1000; // pagina "Alle taken" sluit vanzelf
+  const REST_AFTER_MS = 2 * 60 * 1000; // zo lang niets aangeraakt: terug naar de ruststand
   const TASK_ICONS = ["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"];
   const SUGGESTIONS = [
     { title: "Kattenbak verschonen", icon: "box", repeat: "weekly" },
@@ -114,6 +115,10 @@
     pageGrid: document.getElementById("page-grid"),
     pageHint: document.getElementById("page-hint"),
     pageEdit: document.getElementById("page-edit"),
+    rest: document.getElementById("rest"),
+    restClock: document.getElementById("rest-clock"),
+    restDate: document.getElementById("rest-date"),
+    restHint: document.getElementById("rest-hint"),
     video: document.getElementById("video"),
     videoTitle: document.getElementById("video-title"),
     videoFrame: document.getElementById("video-frame"),
@@ -135,6 +140,7 @@
   let pageOpen = false;
   let pageEditing = false;
   let pageTimer = null;
+  let restTimer = null;
   let sheetTask = null;
   let sheetAction = null;
   let sheetTimer = null;
@@ -713,6 +719,48 @@
     document.documentElement.dataset.theme = isNight(now) ? "dark" : "light";
     els.clock.textContent = formatTime(now);
     els.date.textContent = formatDate(now);
+    els.restClock.textContent = formatTime(now);
+    els.restDate.textContent = formatDate(now);
+  }
+
+  // ---- Ruststand ----
+
+  // Eén regel in de ruststand, alleen als er iets is: open taken, bijna op, bak vol.
+  function restHint() {
+    const parts = [];
+    const open = tasks().filter((task) => !currentDone(task)).length;
+    if (open) parts.push(`${open} ${open === 1 ? "taak" : "taken"} open`);
+    const low = voerraadCode() && voerraad && voerraad.items
+      ? voerraad.items.filter((item) => !item.ordered && item.daysLeft <= LOW_STOCK_DAYS).map((item) => item.name)
+      : config.stock.filter((item) => state.stock[item.id] <= item.low).map((item) => item.title);
+    if (low.length) parts.push(low.length === 1 ? `${low[0]} bijna op` : `${low.length} producten bijna op`);
+    if (kattenbak && kattenbak.binFull) parts.push("Opvangbak vol");
+    return parts.join(" · ");
+  }
+
+  function renderRest() {
+    const hint = restHint();
+    els.restHint.textContent = hint;
+    els.restHint.hidden = !hint;
+  }
+
+  function scheduleRest() {
+    clearTimeout(restTimer);
+    restTimer = setTimeout(showRest, REST_AFTER_MS);
+  }
+
+  function showRest() {
+    // Niet midden in het typen of tijdens een video: dan later nog eens.
+    if (editor || !els.video.hidden) return scheduleRest();
+    closeSheet();
+    closePage();
+    renderRest();
+    els.rest.hidden = false;
+  }
+
+  function hideRest() {
+    els.rest.hidden = true;
+    scheduleRest();
   }
 
   function render() {
@@ -1043,6 +1091,7 @@
 
   document.addEventListener("click", (event) => {
     if (pageOpen) touchPage();
+    if (els.rest.hidden) scheduleRest(); // elke tik stelt de ruststand uit
     const target = event.target.closest("[data-action]");
     if (!target || target.disabled) {
       // Naast het venster tikken sluit het, behalve tijdens het typen.
@@ -1050,7 +1099,9 @@
       return;
     }
     const { action, id } = target.dataset;
-    if (action === "video-close") {
+    if (action === "wake") {
+      hideRest();
+    } else if (action === "video-close") {
       closeVideo();
     } else if (action === "all-tasks") {
       openPage();
@@ -1117,6 +1168,7 @@
   rollOverIfNewDay();
   saveState();
   render();
+  renderRest(); // Pip begint in de ruststand
   refreshVoerraad();
   refreshKattenbak();
   pullSettings();
@@ -1134,6 +1186,7 @@
     } else {
       renderClock();
       renderActions(); // "Gestart om …" verloopt vanzelf
+      renderRest();
     }
   }, 10000);
 
