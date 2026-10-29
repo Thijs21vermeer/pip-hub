@@ -41,6 +41,12 @@ window.PIP_CONFIG = {
   // zodat ze een herstart van de Hub overleven.
   settings: { url: "https://pip-kattenbak.netlify.app/api/pip-settings" },
 
+  // Foto's van Pip voor de ruststand (zet je erop via de startpagina; de Hub
+  // wisselt elke zoveel seconden) en haar eigen miauw voor "Aai Pip". Zelfde
+  // servertje en code als de kattenbak.
+  photos: { url: "https://pip-kattenbak.netlify.app/api/fotos", seconds: 20 },
+  meow: { url: "https://pip-kattenbak.netlify.app/api/geluid" },
+
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is
   // openbaar): je vult hem in op de startpagina of in voerraad-code.txt.

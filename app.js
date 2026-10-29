@@ -138,6 +138,9 @@
     restClock: document.getElementById("rest-clock"),
     restDate: document.getElementById("rest-date"),
     restCard: document.getElementById("rest-card"),
+    restPhotos: [...document.querySelectorAll(".rest-photo")],
+    restPet: document.getElementById("rest-pet"),
+    restHearts: document.getElementById("rest-hearts"),
     video: document.getElementById("video"),
     videoTitle: document.getElementById("video-title"),
     videoFrame: document.getElementById("video-frame"),
@@ -312,9 +315,16 @@
       state.stock[stock.id] = Math.max(0, before - stock.amount);
       entry.took = before - state.stock[stock.id];
     }
+    const wasAllDone = allDueDone();
     state.done[task.id] = entry;
     saveState();
     render();
+    if (!wasAllDone && allDueDone()) celebrate();
+  }
+
+  function allDueDone() {
+    const due = dueTasks();
+    return due.length > 0 && due.every((task) => currentDone(task));
   }
 
   function undo(task) {
@@ -460,7 +470,10 @@
     renderActions();
     refreshKattenbak();
     // Voeren duurt even; daarna staat de voerbeurt in "Laatst …".
-    if (action.id === "feed" && result.kind === "ok") setTimeout(refreshKattenbak, 30 * 1000);
+    if (action.id === "feed" && result.kind === "ok") {
+      playFeedSignal();
+      setTimeout(refreshKattenbak, 30 * 1000);
+    }
   }
 
   function setActionCode(code) {
@@ -469,6 +482,8 @@
     kattenbak = null;
     refreshKattenbak();
     pullSettings();
+    refreshPhotos();
+    refreshMeow();
   }
 
   // ---- Huisgenoten ----
@@ -898,6 +913,233 @@
     els.date.textContent = formatDate(now);
     els.restClock.textContent = formatTime(now);
     els.restDate.textContent = formatDate(now);
+  }
+
+  // ---- Ruststand: wisselende foto's van Pip ----
+
+  // De standaardfoto plus wat jullie via de startpagina sturen (nieuwste eerst).
+  // Elke config.photos.seconds een andere, alleen als de ruststand in beeld is.
+  const DEFAULT_SLIDE = { url: els.restPhotos[0].querySelector(".rest-fg").getAttribute("src"), tall: false, focus: "50% 62%" };
+  const photoUrls = new Map(); // id → blob-URL van een opgehaalde foto
+  let slides = [DEFAULT_SLIDE];
+  let slideIndex = 0;
+  let frontLayer = 0;
+
+  function photosUrl() {
+    return localOverride("fotos") || (config.photos && config.photos.url);
+  }
+
+  function authHeader() {
+    return { Authorization: `Bearer ${actionCode()}` };
+  }
+
+  async function refreshPhotos() {
+    if (!actionCode() || !photosUrl()) return;
+    try {
+      const response = await fetch(photosUrl(), { headers: authHeader(), cache: "no-store" });
+      if (!response.ok) return;
+      const list = await response.json();
+      const ids = new Set(list.map((photo) => photo.id));
+      photoUrls.forEach((url, id) => {
+        if (ids.has(id)) return;
+        URL.revokeObjectURL(url);
+        photoUrls.delete(id);
+      });
+      for (const photo of list) {
+        if (photoUrls.has(photo.id)) continue;
+        const image = await fetch(`${photosUrl()}/${photo.id}`, { headers: authHeader() });
+        if (image.ok) photoUrls.set(photo.id, URL.createObjectURL(await image.blob()));
+      }
+      slides = [...list].reverse()
+        .filter((photo) => photoUrls.has(photo.id))
+        .map((photo) => ({
+          url: photoUrls.get(photo.id),
+          // Staand of bijna vierkant: helemaal tonen, met een vage achtergrond.
+          tall: Boolean(photo.width && photo.height && photo.width / photo.height < 1.25),
+          focus: "50% 50%",
+        }))
+        .concat(DEFAULT_SLIDE);
+    } catch (error) {
+      // Niet bereikbaar: de foto's die er al waren blijven wisselen.
+    }
+  }
+
+  async function nextSlide() {
+    if (els.rest.hidden || slides.length < 2) return;
+    slideIndex = (slideIndex + 1) % slides.length;
+    const slide = slides[slideIndex];
+    const layer = els.restPhotos[1 - frontLayer];
+    const front = layer.querySelector(".rest-fg");
+    const back = layer.querySelector(".rest-bg");
+    front.src = slide.url;
+    front.style.objectPosition = slide.focus;
+    if (slide.tall) back.src = slide.url;
+    else back.removeAttribute("src");
+    layer.classList.toggle("tall", slide.tall);
+    // Eerst laden, dan pas overvloeien; hooguit 3 seconden wachten.
+    const loaded = await Promise.race([
+      front.decode().then(() => true, () => false),
+      new Promise((resolve) => setTimeout(() => resolve(front.complete && front.naturalWidth > 0), 3000)),
+    ]);
+    if (!loaded) return;
+    layer.classList.add("shown");
+    els.restPhotos[frontLayer].classList.remove("shown");
+    frontLayer = 1 - frontLayer;
+  }
+
+  // ---- Geluid: voersignaal, feestje en Aai Pip ----
+
+  // Alles gemaakt met Web Audio, behalve Pips miauw (via de startpagina). Een
+  // browser laat pas geluid toe na een tik; elke tik op het scherm maakt het wakker.
+  let audioContext = null;
+  let meowBuffer = null;
+  let meowAt = null;
+
+  function audio() {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return null;
+    if (!audioContext) audioContext = new Context();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    return audioContext;
+  }
+
+  // 's Avonds en 's nachts zachter.
+  function loudness() {
+    return isNight(new Date()) ? 0.5 : 1;
+  }
+
+  function tone(ctx, frequency, start, length, volume, type = "sine") {
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume * loudness(), start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
+    oscillator.connect(gain).connect(ctx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + length + 0.05);
+  }
+
+  // Voersignaal: altijd dezelfde drie tonen omhoog, zodat Pip leert dat het eten is.
+  function playFeedSignal() {
+    const ctx = audio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.05;
+    [[784, 0], [988, 0.16], [1319, 0.32]].forEach(([frequency, delay]) =>
+      tone(ctx, frequency, start + delay, 0.6, 0.3, "triangle"));
+  }
+
+  // Feestje: een vrolijk loopje, afgesloten met een akkoord.
+  function playParty() {
+    const ctx = audio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.05;
+    [523, 659, 784, 1047].forEach((frequency, index) => tone(ctx, frequency, start + index * 0.11, 0.35, 0.22, "triangle"));
+    [523, 659, 784].forEach((frequency) => tone(ctx, frequency * 2, start + 0.5, 1.1, 0.12));
+  }
+
+  // Spinnen zonder opname: een laag gebrom dat 24 keer per seconde aanzwelt.
+  function playPurr() {
+    const ctx = audio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.02;
+    const rumble = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const pulse = ctx.createGain();
+    const wobble = ctx.createOscillator();
+    const depth = ctx.createGain();
+    const envelope = ctx.createGain();
+    rumble.type = "sawtooth";
+    rumble.frequency.value = 55;
+    filter.type = "lowpass";
+    filter.frequency.value = 380;
+    pulse.gain.value = 0.18;
+    wobble.frequency.value = 24;
+    depth.gain.value = 0.18;
+    wobble.connect(depth).connect(pulse.gain);
+    envelope.gain.setValueAtTime(0.0001, start);
+    envelope.gain.exponentialRampToValueAtTime(loudness(), start + 0.3);
+    envelope.gain.setValueAtTime(loudness(), start + 1.4);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, start + 2);
+    rumble.connect(filter).connect(pulse).connect(envelope).connect(ctx.destination);
+    [rumble, wobble].forEach((node) => {
+      node.start(start);
+      node.stop(start + 2.1);
+    });
+  }
+
+  function meowUrl() {
+    return localOverride("geluid") || (config.meow && config.meow.url);
+  }
+
+  // Pips miauw ophalen, alleen als er een nieuwe is.
+  async function refreshMeow() {
+    if (!actionCode() || !meowUrl()) return;
+    try {
+      const info = await fetch(`${meowUrl()}?info=1`, { headers: authHeader(), cache: "no-store" });
+      if (info.status === 404) {
+        meowBuffer = null;
+        meowAt = null;
+        return;
+      }
+      if (!info.ok) return;
+      const { at } = await info.json();
+      if (at === meowAt) return;
+      const response = await fetch(meowUrl(), { headers: authHeader(), cache: "no-store" });
+      const ctx = audio();
+      if (!response.ok || !ctx) return;
+      meowBuffer = await ctx.decodeAudioData(await response.arrayBuffer());
+      meowAt = at;
+    } catch (error) {
+      // Geen miauw: dan spint ze.
+    }
+  }
+
+  function playMeow() {
+    const ctx = audio();
+    if (!ctx || !meowBuffer) return playPurr();
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    source.buffer = meowBuffer;
+    gain.gain.value = loudness();
+    source.connect(gain).connect(ctx.destination);
+    source.start();
+  }
+
+  // Aai Pip: hartjes, en meestal een miauw; soms spint ze.
+  function petPip() {
+    if (meowBuffer && Math.random() < 0.75) playMeow();
+    else playPurr();
+    for (let index = 0; index < 5; index++) {
+      const heart = document.createElement("span");
+      heart.innerHTML = ICONS.heart;
+      heart.style.setProperty("--drift", `${Math.round((Math.random() - 0.5) * 90)}px`);
+      heart.style.animationDelay = `${index * 0.12}s`;
+      els.restHearts.appendChild(heart);
+      setTimeout(() => heart.remove(), 2400);
+    }
+    scheduleRest(); // aaien telt als iets doen
+  }
+
+  // Feestje: alle taken van vandaag zijn af.
+  function celebrate() {
+    playParty();
+    const colors = ["#a9642f", "#5b7f4f", "#e0a43a", "#f26b7a", "#6aa6c8", "#f3ece4"];
+    const layer = document.createElement("div");
+    layer.className = "confetti";
+    for (let index = 0; index < 70; index++) {
+      const piece = document.createElement("span");
+      piece.style.left = `${Math.random() * 100}%`;
+      piece.style.background = colors[index % colors.length];
+      piece.style.setProperty("--fall", `${1.8 + Math.random() * 1.4}s`);
+      piece.style.setProperty("--delay", `${Math.random() * 0.5}s`);
+      piece.style.setProperty("--drift", `${Math.round((Math.random() - 0.5) * 160)}px`);
+      piece.style.setProperty("--spin", `${Math.round(Math.random() * 720 - 360)}deg`);
+      layer.appendChild(piece);
+    }
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), 4000);
   }
 
   // ---- Ruststand ----
@@ -1654,6 +1896,7 @@
   }, true);
 
   document.addEventListener("click", (event) => {
+    audio(); // geluid mag pas na een tik
     if (pageOpen) touchPage();
     if (logOpen) touchLog();
     if (els.rest.hidden) scheduleRest(); // elke tik stelt de ruststand uit
@@ -1664,7 +1907,9 @@
       return;
     }
     const { action, id } = target.dataset;
-    if (action === "wake") {
+    if (action === "pet") {
+      petPip();
+    } else if (action === "wake") {
       hideRest();
     } else if (action === "video-close") {
       closeVideo();
@@ -1755,6 +2000,7 @@
   // ---- Start ----
 
   els.toGoogle.innerHTML = `${ICONS.home}<span>Google Hub</span>`;
+  els.restPet.innerHTML = ICONS.paw;
   renderLogo();
   rollOverIfNewDay();
   saveState();
@@ -1766,6 +2012,10 @@
   setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
   setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
   setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
+  refreshPhotos();
+  refreshMeow();
+  setInterval(() => { refreshPhotos(); refreshMeow(); }, 15 * 60 * 1000);
+  setInterval(nextSlide, ((config.photos && config.photos.seconds) || 20) * 1000);
   // Lukte het eerste ophalen niet (geen netwerk), elke minuut opnieuw proberen.
   setInterval(() => {
     if (!synced) pullSettings();

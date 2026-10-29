@@ -194,6 +194,56 @@
       line-height: 1;
     }
 
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .photo-grid figure {
+      position: relative;
+      margin: 0;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 12px;
+      background: var(--line);
+    }
+
+    .photo-grid img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-grid button {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 32px;
+      min-height: 32px;
+      margin: 0;
+      padding: 0;
+      border-radius: 50%;
+      background: rgb(0 0 0 / 0.55);
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .media-status {
+      margin-top: 10px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .media-status.ok {
+      color: var(--done);
+    }
+
+    .media-status.error {
+      color: var(--warn);
+    }
+
     .add-row {
       display: flex;
       gap: 8px;
@@ -250,9 +300,28 @@
       <button class="secondary" data-role="clear" hidden>Ontkoppelen</button>
       <p class="code-status"></p>
     </details>
+
+    <details id="photos-box">
+      <summary>Foto's van Pip</summary>
+      <p class="note">Foto's voor de ruststand op de Google Hub; die wisselt er elke 20 seconden tussen. Ze worden op je telefoon eerst kleiner gemaakt. Werkt ook op een iPhone.</p>
+      <div class="photo-grid" id="photo-grid"></div>
+      <input id="photo-input" type="file" accept="image/*" multiple hidden>
+      <button class="secondary" id="photo-add">Foto's kiezen</button>
+      <p class="media-status" id="photo-status"></p>
+    </details>
+
+    <details id="meow-box">
+      <summary>Pips miauw</summary>
+      <p class="note">Neem Pip op, bijvoorbeeld met Dictafoon, en kies het bestand. Je hoort het als je haar aait in de ruststand op de Google Hub. Kort is het leukst: 1 tot 3 seconden.</p>
+      <input id="meow-input" type="file" accept="audio/*" hidden>
+      <button class="secondary" id="meow-add">Geluid kiezen</button>
+      <button class="secondary" id="meow-play" hidden>Afspelen</button>
+      <button class="secondary" id="meow-delete" hidden>Verwijderen</button>
+      <p class="media-status" id="meow-status"></p>
+    </details>
   </main>
 
-  <script src="config.js?v=20261029-14"></script>
+  <script src="config.js?v=20261029-16"></script>
   <script>
     (function () {
       "use strict";
@@ -384,6 +453,174 @@
           "Het kattenbak-servertje",
         ),
       });
+
+      // ---- Foto's van Pip en haar miauw (voor de ruststand op de Google Hub) ----
+
+      // Zelfde servertje en code als de kattenbak (hierboven gekoppeld).
+      const photosUrl = serverUrl("fotos", config.photos && config.photos.url);
+      const meowUrl = serverUrl("geluid", config.meow && config.meow.url);
+      const MAX_SIDE = 1600; // langste kant; de Google Hub is 1024 breed
+      const MAX_MEOW_BYTES = 1024 * 1024;
+
+      function auth() {
+        return { Authorization: `Bearer ${kattenbakLink.stored()}` };
+      }
+
+      function statusLine(id, text, kind) {
+        const line = document.getElementById(id);
+        line.textContent = text || "";
+        line.className = `media-status ${kind || ""}`;
+      }
+
+      // Verkleinen op de telefoon: scheelt uploaden, en de Hub heeft niet meer nodig.
+      // Een <img> houdt rekening met hoe de foto gedraaid is (EXIF).
+      async function shrink(file) {
+        const url = URL.createObjectURL(file);
+        try {
+          const image = new Image();
+          image.src = url;
+          await image.decode();
+          const scale = Math.min(1, MAX_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(image.naturalWidth * scale);
+          canvas.height = Math.round(image.naturalHeight * scale);
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+          return { blob, width: canvas.width, height: canvas.height };
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      async function showPhotos() {
+        const grid = document.getElementById("photo-grid");
+        if (!kattenbakLink.stored()) {
+          grid.innerHTML = "";
+          return statusLine("photo-status", "Koppel eerst de kattenbak hierboven.");
+        }
+        try {
+          const response = await fetch(photosUrl, { headers: auth() });
+          if (!response.ok) throw new Error(String(response.status));
+          const photos = await response.json();
+          grid.innerHTML = "";
+          for (const photo of [...photos].reverse()) {
+            const figure = document.createElement("figure");
+            const image = document.createElement("img");
+            image.alt = "Foto van Pip";
+            const remove = document.createElement("button");
+            remove.textContent = "×";
+            remove.setAttribute("aria-label", "Foto verwijderen");
+            remove.addEventListener("click", async () => {
+              if (!confirm("Deze foto van de Google Hub halen?")) return;
+              await fetch(`${photosUrl}/${photo.id}`, { method: "DELETE", headers: auth() });
+              showPhotos();
+            });
+            figure.append(image, remove);
+            grid.append(figure);
+            fetch(`${photosUrl}/${photo.id}`, { headers: auth() })
+              .then((r) => r.blob())
+              .then((blob) => { image.src = URL.createObjectURL(blob); })
+              .catch(() => {});
+          }
+          statusLine("photo-status", photos.length ? `${photos.length} ${photos.length === 1 ? "foto" : "foto's"} op de Google Hub.` : "Nog geen foto's: de Hub laat de standaardfoto zien.");
+        } catch (error) {
+          statusLine("photo-status", "Het servertje is nu niet bereikbaar.", "error");
+        }
+      }
+
+      document.getElementById("photo-add").addEventListener("click", () => document.getElementById("photo-input").click());
+      document.getElementById("photo-input").addEventListener("change", async (event) => {
+        const files = [...event.target.files];
+        event.target.value = "";
+        if (!kattenbakLink.stored()) return statusLine("photo-status", "Koppel eerst de kattenbak hierboven.", "error");
+        let sent = 0;
+        // Eén voor één: het servertje houdt een lijst bij.
+        for (const [index, file] of files.entries()) {
+          statusLine("photo-status", `Foto ${index + 1} van ${files.length} versturen…`);
+          try {
+            const { blob, width, height } = await shrink(file);
+            const response = await fetch(`${photosUrl}?w=${width}&h=${height}`, {
+              method: "POST",
+              headers: { ...auth(), "Content-Type": "image/jpeg" },
+              body: blob,
+            });
+            if (response.status === 409) {
+              statusLine("photo-status", "Er staan al 40 foto's op. Haal er eerst een paar weg.", "error");
+              break;
+            }
+            if (response.ok) sent += 1;
+          } catch (error) {
+            // Deze foto overslaan (bijvoorbeeld een formaat dat de browser niet kan openen).
+          }
+        }
+        await showPhotos();
+        if (sent) statusLine("photo-status", `${sent} ${sent === 1 ? "foto" : "foto's"} toegevoegd. De Google Hub laat ze binnen een kwartier zien.`, "ok");
+        else if (files.length) statusLine("photo-status", "Dat lukte niet. Probeer een andere foto.", "error");
+      });
+
+      let meowPreview = null;
+
+      async function showMeow() {
+        const has = (yes) => {
+          document.getElementById("meow-play").hidden = !yes;
+          document.getElementById("meow-delete").hidden = !yes;
+          document.getElementById("meow-add").textContent = yes ? "Ander geluid kiezen" : "Geluid kiezen";
+        };
+        if (!kattenbakLink.stored()) {
+          has(false);
+          return statusLine("meow-status", "Koppel eerst de kattenbak hierboven.");
+        }
+        try {
+          const response = await fetch(`${meowUrl}?info=1`, { headers: auth() });
+          if (response.status === 404) {
+            has(false);
+            return statusLine("meow-status", "Nog geen miauw: de Google Hub laat Pip dan zacht spinnen.");
+          }
+          if (!response.ok) throw new Error(String(response.status));
+          const info = await response.json();
+          has(true);
+          statusLine("meow-status", `Pips miauw staat erop (${Math.round(info.bytes / 1024)} kB).`, "ok");
+        } catch (error) {
+          has(false);
+          statusLine("meow-status", "Het servertje is nu niet bereikbaar.", "error");
+        }
+      }
+
+      document.getElementById("meow-add").addEventListener("click", () => document.getElementById("meow-input").click());
+      document.getElementById("meow-input").addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        event.target.value = "";
+        if (!file) return;
+        if (file.size > MAX_MEOW_BYTES) return statusLine("meow-status", "Dat bestand is te groot. Neem een kort stukje op (1 tot 3 seconden).", "error");
+        statusLine("meow-status", "Versturen…");
+        try {
+          const response = await fetch(meowUrl, {
+            method: "PUT",
+            headers: { ...auth(), "Content-Type": file.type || "audio/mp4" },
+            body: file,
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          await showMeow();
+        } catch (error) {
+          statusLine("meow-status", "Dat lukte niet. Is het een geluidsbestand?", "error");
+        }
+      });
+      document.getElementById("meow-play").addEventListener("click", async () => {
+        const response = await fetch(meowUrl, { headers: auth() });
+        if (!response.ok) return;
+        if (meowPreview) URL.revokeObjectURL(meowPreview.src);
+        meowPreview = new Audio(URL.createObjectURL(await response.blob()));
+        meowPreview.play().catch(() => statusLine("meow-status", "Afspelen lukt hier niet; op de Google Hub wel.", "error"));
+      });
+      document.getElementById("meow-delete").addEventListener("click", async () => {
+        if (!confirm("Pips miauw verwijderen?")) return;
+        await fetch(meowUrl, { method: "DELETE", headers: auth() });
+        showMeow();
+      });
+
+      // Pas laden als je het blokje openklapt.
+      document.getElementById("photos-box").addEventListener("toggle", (event) => { if (event.target.open) showPhotos(); });
+      document.getElementById("meow-box").addEventListener("toggle", (event) => { if (event.target.open) showMeow(); });
 
       // ---- Huisgenoten: wie op de Google Hub kan afvinken ----
 

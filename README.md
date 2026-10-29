@@ -116,6 +116,25 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Opslag:** de lijst wordt op de Google Hub bewaard en op het servertje (`/api/pip-settings`, Netlify Blobs), met dezelfde kattenbak-code. Zo overleeft hij een herstart van de Google Hub. Ook de huisgenoten van de startpagina komen daar terecht.
 - `config.js` bevat alleen de standaardlijst voor als er nog niets is opgeslagen.
 
+## Foto's en geluid
+
+**Fotolijst in de ruststand.** De ruststand wisselt elke 20 seconden tussen de standaardfoto en de foto's die jullie sturen, met de nieuwste eerst.
+
+- **Foto's toevoegen:** open op je telefoon de startpagina, klap **Foto's van Pip** open en tik op **Foto's kiezen**. Dat werkt ook op een iPhone.
+  - De foto wordt op je telefoon eerst verkleind (langste kant 1600 pixels).
+  - De Google Hub haalt nieuwe foto's elk kwartier op.
+- **Staande foto's** komen helemaal in beeld, met een vage uitvergroting van zichzelf erachter.
+- **Weghalen:** tik op × bij een foto. Er passen er maximaal 40 op.
+- **Opslag:** de foto's staan op het servertje (`/api/fotos`, Netlify Blobs) en alleen wie de kattenbak-code heeft kan erbij.
+
+**Geluid op de Google Hub**
+
+- **Voersignaal:** na **Voeren** altijd dezelfde drie tonen. Pip leert zo dat dat geluid "eten" betekent.
+- **Feestje:** vink je de laatste taak van de dag af, dan klinkt een vrolijk loopje en valt er confetti over het scherm.
+- **Aai Pip:** het pootje rechtsonder in de ruststand laat hartjes opstijgen. Pip miauwt terug, of spint soms.
+- **Pips miauw:** zet je via **Pips miauw** op de startpagina (een geluidsbestand van hooguit 1 MB, het liefst 1 tot 3 seconden). Zonder miauw spint ze alleen.
+- **Volume:** vanaf 21:00 tot 07:00 zijn de geluiden zachter. Het volume zelf regel je op de Google Hub.
+
 ## Meldingen op je telefoon (ntfy)
 
 Voor natvoer krijgt iedereen in huis een melding op de telefoon:
