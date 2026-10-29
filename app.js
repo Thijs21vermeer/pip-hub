@@ -1192,8 +1192,8 @@
     }
   }
 
-  // Zonder dat script zou de knop Pip wegzetten tot iemand hem opnieuw start.
-  // Dan liever geen knop: Pip blijft zo veel mogelijk staan.
+  // Zonder dat script zou de knop het overzicht wegzetten tot iemand het opnieuw
+  // start. Dan liever geen knop: het overzicht blijft zo veel mogelijk staan.
   function showGoogleButton(alive) {
     els.toGoogle.hidden = !alive;
   }
@@ -1226,7 +1226,7 @@
     const step = (delta, icon, label) =>
       `<button class="away-step" data-action="google-step" data-delta="${delta}" aria-label="${label}">${icon}</button>`;
     return `
-      <p class="away-label">Pip komt terug om</p>
+      <p class="away-label">Het overzicht komt terug om</p>
       <div class="away-pick">
         ${step(-15, ICONS.minus, "Kwartier eerder")}
         <div class="away-time">
@@ -1305,7 +1305,7 @@
     if (!(await watcherAlive())) {
       openSheet(null, `
         <h3>Naar Google Hub</h3>
-        <p>Pip komt daarna niet vanzelf terug: het script op de Mac draait niet. Tik later op Start Pip op je telefoon.</p>
+        <p>Het overzicht komt daarna niet vanzelf terug: het script op de NAS draait niet. Tik later op Start overzicht op je telefoon.</p>
         <div class="choices">
           <button class="choice" data-action="google-go" data-choice="none">Naar Google Hub</button>
           <button class="choice secondary" data-action="close">Annuleren</button>
@@ -1316,13 +1316,13 @@
       `<button class="choice" data-action="google-go" data-choice="${choice}">${label}</button>`).join("");
     openSheet(null, `
       <h3>Naar Google Hub</h3>
-      <p>Wanneer moet Pip terugkomen?</p>
+      <p>Wanneer moet het overzicht terugkomen?</p>
       <div class="choices">${buttons}</div>
       <div class="choices">
         <button class="choice secondary" data-action="google-custom">Zelf kiezen</button>
         <button class="choice secondary" data-action="close">Annuleren</button>
       </div>
-      <p class="hint">Eerder terug? Tik op Start Pip op je telefoon.</p>`);
+      <p class="hint">Eerder terug? Tik op Start overzicht op je telefoon.</p>`);
   }
 
   async function goToGoogle(choice) {
@@ -1330,7 +1330,7 @@
     if (!window.PipCast) {
       openSheet(null, `
         <h3>Alleen op de Google Hub</h3>
-        <p>Hier is Pip een voorbeeld in de browser; er is geen Google Hub om naartoe te gaan.</p>
+        <p>Hier is het overzicht een voorbeeld in de browser; er is geen Google Hub om naartoe te gaan.</p>
         <div class="choices"><button class="choice secondary" data-action="close">Sluiten</button></div>`);
       return;
     }
@@ -1343,7 +1343,7 @@
   function showNotLinked() {
     openSheet(null, `
       <h3>Nog niet gekoppeld</h3>
-      <p>Vul de kattenbak-code in op de startpagina van Pip.</p>
+      <p>Vul de kattenbak-code in op de startpagina van het overzicht.</p>
       <div class="choices"><button class="choice secondary" data-action="close">Sluiten</button></div>`);
   }
 

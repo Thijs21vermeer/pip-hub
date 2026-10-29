@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Start Pip</title>
+  <title>Overzicht starten</title>
   <link rel="icon" href="pip.png">
   <link rel="apple-touch-icon" href="pip.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
@@ -216,15 +216,15 @@
 <body>
   <main>
     <img src="pip.png" alt="">
-    <h1>Pip op de Google Hub</h1>
+    <h1>Pip-overzicht op de Google Hub</h1>
     <p id="status">Even laden…</p>
-    <button id="start" disabled>Start Pip</button>
-    <button id="stop" class="secondary" hidden>Stop Pip op de Google Hub</button>
+    <button id="start" disabled>Start overzicht</button>
+    <button id="stop" class="secondary" hidden>Stop overzicht op de Google Hub</button>
     <p class="note">Werkt in Chrome op Android of op je Mac, op hetzelfde wifi als de Google Hub. Kies na het tikken je Google Hub in de lijst.</p>
 
     <details id="people-box">
       <summary>Huisgenoten</summary>
-      <p class="note">Wie kan op de Google Hub een taak afvinken? Een wijziging gaat meteen naar Pip als die draait, en anders bij de volgende start.</p>
+      <p class="note">Wie kan op de Google Hub een taak afvinken? Een wijziging gaat meteen naar het overzicht als dat draait, en anders bij de volgende start.</p>
       <ul id="people" class="people"></ul>
       <div class="add-row">
         <input id="new-person" type="text" maxlength="20" autocomplete="off" placeholder="Naam toevoegen">
@@ -252,7 +252,7 @@
     </details>
   </main>
 
-  <script src="config.js?v=20261029-10"></script>
+  <script src="config.js?v=20261029-11"></script>
   <script>
     (function () {
       "use strict";
@@ -487,7 +487,7 @@
       function updateStatus() {
         const session = cast.framework.CastContext.getInstance().getCurrentSession();
         stopButton.hidden = !session;
-        if (session) show(`Pip staat aan op ${session.getCastDevice().friendlyName}.`, "ok");
+        if (session) show(`Het overzicht staat aan op ${session.getCastDevice().friendlyName}.`, "ok");
         else show("Klaar om te starten.");
       }
 

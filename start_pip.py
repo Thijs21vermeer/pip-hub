@@ -164,9 +164,9 @@ def send_codes(hub, pip):
 def launch(hub, app_id, pip):
     name = hub.cast_info.friendly_name
     if hub.app_id == app_id:
-        print(f"Pip staat al aan op {name}.")
+        print(f"Het overzicht staat al aan op {name}.")
     else:
-        print(f"Pip starten op {name}…")
+        print(f"Overzicht starten op {name}…")
         try:
             hub.start_app(app_id)
         except PyChromecastError as error:
@@ -180,7 +180,7 @@ def launch(hub, app_id, pip):
 
 def keep_pip_on(hub, app_id, pip):
     start, end = ACTIVE_HOURS
-    print(f"Pip blijft aan op {hub.cast_info.friendly_name} tussen {start}:00 en {end}:00.")
+    print(f"Overzicht blijft aan op {hub.cast_info.friendly_name} tussen {start}:00 en {end}:00.")
     if sys.stdout.isatty():  # niet in het log van de NAS of de achtergrond-versie
         print("Laat dit venster open; sluit het om te stoppen.")
     was_on = hub.app_id == app_id
@@ -196,13 +196,13 @@ def keep_pip_on(hub, app_id, pip):
             # Via de knop "Google Hub" staat er een pauze op het servertje; zonder
             # knop (Hé Google, een timer, weggeveegd) geldt de gewone wachttijd.
             wait_until = time.time() + GRACE_SECONDS
-            print(f"{now()} Pip is weg, de Google Hub krijgt even de ruimte.")
+            print(f"{now()} Overzicht is weg, de Google Hub krijgt even de ruimte.")
         was_on = on
         if not on and start <= local_now().hour < end and hub.app_id in IDLE_APP_IDS:
             away = away_until()
             back = max(wait_until, away)
             if time.time() >= back:
-                print(f"{now()} Google Hub is vrij, Pip wordt gestart.")
+                print(f"{now()} Google Hub is vrij, overzicht wordt gestart.")
                 try:
                     hub.start_app(app_id)
                     send_codes(hub, pip)
@@ -210,7 +210,7 @@ def keep_pip_on(hub, app_id, pip):
                     print(f"{now()} Starten lukte niet ({error!r}), zo meteen opnieuw.")
             elif away > time.time() and away != told_pause:
                 back_at = datetime.fromtimestamp(away + clock_offset, TIMEZONE)
-                print(f"{now()} Pauze via de knop: Pip komt om {back_at:%H:%M} terug.")
+                print(f"{now()} Pauze via de knop: overzicht komt om {back_at:%H:%M} terug.")
                 told_pause = away
         time.sleep(CHECK_EVERY_SECONDS)
 
