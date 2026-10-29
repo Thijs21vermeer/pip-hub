@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pip</title>
+  <link rel="icon" href="pip.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" id="logo"></span>
+      <div>
+        <h1>Pip</h1>
+        <p id="progress-text"></p>
+      </div>
+    </div>
+    <div class="when">
+      <div id="clock"></div>
+      <div id="date"></div>
+    </div>
+  </header>
+
+  <div class="progress"><div id="progress-bar"></div></div>
+
+  <main>
+    <section class="tasks" id="tasks" aria-label="Taken"></section>
+    <aside class="stock">
+      <h2>Voorraad</h2>
+      <div id="stock"></div>
+    </aside>
+  </main>
+
+  <div class="sheet-backdrop" id="sheet" hidden>
+    <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script src="cast.js"></script>
+</body>
+</html>
