@@ -100,10 +100,15 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 
 ## Taken beheren op de Google Hub
 
-- **Op het startscherm** staan de eerste 4 taken. Zijn het er meer, dan staat naast "Taken" bijvoorbeeld **+2 meer ›**; anders staat er **Beheren ›**.
-- **Daarachter** zit de pagina **Alle taken**: daar vink je alle taken af. Met **Bewerken** wijzig, verplaats of verwijder je een taak, of voeg je er een toe (maximaal 12).
+- **Op het startscherm** staan alle taken. Het takenblok blijft even hoog: bij meer taken komt er afwisselend een kolom en een rij bij en worden de tegels kleiner.
+  - 1–4 taken: 2 × 2
+  - 5–6 taken: 3 × 2 (icoon boven de naam)
+  - 7–9 taken: 3 × 3
+  - 10–12 taken: 4 × 3
+  - Op kleine tegels staat kortere tekst, zoals "Deze week" in plaats van "Deze week nog doen".
+- **Beheren ›** naast "Taken" opent de pagina **Alle taken**. Met **Bewerken** wijzig, verplaats of verwijder je een taak, of voeg je er een toe (maximaal 12).
 - **Typen** gaat met het schermtoetsenbord van Pip, want de Google Hub heeft geen eigen toetsenbord. Er staan ook suggesties klaar, zoals "Nagels knippen" of "Medicijn geven".
-- **Volgorde:** met ‹ en › verplaats je een taak. Wat op plek 1 t/m 4 staat, komt op het startscherm.
+- **Volgorde:** met ‹ en › verplaats je een taak. In die volgorde staan ze op het startscherm.
 - **Hoe vaak en welke dag:** kies elke dag, week, om de week, maand of kwartaal. Bij week-taken kun je een vaste dag kiezen ("om de week op zaterdag"), bij maand- en kwartaaltaken een datum ("elke maand op de 15e").
   - De taak gaat op die dag open en blijft open tot hij gedaan is ("Vandaag", "Sinds za 1 nov").
   - Een dag eerder gedaan telt ook mee.

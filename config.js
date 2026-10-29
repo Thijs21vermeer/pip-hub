@@ -14,8 +14,8 @@ window.PIP_CONFIG = {
   resetHour: 4,
 
   // Dagelijkse taken: de standaardlijst. Op de Hub zelf kun je taken toevoegen,
-  // wijzigen en verplaatsen; die lijst komt dan van het servertje. De eerste 4
-  // staan op het startscherm, de rest onder "meer".
+  // wijzigen en verplaatsen; die lijst komt dan van het servertje. Alle taken
+  // staan op het startscherm; bij meer taken worden de tegels kleiner.
   // icon: sun, moon, drop, bowl, box, heart, paw, pill, scissors of ball.
   // stock: haalt bij afvinken automatisch iets van de voorraad af.
   tasks: [

@@ -27,8 +27,11 @@
 
   // Takenlijst die je op de Hub zelf beheert.
   const SETTINGS_KEY = "pip-hub-settings";
-  const HOME_TASKS = 4; // zoveel taken staan op het startscherm, de rest onder "meer"
   const MAX_TASKS = 12;
+  // Alle taken staan op het startscherm. Het takenblok blijft even hoog: bij meer
+  // taken komt er afwisselend een kolom en een rij bij en worden de tegels kleiner.
+  // [tot zoveel taken, kolommen, rijen]
+  const TASK_LAYOUTS = [[4, 2, 2], [6, 3, 2], [9, 3, 3], [MAX_TASKS, 4, 3]];
   const MAX_TITLE = 30;
   const PAGE_TIMEOUT_MS = 90 * 1000; // pagina "Alle taken" sluit vanzelf
   const REST_AFTER_MS = 2 * 60 * 1000; // zo lang niets aangeraakt: terug naar de ruststand
@@ -49,11 +52,11 @@
   // (0 = zo … 6 = za) bij week-taken, de zoveelste van de maand (1-28) bij
   // maand- en kwartaaltaken.
   const REPEATS = {
-    daily: { label: "Elke dag", todo: "Nog doen" },
-    weekly: { label: "Elke week", todo: "Deze week nog doen", days: "week" },
-    biweekly: { label: "Om de week", todo: "Deze 2 weken nog doen", days: "week" },
-    monthly: { label: "Elke maand", todo: "Deze maand nog doen", days: "month" },
-    quarterly: { label: "Elk kwartaal", todo: "Dit kwartaal nog doen", days: "month" },
+    daily: { label: "Elke dag", todo: "Nog doen", short: "Nog doen" },
+    weekly: { label: "Elke week", todo: "Deze week nog doen", short: "Deze week", days: "week" },
+    biweekly: { label: "Om de week", todo: "Deze 2 weken nog doen", short: "Deze 2 weken", days: "week" },
+    monthly: { label: "Elke maand", todo: "Deze maand nog doen", short: "Deze maand", days: "month" },
+    quarterly: { label: "Elk kwartaal", todo: "Dit kwartaal nog doen", short: "Dit kwartaal", days: "month" },
   };
   const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // keuze in de editor: ma t/m zo
   const MAX_MONTH_DAY = 28; // elke maand heeft een 28e
@@ -676,8 +679,8 @@
 
   // Wat er onder een open taak staat. Met een vaste dag: wanneer hij open ging
   // ("Vandaag", "Sinds za 25 okt") of wanneer hij voor het eerst komt.
-  function todoText(task) {
-    if (dayOf(task) === null) return REPEATS[repeatOf(task)].todo;
+  function todoText(task, compact = false) {
+    if (dayOf(task) === null) return REPEATS[repeatOf(task)][compact ? "short" : "todo"];
     const upcoming = upcomingDay(task);
     if (upcoming !== null) return `Op ${dayLabel(upcoming)}`;
     const start = periodStart(task, new Date());
@@ -695,12 +698,17 @@
     return `${label} · ${REPEATS[repeatOf(task)].days === "week" ? DAYS_SHORT[day] : `de ${day}e`}`;
   }
 
-  function taskCard(task) {
+  // compact: kleine tegel op een vol startscherm, dus kortere tekst ("Deze week",
+  // "Thijs · 19:00" in plaats van "Deze week nog doen", "Thijs · vandaag 19:00").
+  function taskCard(task, compact = false) {
     const done = currentDone(task);
     const later = !done && upcomingDay(task) !== null;
+    const when = done && compact
+      ? whenShort(done.at).replace(/^vandaag /, "").replace(/^gisteren .*/, "gisteren")
+      : done && whenShort(done.at);
     const status = done
-      ? `${escapeHtml(done.by)} · ${whenShort(done.at)}`
-      : todoText(task);
+      ? `${escapeHtml(done.by)} · ${when}`
+      : todoText(task, compact);
     return `
       <button class="task${done ? " done" : ""}${later ? " later" : ""}" data-action="task" data-id="${escapeHtml(task.id)}">
         <span class="icon">${done ? ICONS.check : ICONS[task.icon] || ICONS.paw}</span>
@@ -932,9 +940,10 @@
     document.body.classList.toggle("all-done", allDone);
     els.progressText.textContent = allDone ? "Alles gedaan voor vandaag" : `${doneCount} van ${total} gedaan`;
     els.progressBar.style.width = total ? `${(doneCount / total) * 100}%` : "0";
-    els.tasks.innerHTML = list.slice(0, HOME_TASKS).map(taskCard).join("");
-    const extra = total - HOME_TASKS;
-    els.tasksMore.textContent = extra > 0 ? `+${extra} meer ›` : "Beheren ›";
+    const [, cols, rows] = TASK_LAYOUTS.find(([max]) => list.length <= max) || TASK_LAYOUTS[TASK_LAYOUTS.length - 1];
+    els.tasks.dataset.layout = `${cols}x${rows}`;
+    els.tasks.innerHTML = list.map((task) => taskCard(task, cols > 2)).join("");
+    els.tasksMore.textContent = "Beheren ›";
     renderActions();
     renderStock();
     renderPage();
@@ -948,7 +957,7 @@
         <span class="icon">${ICONS[task.icon] || ICONS.paw}</span>
         <span>
           <span class="title">${escapeHtml(task.title)}</span>
-          <span class="status">${repeatText(task)} · ${index < HOME_TASKS ? "startscherm" : "onder meer"}</span>
+          <span class="status">${repeatText(task)}</span>
         </span>
         <span class="edit-badge">${ICONS.pencil}</span>
       </button>`;
@@ -959,8 +968,8 @@
     const list = tasks();
     els.pageEdit.textContent = pageEditing ? "Klaar" : "Bewerken";
     els.pageHint.textContent = pageEditing
-      ? "Tik op een taak om hem te wijzigen. De eerste 4 staan op het startscherm."
-      : `${list.length} ${list.length === 1 ? "taak" : "taken"} · de eerste 4 staan op het startscherm`;
+      ? "Tik op een taak om hem te wijzigen of te verplaatsen."
+      : `${list.length} ${list.length === 1 ? "taak" : "taken"} · in deze volgorde op het startscherm`;
     const cards = list.map((task, index) => (pageEditing ? editCard(task, index) : taskCard(task)));
     if (pageEditing && list.length < MAX_TASKS) {
       cards.push(`
@@ -1033,7 +1042,7 @@
       <button class="choice warn small" data-action="kb-delete"${list.length <= 1 ? " disabled" : ""}>${editor.confirmDelete ? "Echt verwijderen?" : "Verwijderen"}</button>
       <button class="choice secondary small square" data-action="kb-move" data-delta="-1" aria-label="Eerder"${index <= 0 ? " disabled" : ""}>${ICONS.left}</button>
       <button class="choice secondary small square" data-action="kb-move" data-delta="1" aria-label="Later"${index >= list.length - 1 ? " disabled" : ""}>${ICONS.right}</button>
-      <span class="position">Plek ${index + 1} van ${list.length}${index < HOME_TASKS ? " · startscherm" : ""}</span>`;
+      <span class="position">Plek ${index + 1} van ${list.length}</span>`;
     return `
       <h3>${isNew ? "Nieuwe taak" : "Taak wijzigen"}</h3>
       <div class="name-field${editor.title ? "" : " empty"}">${escapeHtml(editor.title) || "Naam van de taak"}<span class="caret"></span></div>
