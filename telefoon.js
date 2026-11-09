@@ -115,7 +115,7 @@
     if (!note || note.dataset.pairing) return;
     note.dataset.pairing = "1";
     if (isApp()) {
-      note.textContent = "Pip op je beginscherm is nog niet gekoppeld. Open Pip in je browser, waar hij wel gekoppeld is, en tik op Thuis bij Instellen op Kopieer koppelcode. Kom dan hier terug.";
+      note.textContent = "Pip op je beginscherm is nog niet gekoppeld. Open Pip in je browser, waar hij wel gekoppeld is, tik op Thuis onderaan op Gekoppeld met de Google Hub en dan op Kopieer koppelcode. Kom dan hier terug.";
     }
     const box = document.createElement("div");
     box.className = "pair";

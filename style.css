@@ -2605,7 +2605,21 @@ img.score-avatar {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 100px 28px 36px;
+  padding: calc(100px + env(safe-area-inset-top)) 28px calc(36px + env(safe-area-inset-bottom));
+}
+/* Als app: een zachte schaduw onder de klok en de batterij (wit). */
+@media (display-mode: standalone) {
+  .wrapped::after {
+    content: "";
+    position: absolute;
+    z-index: 9;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top) + 16px);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0));
+    pointer-events: none;
+  }
 }
 .wr-tall [data-fit] {
   white-space: nowrap;
@@ -2627,7 +2641,7 @@ img.score-avatar {
 .wrapped.tall .wr-progress {
   left: 14px;
   right: 14px;
-  top: 12px;
+  top: calc(12px + env(safe-area-inset-top));
   gap: 4px;
 }
 .wrapped.tall .wr-seg {
@@ -2635,13 +2649,13 @@ img.score-avatar {
 }
 .wrapped.tall .wr-song {
   left: 14px;
-  top: 32px;
+  top: calc(32px + env(safe-area-inset-top));
   max-width: 260px;
   padding: 6px 12px 6px 10px;
   font-size: 12px;
 }
 .wrapped.tall .wr-controls {
-  top: 28px;
+  top: calc(28px + env(safe-area-inset-top));
   right: 14px;
   gap: 6px;
 }

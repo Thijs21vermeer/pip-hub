@@ -695,7 +695,7 @@
           <p class="wr-up d3 wr-serif" style="margin-top:12px;font-size:30px;color:#a9642f">${esc(s.line)}</p>
         </div>
         ${GAP}
-        <div class="wr-row" style="margin-bottom:-36px;align-items:flex-end;gap:12px">${columns}</div>`);
+        <div class="wr-row" style="margin-bottom:calc(-36px - env(safe-area-inset-bottom));align-items:flex-end;gap:12px">${columns}</div>`);
     },
 
     records(s) {
