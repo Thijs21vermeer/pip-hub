@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-55">
+  <link rel="stylesheet" href="stijl.css?v=20261109-56">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -48,6 +48,22 @@
         <div class="wall" id="tiles"></div>
       </section>
       <p class="status" id="status" role="status"></p>
+
+      <!-- Acties: de kattenbak laten draaien en voeren, thuis of onderweg (via het servertje). -->
+      <section class="card acties" aria-labelledby="acties-title">
+        <div class="tasks-head"><h2 id="acties-title">Acties</h2></div>
+        <div class="acts">
+          <button type="button" class="act" id="act-clean">
+            <span class="act-photo" style="background: #f3ebe4"><img src="taken/kattenbak.jpg" alt=""></span>
+            <span class="act-row"><span class="act-text"><strong>Bak draaien</strong><small id="act-clean-status"></small></span><i class="act-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></i></span>
+          </button>
+          <button type="button" class="act" id="act-feed">
+            <span class="act-photo" style="background: #efeae2"><img src="taken/voerbak.jpg" alt=""></span>
+            <span class="act-row"><span class="act-text"><strong>Voeren</strong><small id="act-feed-status"></small></span><i class="act-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></i></span>
+          </button>
+        </div>
+        <p class="act-message" id="act-message" role="status" hidden></p>
+      </section>
 
       <!-- Wat er vandaag gebeurde: Pip en de apparaten, en wat de baasjes deden
            (afgevinkt, gespeeld). Los van de schilderijtjes van de taken. -->
@@ -139,6 +155,29 @@
     </div>
   </div>
 
+  <!-- Acties: kattenbak draaien (of: Pip zit erin) en voeren. -->
+  <div class="sheet" id="clean-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="clean-title">
+      <h2 id="clean-title">Kattenbak draaien</h2>
+      <p id="clean-text">Nu laten draaien?</p>
+      <button type="button" class="primary" id="clean-go">Ja, draaien</button>
+      <button class="sheet-cancel" id="clean-cancel" type="button">Annuleren</button>
+    </div>
+  </div>
+  <div class="sheet" id="feed-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="feed-title">
+      <h2 id="feed-title">Voeren</h2>
+      <p>Hoeveel porties uit de voerbak?</p>
+      <div class="stepper">
+        <button type="button" class="step" id="feed-less" aria-label="Minder">−</button>
+        <div class="amount"><strong id="feed-n">2</strong><span id="feed-word">porties</span></div>
+        <button type="button" class="step" id="feed-more" aria-label="Meer">+</button>
+      </div>
+      <button type="button" class="primary" id="feed-go">Voer 2 porties</button>
+      <button class="sheet-cancel" id="feed-cancel" type="button">Annuleren</button>
+    </div>
+  </div>
+
   <div class="sheet" id="sheet" hidden>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <h2 id="sheet-title">Wie heeft het gedaan?</h2>
@@ -148,10 +187,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-55"></script>
-  <script src="telefoon.js?v=20261109-55"></script>
-  <script src="taken.js?v=20261109-55"></script>
-  <script src="stats.js?v=20261109-55"></script>
+  <script src="config.js?v=20261109-56"></script>
+  <script src="telefoon.js?v=20261109-56"></script>
+  <script src="taken.js?v=20261109-56"></script>
+  <script src="stats.js?v=20261109-56"></script>
   <script>
     (function () {
       "use strict";
@@ -664,6 +703,173 @@
         events.slice(0, ACTIVITY_SHOWN).forEach((event) => list.appendChild(P.activityItem(event)));
       }
 
+      // ---- Acties: de kattenbak laten draaien en voeren ----
+      // Via het servertje (kattenbak.mjs), dus ook onderweg. Dat weigert zelf als
+      // Pip in de bak zit, een apparaat offline is of het te snel na elkaar gaat.
+      const ACT_ERRORS = {
+        CAT_INSIDE: "Pip zit erin. Probeer het straks nog eens.",
+        OFFLINE: "De kattenbak is offline.",
+        TOO_SOON: "De bak is net al gedraaid. Probeer het over een paar minuten.",
+        FEEDER_OFFLINE: "De voerbak is offline.",
+        FEEDING: "De voerbak is al bezig.",
+        NOT_CONFIGURED: "Er is geen voerbak gekoppeld.",
+        BAD_PORTIONS: "Kies 1 tot 10 porties.",
+      };
+      const PORTIONS_KEY = "pip-feed-portions";
+      let kbStatus = null; // GET /api/kattenbak: online, catInside, lastCleanAt, feeder
+      const justDone = {}; // wat deze telefoon net deed: { clean: ms, feed: { at, portions } }
+      let feedPortions = 2;
+      try {
+        feedPortions = Math.min(10, Math.max(1, Number(localStorage.getItem(PORTIONS_KEY)) || 2));
+      } catch (error) {
+        feedPortions = 2;
+      }
+      const portionWord = (n) => (n === 1 ? "portie" : "porties");
+      const RECENT_MS = 10 * 60 * 1000;
+
+      // Eén regel, ook op een kleine iPhone: "Gedraaid 13:15" (vandaag),
+      // "Gisteren 18:02" of "Do 6 nov" (het logboek gaat een week terug).
+      function whenText(prefix, at) {
+        const today = P.pipDayKey(Date.now());
+        const day = P.pipDayKey(at);
+        if (day === today) return `${prefix} ${P.clock(at)}`;
+        if (day === P.pipDayKey(Date.now() - 24 * 3600 * 1000)) return `Gisteren ${P.clock(at)}`;
+        const date = new Date(at);
+        return `${["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"][date.getDay()]} ${date.getDate()} ${["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"][date.getMonth()]}`;
+      }
+
+      function paintAct(id, text, kind) {
+        const el = $(id);
+        el.textContent = text;
+        el.className = kind || "";
+      }
+
+      function renderActs() {
+        const log = data.log || {};
+        // Kattenbak draaien
+        const lastClean = Math.max(0, ...(log.cleans || []).map((c) => c.at || 0), (kbStatus && kbStatus.lastCleanAt) || 0);
+        if (kbStatus && kbStatus.catInside) paintAct("act-clean-status", "Pip zit erin", "warn");
+        else if (kbStatus && kbStatus.online === false) paintAct("act-clean-status", "Offline", "warn");
+        else if (justDone.clean && Date.now() - justDone.clean < RECENT_MS) paintAct("act-clean-status", `Gestart ${P.clock(justDone.clean)}`, "ok");
+        else paintAct("act-clean-status", lastClean ? whenText("Gedraaid", lastClean) : "Nog niet");
+        // Voeren (ook de voerbeurten van het schema)
+        const feeder = kbStatus && kbStatus.feeder;
+        const feederLast = feeder && feeder.lastFeed && feeder.lastFeed.at;
+        const lastFeed = Math.max(0, ...(log.feeds || []).map((f) => f.at || 0), feederLast || 0);
+        if (feeder && feeder.online === false) paintAct("act-feed-status", "Voerbak offline", "warn");
+        else if (justDone.feed && Date.now() - justDone.feed.at < RECENT_MS) paintAct("act-feed-status", `Gevoerd ${P.clock(justDone.feed.at)}`, "ok");
+        else paintAct("act-feed-status", lastFeed ? whenText("Gevoerd", lastFeed) : "Nog niet");
+      }
+
+      // De stand van de bak en de voerbak: bij het openen, als Pip weer naar voren
+      // komt en vlak voor een actie (niet elke minuut: dat zijn telkens vragen aan Tuya).
+      async function refreshKb() {
+        try {
+          kbStatus = await getJson(urls.kattenbak);
+        } catch (error) {
+          // Niet bereikbaar: dan alleen het logboek.
+        }
+        renderActs();
+      }
+
+      function actMessage(text, error = false) {
+        const el = $("act-message");
+        el.textContent = text;
+        el.classList.toggle("error", error);
+        el.hidden = !text;
+      }
+
+      async function runAct(body) {
+        const response = await fetch(urls.kattenbak, {
+          method: "POST",
+          headers: auth({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ ...body, source: "telefoon" }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw Object.assign(new Error(result.error || "ERROR"), { code: result.error });
+        return result;
+      }
+
+      // Kattenbak draaien: eerst vragen; zit Pip erin, dan alleen zeggen.
+      function paintCleanSheet() {
+        const inside = kbStatus && kbStatus.catInside;
+        $("clean-title").textContent = inside ? "Pip zit erin" : "Kattenbak draaien";
+        $("clean-text").textContent = inside
+          ? "De bak draait niet zolang Pip erin zit. Probeer het straks nog eens."
+          : kbStatus ? "Nu laten draaien? Pip zit er niet in." : "Nu laten draaien?";
+        $("clean-go").hidden = Boolean(inside);
+        $("clean-cancel").textContent = inside ? "Oké" : "Annuleren";
+      }
+      $("act-clean").addEventListener("click", () => {
+        paintCleanSheet();
+        $("clean-sheet").hidden = false;
+        refreshKb().then(paintCleanSheet); // net even opnieuw kijken
+      });
+      $("clean-cancel").addEventListener("click", () => { $("clean-sheet").hidden = true; });
+      $("clean-sheet").addEventListener("click", (event) => { if (event.target === $("clean-sheet")) $("clean-sheet").hidden = true; });
+      $("clean-go").addEventListener("click", async () => {
+        const button = $("clean-go");
+        if (button.disabled) return;
+        button.disabled = true;
+        button.textContent = "Bezig…";
+        try {
+          await runAct({ action: "clean" });
+          justDone.clean = Date.now();
+          $("clean-sheet").hidden = true;
+          actMessage("De kattenbak draait. Klaar over een paar minuten.");
+          renderActs();
+          load();
+        } catch (error) {
+          if (error.code === "CAT_INSIDE" && kbStatus) kbStatus.catInside = true;
+          $("clean-sheet").hidden = true;
+          actMessage(ACT_ERRORS[error.code] || "Dat lukte niet. Probeer het nog eens.", true);
+          renderActs();
+        }
+        button.disabled = false;
+        button.textContent = "Ja, draaien";
+      });
+
+      // Voeren: hoeveel porties (1-10, net als op de Hub).
+      function paintFeedSheet() {
+        $("feed-n").textContent = feedPortions;
+        $("feed-word").textContent = portionWord(feedPortions);
+        $("feed-go").textContent = `Voer ${feedPortions} ${portionWord(feedPortions)}`;
+      }
+      $("act-feed").addEventListener("click", () => {
+        paintFeedSheet();
+        $("feed-sheet").hidden = false;
+      });
+      $("feed-less").addEventListener("click", () => { feedPortions = Math.max(1, feedPortions - 1); paintFeedSheet(); });
+      $("feed-more").addEventListener("click", () => { feedPortions = Math.min(10, feedPortions + 1); paintFeedSheet(); });
+      $("feed-cancel").addEventListener("click", () => { $("feed-sheet").hidden = true; });
+      $("feed-sheet").addEventListener("click", (event) => { if (event.target === $("feed-sheet")) $("feed-sheet").hidden = true; });
+      $("feed-go").addEventListener("click", async () => {
+        const button = $("feed-go");
+        if (button.disabled) return;
+        button.disabled = true;
+        button.textContent = "Bezig…";
+        const portions = feedPortions;
+        try {
+          await runAct({ action: "feed", portions });
+          justDone.feed = { at: Date.now(), portions };
+          try {
+            localStorage.setItem(PORTIONS_KEY, String(portions));
+          } catch (error) {
+            // Niet bewaard: volgende keer weer 2.
+          }
+          $("feed-sheet").hidden = true;
+          actMessage(`De voerbak geeft ${portions} ${portionWord(portions)}.`);
+          renderActs();
+          load();
+        } catch (error) {
+          $("feed-sheet").hidden = true;
+          actMessage(ACT_ERRORS[error.code] || "Dat lukte niet. Probeer het nog eens.", true);
+          renderActs();
+        }
+        button.disabled = false;
+        paintFeedSheet();
+      });
+
       // ---- Afvinken vanaf de telefoon ----
 
       function askWho(task) {
@@ -851,6 +1057,7 @@
 
       function renderAll() {
         renderTasks();
+        renderActs();
         renderWrapped();
         renderScores();
         renderSettings();
@@ -864,6 +1071,8 @@
         $("progress").innerHTML = '<i class="sk-line" style="width:96px;margin:0"></i>';
         $("timeline").innerHTML = [72, 58, 66].map((w) => `<li class="skeleton" aria-hidden="true"><i class="sk-line" style="width:38px"></i><i class="dot"></i><span><i class="sk-line" style="width:${w}%"></i><i class="sk-line short" style="width:40%"></i></span></li>`).join("");
         $("activity-more").textContent = "";
+        $("act-clean-status").textContent = "\u00a0";
+        $("act-feed-status").textContent = "\u00a0";
       }
 
       (async function start() {
@@ -885,11 +1094,13 @@
           avatars = list;
           renderAll();
         });
+        refreshKb();
         await load();
         setInterval(load, 60 * 1000);
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
             load();
+            refreshKb();
           }
         });
       })();

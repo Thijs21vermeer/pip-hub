@@ -1519,10 +1519,10 @@
     const portionsToday = feeds.filter(isToday).reduce((sum, feed) => sum + (feed.portions || 0), 0);
     els.logColumns.innerHTML =
       logCard(ICONS.box, "Kattenbak", boxSummary, logRows(box, (entry) => entry.kind === "clean"
-        ? '<span class="log-what">Gedraaid</span><span class="log-source">via overzicht</span>'
+        ? `<span class="log-what">Gedraaid</span><span class="log-source">${entry.source === "telefoon" ? "via telefoon" : "via overzicht"}</span>`
         : `<span class="log-what">${[entry.weightKg && `${String(entry.weightKg).replace(".", ",")} kg`, duration(entry.seconds)].filter(Boolean).join(" · ") || "Bezoek"}</span>`)) +
       logCard(ICONS.bowl, "Voeren", `Vandaag ${portionsText(portionsToday)}`, logRows(feeds, (feed) =>
-        `<span class="log-what">${portionsText(feed.portions)}</span><span class="log-source">${feed.source === "overzicht" ? "via overzicht" : "schema of app"}</span>`));
+        `<span class="log-what">${portionsText(feed.portions)}</span><span class="log-source">${{ overzicht: "via overzicht", telefoon: "via telefoon" }[feed.source] || "schema of app"}</span>`));
   }
 
   async function refreshLog() {

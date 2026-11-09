@@ -9,6 +9,8 @@
 //   POST /api/kattenbak  {"action":"clean"}  nu schoonmaken (niet als er een kat in zit)
 //   POST /api/kattenbak  {"action":"odourless"}  nu ontgeuren
 //   POST /api/kattenbak  {"action":"feed","portions":2}  nu voeren (1-10 porties)
+//   met "source":"telefoon" erbij komt het in het logboek als via je telefoon
+//   (anders via het overzicht op de Hub)
 //
 // Omgeving: TUYA_ACCESS_ID, TUYA_ACCESS_SECRET, TUYA_DEVICE_ID, PIP_ACTION_CODE,
 // optioneel TUYA_FEEDER_ID (voerbak), TUYA_REGION (standaard eu) en
@@ -153,7 +155,12 @@ async function readStatus() {
   };
 }
 
-async function feed(portions) {
+// Waar een actie vandaan kwam, voor het logboek.
+function sourceOf(value) {
+  return value === "telefoon" ? "telefoon" : "overzicht";
+}
+
+async function feed(portions, source = "overzicht") {
   const device = process.env.TUYA_FEEDER_ID;
   if (!device) return [503, { error: "NOT_CONFIGURED" }];
   if (!Number.isInteger(portions) || portions < 1 || portions > MAX_PORTIONS) return [400, { error: "BAD_PORTIONS" }];
@@ -169,12 +176,12 @@ async function feed(portions) {
     token,
   );
   lastFeed = Date.now();
-  await addToLog("feeds", { at: lastFeed, portions, source: "overzicht" }).catch(() => {});
+  await addToLog("feeds", { at: lastFeed, portions, source }).catch(() => {});
   return [200, { ok: true, action: "feed", portions, at: new Date().toISOString() }];
 }
 
-async function runAction(action, portions) {
-  if (action === "feed") return feed(portions);
+async function runAction(action, portions, source = "overzicht") {
+  if (action === "feed") return feed(portions, source);
   const code = ACTIONS[action];
   if (!code) return [400, { error: "UNKNOWN_ACTION" }];
   if (action === "clean") {
@@ -192,7 +199,7 @@ async function runAction(action, portions) {
   );
   if (action === "clean") {
     lastClean = Date.now();
-    await addToLog("cleans", { at: lastClean, source: "overzicht" }).catch(() => {});
+    await addToLog("cleans", { at: lastClean, source }).catch(() => {});
   }
   return [200, { ok: true, action, at: new Date().toISOString() }];
 }
@@ -207,8 +214,8 @@ export default async (request) => {
       return json(200, wantsLog ? await readLogbook() : await readStatus(), headers);
     }
     if (request.method === "POST") {
-      const { action, portions } = await request.json().catch(() => ({}));
-      const [status, body] = await runAction(action, portions);
+      const { action, portions, source } = await request.json().catch(() => ({}));
+      const [status, body] = await runAction(action, portions, sourceOf(source));
       return json(status, body, headers);
     }
     return json(405, { error: "METHOD_NOT_ALLOWED" }, headers);

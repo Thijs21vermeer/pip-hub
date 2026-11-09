@@ -396,10 +396,14 @@
     const events = [];
     const add = (event) => { if (event.at >= from && event.at <= now + 60000) events.push({ ...event, day: pipDayKey(event.at) }); };
     const kattenbak = log || {};
+    // Waar een actie vandaan kwam: de Hub of een telefoon (een baasje deed het,
+    // dus een gevuld bolletje). Een voerbeurt van het schema heeft geen herkomst.
+    const via = { overzicht: "via de Hub", telefoon: "via je telefoon" };
     for (const feed of kattenbak.feeds || []) {
-      add({ at: feed.at, text: "Gevoerd uit de voerbak", sub: `${feed.portions} ${feed.portions === 1 ? "portie" : "porties"}${feed.source === "overzicht" ? " · via de Hub" : ""}` });
+      const from = via[feed.source];
+      add({ at: feed.at, text: "Gevoerd uit de voerbak", sub: `${feed.portions} ${feed.portions === 1 ? "portie" : "porties"}${from ? ` · ${from}` : ""}`, care: Boolean(from) });
     }
-    for (const clean of kattenbak.cleans || []) add({ at: clean.at, text: "Bak gedraaid", sub: "via de Hub" });
+    for (const clean of kattenbak.cleans || []) add({ at: clean.at, text: "Bak gedraaid", sub: via[clean.source] || "via de Hub", care: true });
     // Per dag tellen: de hoeveelste keer op de bak.
     const visits = (kattenbak.visits || []).slice().sort((a, b) => a.at - b.at);
     const perDay = new Map();
