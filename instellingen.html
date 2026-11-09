@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-50">
+  <link rel="stylesheet" href="stijl.css?v=20261109-51">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -53,6 +53,7 @@
       <section class="card activity" aria-labelledby="activity-title">
         <div class="tasks-head"><h2 id="activity-title">Activiteit</h2><span>Vandaag</span></div>
         <ol class="timeline" id="timeline"></ol>
+        <div class="card-foot"><span id="activity-more"></span><a href="activiteit.html">Meer ›</a></div>
       </section>
 
       <!-- Pip Wrapped staat er altijd; in december en de eerste helft van
@@ -146,10 +147,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-50"></script>
-  <script src="telefoon.js?v=20261109-50"></script>
-  <script src="taken.js?v=20261109-50"></script>
-  <script src="stats.js?v=20261109-50"></script>
+  <script src="config.js?v=20261109-51"></script>
+  <script src="telefoon.js?v=20261109-51"></script>
+  <script src="taken.js?v=20261109-51"></script>
+  <script src="stats.js?v=20261109-51"></script>
   <script>
     (function () {
       "use strict";
@@ -611,63 +612,23 @@
       $("play-card").addEventListener("click", playButton);
       $("play-done").addEventListener("click", playButton);
 
-      // Wat er vandaag gebeurde: op de bak, voeren, de bak draaien, en wat de
-      // baasjes deden (een taak afgevinkt, met Pip gespeeld).
+      // Wat er vandaag gebeurde, nieuwste bovenaan: de laatste 5. Meer staat op
+      // activiteit.html (ook de dagen ervoor). Opgebouwd in telefoon.js (activity).
+      const ACTIVITY_SHOWN = 5;
       function renderTimeline() {
-        const start = todayStart(new Date());
-        const events = [];
-        const log = data.log || {};
-        // Uit het jaarlog (elk vinkje en elke keer spelen), plus wat net is
-        // afgevinkt of gespeeld en daar nog niet in staat. Elk één keer.
-        const settings = data.settings || {};
-        const tasks = tasksOf(settings);
-        const seen = new Set();
-        const care = (id, at, text, sub) => {
-          if (!at || at < start || seen.has(`${id}:${at}`)) return;
-          seen.add(`${id}:${at}`);
-          events.push({ at, text, sub, care: true });
-        };
-        const titleOf = (id, fallback) => (tasks.find((task) => task.id === id) || {}).title || fallback || id;
-        const played = (by, minutes) => `${by}${minutes ? ` · ${minutes} min` : ""}`;
-        for (const tick of (data.jaarlog && data.jaarlog.ticks) || []) {
-          if (tick.play) care(tick.id, tick.at, "Met Pip gespeeld", played(tick.by, tick.min));
-          else care(tick.id, tick.at, titleOf(tick.id, tick.title), `Afgevinkt door ${tick.by}`);
-        }
-        for (const task of tasks.filter((t) => !t.play)) {
-          const entry = (settings.done || {})[task.id];
-          if (entry) care(task.id, entry.at, task.title, `Afgevinkt door ${entry.by}`);
-        }
-        const playId = (tasks.find((t) => t.play) || { id: "spelen" }).id;
-        for (const session of (settings.play && settings.play.sessions) || []) {
-          care(playId, session.at, "Met Pip gespeeld", played(session.by, session.minutes));
-        }
-        for (const feed of log.feeds || []) {
-          if (feed.at >= start) events.push({ at: feed.at, text: "Gevoerd uit de voerbak", sub: `${feed.portions} ${feed.portions === 1 ? "portie" : "porties"}${feed.source === "overzicht" ? " · via de Hub" : ""}` });
-        }
-        for (const clean of log.cleans || []) {
-          if (clean.at >= start) events.push({ at: clean.at, text: "Bak gedraaid", sub: "via de Hub" });
-        }
-        const visits = (log.visits || []).filter((visit) => visit.at >= start).sort((a, b) => a.at - b.at);
-        visits.forEach((visit, i) => events.push({ at: visit.at, text: "Pip op de kattenbak", sub: `${i + 1}e keer vandaag${visit.weightKg ? ` · ${String(visit.weightKg).replace(".", ",")} kg` : ""}` }));
-        events.sort((a, b) => a.at - b.at);
-        const shown = events.slice(-10);
+        const today = P.pipDayKey(Date.now());
+        const events = P.activity(data).filter((event) => event.day === today);
         const list = $("timeline");
         list.innerHTML = "";
-        if (!shown.length) {
+        const hidden = Math.max(0, events.length - ACTIVITY_SHOWN);
+        $("activity-more").textContent = hidden ? `Nog ${hidden} eerder vandaag` : "Ook de dagen ervoor";
+        if (!events.length) {
           list.innerHTML = '<li class="timeline-empty" style="display:block">Nog niets gebeurd vandaag.</li>';
           list.style.background = "none";
           return;
         }
         list.style.background = "";
-        for (const event of shown) {
-          const li = document.createElement("li");
-          if (event.care) li.className = "care";
-          li.innerHTML = '<time></time><i class="dot" aria-hidden="true"></i><span><strong></strong><small></small></span>';
-          li.querySelector("time").textContent = P.clock(event.at);
-          li.querySelector("strong").textContent = event.text;
-          li.querySelector("small").textContent = event.sub;
-          list.appendChild(li);
-        }
+        events.slice(0, ACTIVITY_SHOWN).forEach((event) => list.appendChild(P.activityItem(event)));
       }
 
       // ---- Afvinken vanaf de telefoon ----

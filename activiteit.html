@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Activiteit van Pip</title>
+  <link rel="icon" href="pip.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="telefoon.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="Pip">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- Als app: een effen statusbalk in de kleur van de pagina (theme-color),
+       zonder de waas die iOS legt als de pagina onder de klok doorloopt. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="stijl.css?v=20261109-51">
+  <!-- Alle activiteit van de afgelopen 7 dagen, nieuwste bovenaan, per dag: Pip
+       op de bak, de voerbak, de bak draaien, en wat de baasjes deden. Het
+       thuisscherm toont alleen de laatste 5 van vandaag (telefoon.js, activity). -->
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <a class="back" href="instellingen.html">‹ Thuis</a>
+      <h1 class="title">Activiteit</h1>
+    </div>
+
+    <div id="linked" hidden>
+      <p class="period">De afgelopen 7 dagen, nieuwste bovenaan</p>
+      <div id="days"></div>
+    </div>
+
+    <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
+  </main>
+
+  <script src="config.js?v=20261109-51"></script>
+  <script src="telefoon.js?v=20261109-51"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const P = window.PipPhone;
+      const { config, $, serverUrl, getJson } = P;
+      const kattenbakUrl = serverUrl("kattenbak", config.kattenbak.url);
+
+      // "Vandaag", "Gisteren" of "Zaterdag 7 november".
+      function dayLabel(key) {
+        const today = P.pipDayKey(Date.now());
+        const yesterday = P.pipDayKey(Date.now() - 24 * 3600 * 1000);
+        if (key === today) return "Vandaag";
+        if (key === yesterday) return "Gisteren";
+        const [y, m, d] = key.split("-").map(Number);
+        return P.longDate(new Date(y, m - 1, d, 12));
+      }
+
+      function render(events) {
+        const box = $("days");
+        box.innerHTML = "";
+        if (!events.length) {
+          box.innerHTML = '<p class="empty">Nog niets gebeurd de afgelopen 7 dagen.</p>';
+          return;
+        }
+        const days = new Map();
+        for (const event of events) {
+          if (!days.has(event.day)) days.set(event.day, []);
+          days.get(event.day).push(event);
+        }
+        for (const [day, list] of days) {
+          const card = document.createElement("section");
+          card.className = "card activity day";
+          card.innerHTML = '<div class="tasks-head"><h2></h2><span></span></div><ol class="timeline"></ol>';
+          card.querySelector("h2").textContent = dayLabel(day);
+          card.querySelector("span").textContent = list.length === 1 ? "1 ding" : `${list.length} dingen`;
+          const ol = card.querySelector("ol");
+          list.forEach((event) => ol.appendChild(P.activityItem(event)));
+          box.appendChild(card);
+        }
+      }
+
+      async function load() {
+        const [settings, jaarlog, log] = await Promise.all([
+          getJson(serverUrl("settings", config.settings.url)).catch(() => ({})),
+          getJson(serverUrl("jaarlog", config.jaarlog.url)).catch(() => null),
+          getJson(`${kattenbakUrl}${kattenbakUrl.includes("?") ? "&" : "?"}log=1`).catch(() => null),
+        ]);
+        render(P.activity({ settings: settings || {}, jaarlog, log }));
+      }
+
+      (async function start() {
+        const { linked } = await P.showLinked();
+        if (!linked) return;
+        await load();
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") load();
+        });
+      })();
+    })();
+  </script>
+</body>
+</html>

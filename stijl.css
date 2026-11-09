@@ -520,6 +520,13 @@ button.piece:active .tick {
   margin: 56px 12px 0;
   padding: 22px 18px 12px;
 }
+/* Pagina Activiteit: per dag een kaart. */
+.activity.day {
+  margin-top: 22px;
+}
+.activity .card-foot {
+  padding-bottom: 6px;
+}
 
 .timeline {
   margin: 14px 0 0;

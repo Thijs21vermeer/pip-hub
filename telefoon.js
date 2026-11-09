@@ -286,6 +286,78 @@
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
 
+  // ---- Activiteit: wat er gebeurde, voor het thuisscherm en activiteit.html ----
+
+  // Een dag van Pip begint om resetHour (04:00): iets om 01:00 hoort nog bij gisteren.
+  function pipDayKey(ms) {
+    const d = new Date(ms - config.resetHour * 3600 * 1000);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const ACTIVITY_DAYS = 7; // zo lang bewaart het servertje de bezoeken aan de bak
+
+  // Alles van de afgelopen 7 dagen, nieuwste eerst: Pip op de bak, de voerbak,
+  // de bak draaien, en wat de baasjes deden (een taak afgevinkt, gespeeld).
+  // { at, day, text, sub, care }; care = iets wat een baasje deed.
+  function activity({ settings, jaarlog, log }, now = Date.now()) {
+    const from = now - ACTIVITY_DAYS * 24 * 3600 * 1000;
+    const today = pipDayKey(now);
+    const events = [];
+    const add = (event) => { if (event.at >= from && event.at <= now + 60000) events.push({ ...event, day: pipDayKey(event.at) }); };
+    const kattenbak = log || {};
+    for (const feed of kattenbak.feeds || []) {
+      add({ at: feed.at, text: "Gevoerd uit de voerbak", sub: `${feed.portions} ${feed.portions === 1 ? "portie" : "porties"}${feed.source === "overzicht" ? " · via de Hub" : ""}` });
+    }
+    for (const clean of kattenbak.cleans || []) add({ at: clean.at, text: "Bak gedraaid", sub: "via de Hub" });
+    // Per dag tellen: de hoeveelste keer op de bak.
+    const visits = (kattenbak.visits || []).slice().sort((a, b) => a.at - b.at);
+    const perDay = new Map();
+    for (const visit of visits) {
+      const day = pipDayKey(visit.at);
+      const n = (perDay.get(day) || 0) + 1;
+      perDay.set(day, n);
+      const kg = visit.weightKg ? ` · ${String(visit.weightKg).replace(".", ",")} kg` : "";
+      add({ at: visit.at, text: "Pip op de kattenbak", sub: `${n}e keer${day === today ? " vandaag" : ""}${kg}` });
+    }
+    // Wat de baasjes deden: uit het jaarlog (elk vinkje en elke keer spelen),
+    // plus wat net is afgevinkt of gespeeld en daar nog niet in staat. Elk één keer.
+    const s = settings || {};
+    const tasks = Array.isArray(s.tasks) && s.tasks.length ? s.tasks : config.tasks;
+    const seen = new Set();
+    const care = (id, at, text, sub) => {
+      if (!at || seen.has(`${id}:${at}`)) return;
+      seen.add(`${id}:${at}`);
+      add({ at, text, sub, care: true });
+    };
+    const titleOf = (id, fallback) => (tasks.find((task) => task.id === id) || {}).title || fallback || id;
+    const played = (by, minutes) => `${by}${minutes ? ` · ${minutes} min` : ""}`;
+    for (const tick of (jaarlog && jaarlog.ticks) || []) {
+      if (tick.at < from) continue;
+      if (tick.play) care(tick.id, tick.at, "Met Pip gespeeld", played(tick.by, tick.min));
+      else care(tick.id, tick.at, titleOf(tick.id, tick.title), `Afgevinkt door ${tick.by}`);
+    }
+    for (const task of tasks.filter((t) => !t.play)) {
+      const entry = (s.done || {})[task.id];
+      if (entry) care(task.id, entry.at, task.title, `Afgevinkt door ${entry.by}`);
+    }
+    const playId = (tasks.find((t) => t.play) || { id: "spelen" }).id;
+    for (const session of (s.play && s.play.sessions) || []) {
+      care(playId, session.at, "Met Pip gespeeld", played(session.by, session.minutes));
+    }
+    return events.sort((a, b) => b.at - a.at);
+  }
+
+  // Eén regel van de tijdlijn.
+  function activityItem(event) {
+    const li = document.createElement("li");
+    if (event.care) li.className = "care";
+    li.innerHTML = '<time></time><i class="dot" aria-hidden="true"></i><span><strong></strong><small></small></span>';
+    li.querySelector("time").textContent = clock(event.at);
+    li.querySelector("strong").textContent = event.text;
+    li.querySelector("small").textContent = event.sub;
+    return li;
+  }
+
   function people(settings) {
     return Array.isArray(settings && settings.people) && settings.people.length ? settings.people : config.people;
   }
@@ -304,7 +376,7 @@
 
   window.PipPhone = {
     config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp, isIos,
-    pushSupported, pushState, enablePush, disablePush,
+    pushSupported, pushState, enablePush, disablePush, activity, activityItem, pipDayKey,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
   };
 })();
