@@ -118,7 +118,7 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 
 ## Foto's en geluid
 
-**Telefoonpagina's.** Op je telefoon is `instellingen.html` het beginpunt: een menu met **Foto's van Pip** (`fotos.html`) en **Baasjes** (`baasjes.html`). Stijl en gedeelde code staan in `telefoon.css` en `telefoon.js`; een nieuwe pagina komt in het menu door hem in `PAGES` in `telefoon.js` te zetten. Elke pagina heeft linksboven **‹ Instellingen** terug naar het menu, en daar kun je de telefoon ook ontkoppelen.
+**Telefoonpagina's.** Op je telefoon is `instellingen.html` het beginpunt: een menu met **Foto's van Pip** (`fotos.html`) en **Baasjes** (`baasjes.html`). Stijl en gedeelde code staan in `telefoon.css` en `telefoon.js`; een nieuwe pagina komt in het menu door hem in `PAGES` in `telefoon.js` te zetten. Elke pagina heeft linksboven **‹ Instellingen** terug naar het menu, en daar kun je de telefoon ook ontkoppelen. Zet je een pagina op het beginscherm (Safari: deel › Zet op beginscherm), dan krijgt hij een foto van Pip als icoon en de naam "Pip" (`apple-touch-icon.png`, `icoon-192.png`, `icoon-512.png`, `telefoon.webmanifest`). Hij opent bewust in Safari en niet als losse app: zo'n app krijgt op een iPhone eigen opslag en kent de koppelcode dan niet.
 
 **Fotolijst in de ruststand.** De ruststand wisselt tussen jullie foto's van Pip. Alles regel je op de fotopagina `fotos.html`, op je telefoon:
 

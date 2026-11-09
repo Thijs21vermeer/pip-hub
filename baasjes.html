@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Baasjes van Pip</title>
   <link rel="icon" href="pip.png">
-  <link rel="apple-touch-icon" href="pip.png">
+  <!-- Op het beginscherm van je telefoon: een foto van Pip als icoon, met de naam "Pip".
+       Bewust geen losse app (display: browser): die krijgt op een iPhone eigen opslag
+       en zou de koppelcode uit Safari niet kennen. -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="telefoon.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="Pip">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="telefoon.css?v=20261109-30">
+  <link rel="stylesheet" href="telefoon.css?v=20261109-31">
 </head>
 <body>
   <main>
@@ -30,8 +35,8 @@
     <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
   </main>
 
-  <script src="config.js?v=20261109-30"></script>
-  <script src="telefoon.js?v=20261109-30"></script>
+  <script src="config.js?v=20261109-31"></script>
+  <script src="telefoon.js?v=20261109-31"></script>
   <script>
     (function () {
       "use strict";
@@ -96,11 +101,22 @@
           } else {
             picture.textContent = name.charAt(0).toUpperCase();
           }
-          const label = document.createElement("div");
+          if (renaming === name) {
+            $("people").appendChild(renameRow(name, picture));
+            continue;
+          }
+          // Tik op de naam om hem aan te passen.
+          const label = document.createElement("button");
+          label.type = "button";
           label.className = "person-name";
-          label.innerHTML = "<strong></strong><span></span>";
-          label.querySelector("strong").textContent = name;
-          label.querySelector("span").textContent = avatar ? "Met foto" : "Nog geen foto";
+          label.setAttribute("aria-label", `Naam van ${name} aanpassen`);
+          label.innerHTML = '<strong><span class="the-name"></span><svg class="pencil" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></strong><span></span>';
+          label.querySelector(".the-name").textContent = name;
+          label.querySelector(":scope > span").textContent = avatar ? "Met foto" : "Nog geen foto";
+          label.addEventListener("click", () => {
+            renaming = name;
+            renderPeople();
+          });
           const actions = document.createElement("div");
           actions.className = "person-actions";
           const pick = document.createElement("button");
@@ -126,6 +142,59 @@
         $("summary").textContent = people.length
           ? `${people.length} ${people.length === 1 ? "baasje" : "baasjes"} · ${withPhoto} met foto`
           : "Nog geen baasjes";
+      }
+
+      // Naam aanpassen: een invulveld met Opslaan en Annuleren.
+      let renaming = null;
+      function renameRow(name, picture) {
+        const form = document.createElement("form");
+        form.className = "person person-rename";
+        form.innerHTML = `<div class="rename-top"></div>
+          <div class="rename-actions"><button type="submit" class="pick">Opslaan</button><button type="button" data-cancel>Annuleren</button></div>
+          <p class="note" style="margin:8px 0 0 70px">Vinkjes, punten en de foto gaan mee naar de nieuwe naam.</p>`;
+        const input = document.createElement("input");
+        input.value = name;
+        input.maxLength = 20;
+        input.setAttribute("aria-label", `Nieuwe naam voor ${name}`);
+        form.querySelector(".rename-top").append(picture, input);
+        form.querySelector("[data-cancel]").addEventListener("click", () => {
+          renaming = null;
+          renderPeople();
+        });
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          renamePerson(name, input.value);
+        });
+        setTimeout(() => { input.focus(); input.select(); }, 0);
+        return form;
+      }
+
+      async function renamePerson(from, raw) {
+        const to = String(raw || "").trim().replace(/\s+/g, " ").slice(0, 20);
+        if (!to || to === from) {
+          renaming = null;
+          renderPeople();
+          return;
+        }
+        const existing = people.find((person) => person.toLowerCase() === to.toLowerCase() && person !== from);
+        if (existing) {
+          peopleStatus(`${existing} staat er al bij.`, "error");
+          return;
+        }
+        peopleStatus(`${from} wordt ${to}…`);
+        try {
+          const response = await fetch(settingsUrl, {
+            method: "PUT",
+            headers: auth({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ rename: { from, to } }),
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          renaming = null;
+          peopleStatus(`${from} heet nu ${to}. De Google Hub neemt het binnen 5 minuten over.`, "ok");
+          await loadPeople();
+        } catch (error) {
+          peopleStatus("Naam aanpassen lukte niet. Probeer het nog eens.", "error");
+        }
       }
 
       // Onderaan: een nieuw baasje toevoegen (hooguit 6, net als op de Hub).

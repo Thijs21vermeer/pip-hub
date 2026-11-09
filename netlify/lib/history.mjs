@@ -98,6 +98,24 @@ function seed(before, byId, year) {
 
 // ---- Herinneringen ----
 
+// Een baasje heet voortaan anders: in het jaarlog (vinkjes) van dit en vorig jaar
+// de naam omzetten, zodat punten en reeksen meegaan.
+export async function renameInHistory(from, to, now = Date.now()) {
+  const same = (a, b) => String(a || "").toLowerCase() === String(from).toLowerCase();
+  for (const year of new Set([yearOf(now), yearOf(now) - 1])) {
+    const ticks = await readPart(year, "ticks");
+    if (!ticks || !Array.isArray(ticks.list)) continue;
+    let changed = false;
+    for (const tick of ticks.list) {
+      if (same(tick.by)) {
+        tick.by = to;
+        changed = true;
+      }
+    }
+    if (changed) await writePart(year, "ticks", ticks);
+  }
+}
+
 // kind: leeg voor het gewone seintje, "late" voor "een half uur te laat".
 export async function recordReminder(taskId, at, kind) {
   const year = yearOf(at);

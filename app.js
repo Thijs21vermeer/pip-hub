@@ -616,7 +616,8 @@
       // Vinkjes terug: per taak de laatste keer (vroegere versies stuurden "today").
       const remoteDone = { ...((remote.today && remote.today.done) || {}), ...(remote.done || {}) };
       Object.entries(remoteDone).forEach(([id, entry]) => {
-        if (!state.done[id] || state.done[id].at < entry.at) state.done[id] = entry;
+        // <= : zelfde tijd maar een andere naam (een baasje is hernoemd) neemt ook over.
+        if (!state.done[id] || state.done[id].at <= entry.at) state.done[id] = entry;
       });
       if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);

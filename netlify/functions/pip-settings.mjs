@@ -5,6 +5,8 @@
 //
 //   GET /api/pip-settings   { tasks?, people?, done?, stock?, voerraadCode?, away?, watcherSeenAt?, updatedAt? }
 //   PUT /api/pip-settings   werkt bij wat meegestuurd wordt
+//   PUT { rename: { from, to } }  een baasje heet voortaan anders: de naam gaat
+//                                 overal mee (huisgenoten, vinkjes, jaarlog, profielfoto)
 //
 // Een taak met notify: true geeft een melding op de telefoon (ntfy) zodra iemand
 // hem afvinkt; remind: "22:00" geeft een seintje als hij dan nog open staat
@@ -12,7 +14,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
-import { recordTicks } from "../lib/history.mjs";
+import { recordTicks, renameInHistory } from "../lib/history.mjs";
 import { localTime, notify } from "../lib/notify.mjs";
 
 const ICONS = new Set(["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"]);
@@ -116,6 +118,16 @@ function cleanAway(value) {
 // deed. Alleen verse vinkjes: een herstart van Pip stuurt oude vinkjes opnieuw mee.
 const FRESH_MS = 6 * 60 * 60 * 1000;
 
+// De profielfoto (baasjes.mjs) hoort bij de naam: die naam ook omzetten.
+async function renameAvatar(from, to) {
+  const media = getStore({ name: "pip-media", consistency: "strong" });
+  const list = (await media.get("avatars", { type: "json" })) || [];
+  const index = list.findIndex((item) => item.name.toLowerCase() === from.toLowerCase());
+  if (index < 0) return;
+  list[index] = { ...list[index], name: to };
+  await media.setJSON("avatars", list);
+}
+
 async function announceDone(before, after) {
   const tasks = after.tasks || before.tasks || [];
   for (const task of tasks.filter((t) => t.notify)) {
@@ -153,6 +165,23 @@ export default async (request) => {
       if (!people) return json(400, { error: "BAD_PEOPLE" }, headers);
       next.people = people;
     }
+    let renamed = null;
+    if ("rename" in body) {
+      const from = text(body.rename && body.rename.from, 20);
+      const to = text(body.rename && body.rename.to, 20).replace(/\s+/g, " ");
+      const people = next.people || [];
+      const index = people.findIndex((name) => name.toLowerCase() === from.toLowerCase());
+      if (!from || !to || index < 0) return json(400, { error: "BAD_RENAME" }, headers);
+      if (people.some((name, i) => i !== index && name.toLowerCase() === to.toLowerCase())) return json(409, { error: "NAME_TAKEN" }, headers);
+      next.people = people.map((name, i) => (i === index ? to : name));
+      // Wie een taak het laatst deed: ook de nieuwe naam.
+      const done = { ...(next.done || {}) };
+      for (const [id, entry] of Object.entries(done)) {
+        if (entry && String(entry.by || "").toLowerCase() === from.toLowerCase()) done[id] = { ...entry, by: to };
+      }
+      next.done = done;
+      renamed = { from: people[index], to };
+    }
     if ("done" in body) {
       const done = cleanDone(body.done);
       if (!done) return json(400, { error: "BAD_DONE" }, headers);
@@ -185,6 +214,13 @@ export default async (request) => {
     if (body.watcher === true) next.watcherSeenAt = Date.now();
     next.updatedAt = new Date().toISOString();
     await store.setJSON("settings", next);
+    if (renamed) {
+      // Jaarlog en profielfoto ook omzetten; mislukt dat, dan blijft de nieuwe naam toch staan.
+      await renameInHistory(renamed.from, renamed.to).catch((error) =>
+        console.error(JSON.stringify({ event: "rename.history.error", code: error.code || error.name || "UNKNOWN" })));
+      await renameAvatar(renamed.from, renamed.to).catch((error) =>
+        console.error(JSON.stringify({ event: "rename.avatar.error", code: error.code || error.name || "UNKNOWN" })));
+    }
     await announceDone(current, next).catch(() => {}); // een melding mag het opslaan nooit tegenhouden
     // Elk vinkje in het jaarlog (scoreboard en Pip Wrapped); mag ook nooit tegenhouden.
     if ("done" in body) {

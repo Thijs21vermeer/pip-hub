@@ -550,3 +550,70 @@ button {
 #people {
   margin-top: 22px;
 }
+
+/* Baasjes: de naam is een knop (tik = aanpassen). */
+button.person-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  min-height: 48px;
+}
+.person-rename {
+  display: block;
+}
+.rename-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rename-top input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.rename-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 0 70px;
+}
+.rename-actions button {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.rename-actions .pick {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+.person-name .pencil {
+  width: 15px;
+  height: 15px;
+  margin-left: 6px;
+  vertical-align: -1px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.person-name strong .the-name {
+  color: inherit;
+  font-size: inherit;
+}

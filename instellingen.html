@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Pip instellen</title>
   <link rel="icon" href="pip.png">
-  <link rel="apple-touch-icon" href="pip.png">
+  <!-- Op het beginscherm van je telefoon: een foto van Pip als icoon, met de naam "Pip".
+       Bewust geen losse app (display: browser): die krijgt op een iPhone eigen opslag
+       en zou de koppelcode uit Safari niet kennen. -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="telefoon.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="Pip">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="telefoon.css?v=20261109-30">
+  <link rel="stylesheet" href="telefoon.css?v=20261109-31">
   <!-- Het beginpunt op de telefoon: een menu met de pagina's om Pip op de Google
        Hub in te stellen. De lijst staat in telefoon.js (PAGES); een nieuwe pagina
        erbij zetten is daar één regel. -->
@@ -36,8 +41,8 @@
     <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
   </main>
 
-  <script src="config.js?v=20261109-30"></script>
-  <script src="telefoon.js?v=20261109-30"></script>
+  <script src="config.js?v=20261109-31"></script>
+  <script src="telefoon.js?v=20261109-31"></script>
   <script>
     (function () {
       "use strict";
