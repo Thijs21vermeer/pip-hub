@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
   <!-- ?v= bij elke nieuwe versie ophogen: GitHub Pages laat bestanden 10 minuten cachen,
        zonder nieuw nummer draait de Google Hub dan nog half de oude versie. -->
-  <link rel="stylesheet" href="style.css?v=20261109-1">
+  <link rel="stylesheet" href="style.css?v=20261109-2">
 </head>
 <body>
   <header class="top">
@@ -22,9 +22,8 @@
       </div>
     </div>
     <div class="top-right">
-      <!-- Naar de eigen software van de Google Hub; Pip komt vanzelf terug.
-           Alleen zichtbaar als het script draait dat Pip terugzet (zie app.js). -->
-      <button class="to-google" id="to-google" data-action="to-google" hidden></button>
+      <!-- Scores: wie het meest voor Pip deed, en van daaruit Pip Wrapped. -->
+      <button class="to-scores" id="to-scores" data-action="scores-open"></button>
       <div class="when">
         <div id="clock"></div>
         <div id="date"></div>
@@ -38,10 +37,7 @@
     <div class="left">
       <div class="group-head">
         <h2 class="group-title">Taken</h2>
-        <div class="group-links">
-          <button class="group-link" data-action="scores-open">Scores ›</button>
-          <button class="group-link" id="tasks-more" data-action="all-tasks"></button>
-        </div>
+        <button class="group-link" id="tasks-more" data-action="all-tasks"></button>
       </div>
       <section class="tasks" id="tasks" aria-label="Taken"></section>
       <div class="group-head">
@@ -116,7 +112,7 @@
   <section class="rest" id="rest" data-action="wake" aria-label="Ruststand">
     <!-- Twee lagen die in elkaar overvloeien: de standaardfoto en de foto's die
          jullie via de startpagina sturen. -->
-    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-1" alt="Pip"></div>
+    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-2" alt="Pip"></div>
     <div class="rest-photo"><img class="rest-bg" alt=""><img class="rest-fg" alt="Pip"></div>
     <div class="rest-card" id="rest-card" hidden></div>
     <!-- Telefoon koppelen: QR-knopje linksonder; de QR-code klapt daar open. Hij
@@ -124,6 +120,9 @@
     <button class="rest-qr-button" id="rest-qr-button" data-action="rest-qr" aria-label="QR-code om een telefoon te koppelen"></button>
     <!-- In december: Pip Wrapped van dit jaar (in de eerste helft van januari nog dat van vorig jaar). -->
     <button class="rest-wrapped-button" id="rest-wrapped-button" data-action="wrapped-open" hidden></button>
+    <!-- Naar de eigen software van de Google Hub; het overzicht komt vanzelf terug.
+         Alleen zichtbaar als het script draait dat het terugzet (zie app.js). -->
+    <button class="rest-google-button" id="to-google" data-action="to-google" hidden></button>
     <div class="rest-qr" id="rest-qr" data-action="rest-qr-close" hidden>
       <div class="rest-qr-code" id="rest-qr-code"></div>
       <div class="rest-qr-text">
@@ -151,10 +150,10 @@
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
   </div>
 
-  <script src="config.js?v=20261109-1"></script>
-  <script src="stats.js?v=20261109-1"></script>
-  <script src="wrapped.js?v=20261109-1"></script>
-  <script src="app.js?v=20261109-1"></script>
-  <script src="cast.js?v=20261109-1"></script>
+  <script src="config.js?v=20261109-2"></script>
+  <script src="stats.js?v=20261109-2"></script>
+  <script src="wrapped.js?v=20261109-2"></script>
+  <script src="app.js?v=20261109-2"></script>
+  <script src="cast.js?v=20261109-2"></script>
 </body>
 </html>

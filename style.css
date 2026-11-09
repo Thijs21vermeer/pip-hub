@@ -146,30 +146,31 @@ h1 {
 }
 
 /* Naar de Google Hub-software: rustig, zodat hij niet met de taken concurreert. */
-.to-google {
+.to-scores {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 2.9rem;
-  padding: 0 1.1rem 0 0.9rem;
+  padding: 0 1.2rem 0 0.95rem;
   border: 1px solid var(--line);
   border-radius: 99px;
   background: var(--surface);
-  color: var(--muted);
+  color: var(--text);
   font-size: 1rem;
   font-weight: 600;
 }
 
-.to-google[hidden] {
+.to-scores[hidden] {
   display: none;
 }
 
-.to-google svg {
+.to-scores svg {
   width: 1.3rem;
   height: 1.3rem;
+  color: var(--honey);
 }
 
-.to-google:active {
+.to-scores:active {
   background: var(--accent-soft);
 }
 
@@ -1732,11 +1733,6 @@ main {
 
 /* ---- Scores: wie deed het meest voor Pip (app.js, renderScores) ---- */
 
-.group-links {
-  display: flex;
-  gap: 1rem;
-}
-
 .page-tabs {
   display: flex;
   gap: 0.35rem;
@@ -2015,6 +2011,36 @@ main {
 
 .rest-wrapped-button[hidden] {
   display: none;
+}
+
+/* Naar de Google Hub: glazen knop rechtsonder in de ruststand. */
+.rest-google-button {
+  position: absolute;
+  z-index: 2;
+  right: 2rem;
+  bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 3.6rem;
+  padding: 0 1.3rem 0 1.05rem;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  border-radius: 99px;
+  background: rgb(255 255 255 / 0.26);
+  backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
+}
+
+.rest-google-button[hidden] {
+  display: none;
+}
+
+.rest-google-button svg {
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 /* ---- Pip Wrapped (wrapped.js): schermen op 1024×600, geschaald ---- */

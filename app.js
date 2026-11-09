@@ -125,6 +125,7 @@
   const els = {
     logo: document.getElementById("logo"),
     toGoogle: document.getElementById("to-google"),
+    toScores: document.getElementById("to-scores"),
     progressText: document.getElementById("progress-text"),
     progressBar: document.getElementById("progress-bar"),
     clock: document.getElementById("clock"),
@@ -2302,6 +2303,7 @@
   // ---- Start ----
 
   els.toGoogle.innerHTML = `${ICONS.home}<span>Google Hub</span>`;
+  els.toScores.innerHTML = `${ICONS.crown}<span>Scores</span>`;
   els.restQrButton.innerHTML = ICONS.qr;
   els.restQrButton.hidden = !actionCode(); // zonder koppelcode valt er niets te koppelen
   renderLogo();
