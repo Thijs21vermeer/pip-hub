@@ -104,6 +104,11 @@
 
   // Geopend vanaf het beginscherm (als app, zonder adresbalk)? Zo'n app heeft op
   // een iPhone eigen opslag en kent de koppelcode van de browser dus niet.
+  // iPhone of iPad (een iPad doet zich soms voor als Mac).
+  function isIos() {
+    return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
   function isApp() {
     return window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
   }
@@ -129,8 +134,7 @@
   // "unsupported" (deze telefoon kan het niet).
   async function pushState() {
     if (!pushSupported() || !pushUrl()) {
-      const iPhone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      return iPhone && !isApp() ? "browser" : "unsupported";
+      return isIos() && !isApp() ? "browser" : "unsupported";
     }
     if (Notification.permission === "denied") return "denied";
     // Niet eeuwig wachten als het achtergrondscript niet antwoordt.
@@ -299,7 +303,7 @@
   }
 
   window.PipPhone = {
-    config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp,
+    config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp, isIos,
     pushSupported, pushState, enablePush, disablePush,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
   };

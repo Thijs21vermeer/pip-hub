@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-48">
+  <link rel="stylesheet" href="stijl.css?v=20261109-49">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -145,10 +145,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-48"></script>
-  <script src="telefoon.js?v=20261109-48"></script>
-  <script src="taken.js?v=20261109-48"></script>
-  <script src="stats.js?v=20261109-48"></script>
+  <script src="config.js?v=20261109-49"></script>
+  <script src="telefoon.js?v=20261109-49"></script>
+  <script src="taken.js?v=20261109-49"></script>
+  <script src="stats.js?v=20261109-49"></script>
   <script>
     (function () {
       "use strict";
@@ -732,14 +732,20 @@
       }
 
       // Meldingen van de Pip-app zelf: tik je erop, dan opent Pip (sw.js). Op een
-      // iPhone alleen in Pip op het beginscherm.
+      // iPhone alleen in Pip op het beginscherm; op Android ook gewoon in Chrome.
       // Per stand: de regel (bolletje en tekst), de uitleg in het paneel en de knop.
+      // De uitleg bij geblokkeerd en niet beschikbaar verschilt per soort telefoon.
+      const IOS = P.isIos();
       const PUSH = {
         on: { led: "", label: "Meldingen aan", text: "Seintjes van Pip komen op deze telefoon, zoals natvoer om 22:00 en de held van de week. Tik je op een melding, dan opent Pip.", button: "Zet meldingen uit", sub: "Je krijgt dan geen seintjes van Pip meer op deze telefoon" },
-        off: { led: "off", label: "Meldingen uit", text: "Zet ze aan om de seintjes van Pip op deze telefoon te krijgen. Tik je op een melding, dan opent Pip.", button: "Zet meldingen aan", sub: "Je iPhone vraagt één keer om toestemming" },
-        denied: { led: "warn", label: "Meldingen geblokkeerd", text: "Meldingen staan uit voor Pip op je iPhone. Zet ze aan bij Instellingen › Meldingen › Pip, en open Pip daarna opnieuw." },
+        off: { led: "off", label: "Meldingen uit", text: "Zet ze aan om de seintjes van Pip op deze telefoon te krijgen. Tik je op een melding, dan opent Pip.", button: "Zet meldingen aan", sub: `Je ${IOS ? "iPhone" : "telefoon"} vraagt één keer om toestemming` },
+        denied: { led: "warn", label: "Meldingen geblokkeerd", text: IOS
+          ? "Meldingen staan uit voor Pip op je iPhone. Zet ze aan bij Instellingen › Meldingen › Pip, en open Pip daarna opnieuw."
+          : "Meldingen staan uit voor Pip. Op het beginscherm: houd het Pip-icoon ingedrukt › App-info › Meldingen. In Chrome: tik op het icoontje links van het adres › Toestemmingen › Meldingen. Open Pip daarna opnieuw." },
         browser: { led: "off", label: "Meldingen", text: "Meldingen werken alleen in Pip op je beginscherm. Open Pip daar en zet ze hier aan." },
-        unsupported: { led: "off", label: "Meldingen niet beschikbaar", text: "Deze telefoon kan geen meldingen van Pip krijgen (iOS 16.4 of nieuwer nodig)." },
+        unsupported: { led: "off", label: "Meldingen niet beschikbaar", text: IOS
+          ? "Deze telefoon kan geen meldingen van Pip krijgen (iOS 16.4 of nieuwer nodig)."
+          : "Deze browser kan geen meldingen van Pip krijgen. Open Pip in Chrome." },
       };
       function paintPush(state, note) {
         const look = PUSH[state] || PUSH.unsupported;
