@@ -371,6 +371,113 @@
     },
   };
 
+  // ---- Muziek ----
+
+  // Per hoofdstuk een bekend nummer (config.js, wrappedMusic): een fragment van
+  // 30 seconden van Apple Music, zacht in en uit. Lukt ophalen niet, dan stil.
+  const VOLUME = 0.6;
+  const music = { songs: [], urls: new Map(), current: null, audio: null };
+
+  // Een nieuwe fade op hetzelfde fragment stopt de vorige (snel heen en weer tikken).
+  function fade(audio, to, ms, done) {
+    const from = audio.volume;
+    const start = performance.now();
+    const id = (audio.pipFade || 0) + 1;
+    audio.pipFade = id;
+    const step = () => {
+      if (audio.pipFade !== id) return;
+      const t = Math.min(1, (performance.now() - start) / ms);
+      audio.volume = Math.max(0, Math.min(1, from + (to - from) * t));
+      if (t < 1) requestAnimationFrame(step);
+      else if (done) done();
+    };
+    requestAnimationFrame(step);
+  }
+
+  async function loadMusic(songs) {
+    music.songs = Array.isArray(songs) ? songs : [];
+    const missing = music.songs.filter((song) => !music.urls.has(song.id));
+    if (!missing.length) return;
+    try {
+      const ids = missing.map((song) => song.id).join(",");
+      const response = await fetch(`https://itunes.apple.com/lookup?id=${ids}&country=NL`);
+      const data = await response.json();
+      (data.results || []).forEach((result) => {
+        if (result.previewUrl) music.urls.set(result.trackId, result.previewUrl);
+      });
+    } catch (error) {
+      // Geen internet of Apple niet bereikbaar: Wrapped speelt zonder muziek.
+    }
+  }
+
+  function renderSong() {
+    const caption = root && root.querySelector(".wr-song");
+    if (!caption) return;
+    const song = music.current;
+    const playable = song && music.urls.has(song.id);
+    caption.hidden = !playable;
+    if (playable) {
+      caption.innerHTML = `<span class="wr-eq" aria-hidden="true"><i></i><i></i><i></i></span><span>${esc(song.artist)} · ${esc(song.title)}</span>`;
+    }
+  }
+
+  // Het nummer bij een scherm; bij het kattentype het nummer van dat type.
+  function songFor(slide) {
+    const fits = music.songs.filter((s) => (s.slides || []).includes(slide.type));
+    return fits.find((s) => s.when && s.when === slide.variant) || fits.find((s) => !s.when) || null;
+  }
+
+  // Elk fragment één keer klaarzetten, zodat het volgende scherm meteen klinkt.
+  const audios = new Map();
+
+  function audioFor(song) {
+    const url = song && music.urls.get(song.id);
+    if (!url) return null;
+    if (!audios.has(song.id)) {
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audio.loop = true;
+      audio.volume = 0;
+      audios.set(song.id, audio);
+    }
+    return audios.get(song.id);
+  }
+
+  function playSongFor(slide) {
+    const song = songFor(slide);
+    if (song === music.current) return;
+    const old = music.audio;
+    if (old) fade(old, 0, 500, () => { if (music.audio !== old) old.pause(); });
+    music.current = song;
+    renderSong();
+    const audio = audioFor(song);
+    music.audio = audio;
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.volume = 0;
+    if (state && state.playing) {
+      audio.play().then(() => fade(audio, VOLUME, 800)).catch(() => {});
+    }
+  }
+
+  function preloadAfter(index) {
+    const next = state && state.slides[index + 1];
+    if (next) audioFor(songFor(next));
+  }
+
+  function stopMusic() {
+    const old = music.audio;
+    if (old) fade(old, 0, 600, () => old.pause());
+    music.audio = null;
+    music.current = null;
+    // Na het uitfaden de klaargezette fragmenten loslaten.
+    setTimeout(() => {
+      if (state) return;
+      audios.forEach((audio) => audio.pause());
+      audios.clear();
+    }, 800);
+  }
+
   // ---- Afspelen ----
 
   let root = null;
@@ -394,6 +501,8 @@
     run.addEventListener("animationend", () => {
       if (state && state.index === index) step(1, true);
     });
+    playSongFor(slide);
+    preloadAfter(index);
   }
 
   function step(delta, auto) {
@@ -407,6 +516,10 @@
   function setPlaying(playing) {
     state.playing = playing;
     root.classList.toggle("paused", !playing);
+    if (music.audio) {
+      if (playing) music.audio.play().then(() => fade(music.audio, VOLUME, 600)).catch(() => {});
+      else music.audio.pause();
+    }
     const button = root.querySelector(".wr-pause");
     button.setAttribute("aria-label", playing ? "Pauzeren" : "Afspelen");
     button.innerHTML = playing
@@ -422,6 +535,8 @@
       playing: true,
       onClose: options.onClose,
       slides: data.slides.filter((slide) => SLIDES[slide.type]).map((slide) => ({
+        type: slide.type,
+        variant: slide.name || "",
         html: SLIDES[slide.type](slide, ctx),
         light: LIGHT.has(slide.type),
       })),
@@ -430,6 +545,7 @@
       <div class="wr-stage">
         <div class="wr-host"></div>
         <div class="wr-progress"></div>
+        <div class="wr-song" hidden></div>
         <button class="wr-tap wr-prev" aria-label="Vorige"></button>
         <button class="wr-tap wr-next" aria-label="Volgende"></button>
         <div class="wr-controls">
@@ -443,13 +559,22 @@
     root.querySelector(".wr-close").addEventListener("click", close);
     root.hidden = false;
     scale();
+    music.current = null;
     setPlaying(true);
     show(0);
+    // De fragmenten komen pas als Apple antwoordt; dan het nummer van dit scherm.
+    loadMusic(options.music).then(() => {
+      if (!state) return;
+      music.current = null;
+      playSongFor(state.slides[state.index]);
+      preloadAfter(state.index);
+    });
   }
 
   function close() {
     if (!root || !state) return;
     const done = state.onClose;
+    stopMusic();
     state = null;
     root.hidden = true;
     root.innerHTML = "";

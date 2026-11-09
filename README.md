@@ -200,6 +200,7 @@ NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --dir
   - wanneer een herinnering ging (`herinnering.mjs`).
   De Hub haalt het op via `/api/jaarlog` en rekent zelf (`stats.js`); `wrapped.js` tekent de schermen.
 - **Kosten** in Wrapped komen uit Voerraad (aankopen en verzekering van dit jaar), via dezelfde koppelcode als de voorraad. Zonder die cijfers valt het kostenscherm weg.
+- **Muziek** onder Wrapped: per scherm een bekend nummer met een knipoog (Sandstorm bij de kattenbak, Hungry Like the Wolf bij het eten, Money, Money, Money bij de kosten; bij het kattentype hangt het nummer af van het type), als fragment van 30 seconden van Apple Music. De Hub haalt ze op bij het openen; in deze map staan alleen de titels (`wrappedMusic` in `config.js`). Ander nummer? Zoek het `id` op met `https://itunes.apple.com/search?term=artiest+titel&country=NL&entity=song`.
 
 ## 5. Eerste test op de Google Hub
 

@@ -1673,6 +1673,7 @@
     window.PipWrapped.open(data, {
       photo: photoList()[0] || "pip-foto.jpg",
       portrait: "pip-icoon.jpg",
+      music: config.wrappedMusic || [],
       onClose: () => {
         if (els.rest.hidden) scheduleRest();
       },

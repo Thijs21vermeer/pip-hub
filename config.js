@@ -44,6 +44,30 @@ window.PIP_CONFIG = {
   // Jaarlog voor het scoreboard en Pip Wrapped (zelfde servertje en code).
   jaarlog: { url: "https://pip-kattenbak.netlify.app/api/jaarlog", refreshMinutes: 30 },
 
+  // Muziek onder Pip Wrapped: per scherm een nummer met een knipoog, als fragment
+  // van 30 seconden van Apple Music dat de Hub tijdens het afspelen ophaalt (hier
+  // staan alleen de titels). id = nummer in de Nederlandse iTunes Store
+  // (itunes.apple.com/lookup?id=…&country=NL); slides = bij welk scherm; when =
+  // alleen bij dit kattentype. Leeg laten = zonder muziek.
+  wrappedMusic: [
+    { id: 1611340687, artist: "Tight Fit", title: "The Lion Sleeps Tonight", slides: ["intro"] }, // Pip slaapt op de foto
+    { id: 1539783395, artist: "Willeke Alberti", title: "Samen zijn", slides: ["total"] }, // samen voor Pip
+    { id: 290340779, artist: "Darude", title: "Sandstorm", slides: ["box"] }, // de zandbak
+    { id: 1586832570, artist: "Cat Stevens", title: "Morning Has Broken", slides: ["type"], when: "De Ochtendkat" },
+    { id: 578054247, artist: "Bruno Mars", title: "The Lazy Song", slides: ["type"], when: "De Uitslaper" },
+    { id: 1441164589, artist: "The Beatles", title: "Here Comes the Sun", slides: ["type"], when: "De Middagkat" },
+    { id: 1444052008, artist: "Boudewijn de Groot", title: "Avond", slides: ["type"], when: "De Avondkat" },
+    { id: 285337761, artist: "Guus Meeuwis", title: "Het is een nacht", slides: ["type"], when: "De Nachtkat" },
+    { id: 693610779, artist: "Duran Duran", title: "Hungry Like the Wolf", slides: ["food"] }, // eten
+    { id: 210864579, artist: "The Hollies", title: "He Ain't Heavy, He's My Brother", slides: ["weight"] }, // gewicht
+    { id: 263188329, artist: "Dolly Parton", title: "9 to 5", slides: ["top"] }, // de meeste klusjes
+    { id: 724267293, artist: "André Hazes", title: "Zij gelooft in mij", slides: ["human"] }, // favoriete mens
+    { id: 6781080602, artist: "Queen", title: "We Are the Champions", slides: ["records"] }, // records
+    { id: 1440816971, artist: "ABBA", title: "Money, Money, Money", slides: ["costs"] }, // kosten
+    { id: 1747957549, artist: "Ed Sheeran", title: "Photograph", slides: ["photos"] }, // fotolijst
+    { id: 1440816992, artist: "ABBA", title: "Thank You for the Music", slides: ["outro"] }, // bedankt
+  ],
+
   // Foto's van Pip voor de ruststand (fotos.html). Zelfde servertje en code als
   // de kattenbak.
   // Hoe de fotolijst wisselt (tempo, volgorde, zoom) stel je in op fotos.html.
