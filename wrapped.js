@@ -36,12 +36,12 @@
   const SLIDES = {
     intro(s, ctx) {
       const paws = [[64, 530, 80], [126, 496, 100], [192, 534, 80], [256, 500, 100], [322, 538, 80]]
-        .map(([x, y, r], i) => `<div class="wr-abs" style="left:${x}px;top:${y}px;transform:rotate(${r}deg);color:rgba(243,199,122,.4)"><div class="wr-pop wr-paw" style="${delay(0.6 + i * 0.15)}">${PAW}</div></div>`).join("");
+        .map(([x, y, r], i) => `<div aria-hidden="true" class="wr-abs" style="left:${x}px;top:${y}px;transform:rotate(${r}deg);color:rgba(243,199,122,.4)"><div class="wr-pop wr-paw" style="${delay(0.6 + i * 0.15)}">${PAW}</div></div>`).join("");
       return `<div class="wr-slide" style="background:#24170f">
-        <div class="wr-abs wr-pop wr-round" style="left:548px;top:64px;width:500px;height:500px;background:#f3c77a"></div>
+        <div aria-hidden="true" class="wr-abs wr-pop wr-round" style="left:548px;top:64px;width:500px;height:500px;background:#f3c77a"></div>
         <div class="wr-abs wr-pop d2 wr-round wr-photo" style="left:588px;top:104px;width:420px;height:420px;box-shadow:0 0 0 8px #24170f"><img src="${esc(ctx.photo)}" alt="Pip"></div>
-        <div class="wr-abs wr-pop d4 wr-round" style="left:536px;top:440px;width:104px;height:104px;background:#ff8c66"></div>
-        <div class="wr-abs wr-pop d5 wr-round" style="left:946px;top:468px;width:62px;height:62px;border:9px solid #9cc7e0"></div>
+        <div aria-hidden="true" class="wr-abs wr-pop d4 wr-round" style="left:536px;top:440px;width:104px;height:104px;background:#ff8c66"></div>
+        <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="left:946px;top:468px;width:62px;height:62px;border:9px solid #9cc7e0"></div>
         ${paws}
         <div class="wr-abs" style="left:64px;top:112px;width:470px">
           <p class="wr-up wr-eyebrow" style="color:#f3c77a">Pip Wrapped</p>
@@ -60,8 +60,8 @@
           <p style="margin-top:4px;font-size:17px;color:#4a3424">${esc(row.label)}</p>
         </div>`).join("");
       return `<div class="wr-slide" style="background:#f3c77a;color:#24170f">
-        <div class="wr-abs" style="left:812px;top:392px;transform:rotate(18deg);color:#e5ac54"><div class="wr-pop d4 wr-paw" style="width:260px;height:260px">${PAW}</div></div>
-        <div class="wr-abs wr-pop d5 wr-round" style="left:528px;top:524px;width:64px;height:64px;background:#ff8c66"></div>
+        <div aria-hidden="true" class="wr-abs" style="left:812px;top:392px;transform:rotate(18deg);color:#e5ac54"><div class="wr-pop d4 wr-paw" style="width:260px;height:260px">${PAW}</div></div>
+        <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="left:528px;top:524px;width:64px;height:64px;background:#ff8c66"></div>
         <div class="wr-abs" style="left:64px;top:130px;width:540px">
           <p class="wr-up wr-eyebrow" style="color:#7d4820">Samen voor Pip</p>
           <p class="wr-up d1" style="margin-top:18px;font-size:34px;font-weight:600">Jullie zorgden</p>
@@ -85,7 +85,7 @@
       const facts = s.facts.map((fact, i) => `
         <div class="wr-up wr-fact" style="${delay(0.4 + i * 0.12)}"><span class="wr-dot" style="background:#f3c77a"></span><span>${esc(fact)}</span></div>`).join("");
       return `<div class="wr-slide" style="background:#16324a">
-        <div class="wr-abs wr-pop d5 wr-round" style="left:-90px;top:476px;width:250px;height:250px;background:#1d4060"></div>
+        <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="left:-90px;top:476px;width:250px;height:250px;background:#1d4060"></div>
         <div class="wr-abs" style="left:64px;top:96px;width:420px">
           <p class="wr-up wr-eyebrow" style="color:#9cc7e0">Kattenbak</p>
           <p class="wr-pop d1 wr-num" style="margin-top:14px;font-size:${fit(num(s.visits), 140, 420)}px;color:#fbf7f2">${num(s.visits)}</p>
@@ -114,7 +114,7 @@
       const label = (x, y, anchor, text) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="14" font-weight="600" fill="#2a1508">${text}</text>`;
       const chips = s.chips.map((chip, i) => `<span class="wr-up wr-chip" style="background:#2a1508;color:#ffe1d4;${delay(0.5 + i * 0.12)}">${esc(chip)}</span>`).join("");
       return `<div class="wr-slide" style="background:#ff8c66;color:#2a1508">
-        <div class="wr-abs wr-pop d1 wr-round" style="left:560px;top:90px;width:420px;height:420px;background:#ffa585"></div>
+        <div aria-hidden="true" class="wr-abs wr-pop d1 wr-round" style="left:560px;top:90px;width:420px;height:420px;background:#ffa585"></div>
         <div class="wr-abs wr-pop d2" style="left:570px;top:100px;width:400px;height:400px">
           <svg width="400" height="400" viewBox="0 0 400 400" font-family="Outfit, sans-serif" role="img" aria-label="Bezoeken aan de kattenbak per uur van de dag">
             <path d="${base}" fill="none" stroke="#2a1508" stroke-opacity=".3" stroke-width="10" stroke-linecap="round"/>
@@ -137,7 +137,7 @@
     food(s, ctx) {
       const stats = s.stats.map((stat, i) => `
         <div class="wr-up" style="${delay(0.15 + i * 0.12)}">
-          <p class="wr-num" style="font-size:84px;line-height:.95">${num(stat.value)}</p>
+          <p class="wr-num" style="font-size:76px;line-height:.95">${num(stat.value)}</p>
           <p style="margin-top:6px;font-size:19px;line-height:1.3;color:#ffe9d2">${esc(stat.label)}</p>
         </div>`).join("");
       let card = "";
@@ -173,7 +173,7 @@
             <div class="wr-row" style="justify-content:space-between;gap:24px;width:${width}px;margin-top:8px;font-size:13px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>`;
         }
         card = `
-          <div class="wr-abs wr-up d3 wr-card" style="left:64px;right:64px;top:300px;background:#8d5124">
+          <div class="wr-abs wr-up d3 wr-card" style="left:64px;right:64px;top:280px;background:#8d5124">
             <div class="wr-row" style="justify-content:space-between">
               <p style="font-size:19px;font-weight:700">${esc(s.title)} in ${ctx.year}</p>
               <div class="wr-row" style="gap:16px;font-size:14px;color:#ffe9d2">
@@ -260,7 +260,7 @@
           <h2 class="wr-up d1 wr-num" style="margin-top:12px;font-size:46px;line-height:1">Meest afgevinkte taken</h2>
           <div class="wr-stack" style="margin-top:24px;gap:10px">${rows}</div>
         </div>
-        <div class="wr-abs" style="left:690px;top:122px;transform:rotate(-6deg)"><div class="wr-pop d1" style="width:270px;height:330px;border-radius:28px;background:#f2a6a0"></div></div>
+        <div aria-hidden="true" class="wr-abs" style="left:690px;top:122px;transform:rotate(-6deg)"><div class="wr-pop d1" style="width:270px;height:330px;border-radius:28px;background:#f2a6a0"></div></div>
         <div class="wr-abs" style="left:690px;top:122px;transform:rotate(4deg)"><div class="wr-pop d2 wr-photo" style="width:270px;height:330px;border-radius:28px"><img src="${esc(ctx.portrait)}" alt="Pip"></div></div>
         <p class="wr-abs wr-up d5 wr-serif" style="left:690px;top:486px;width:270px;text-align:center;font-size:30px;color:#f2a6a0">Pip keurt het goed.</p>
       </div>`;
@@ -288,7 +288,7 @@
           <p class="wr-up d2" style="margin-top:18px;font-size:24px;font-weight:600">${num(s.points)} punten · ${num(s.count)} ${s.count === 1 ? "taak" : "taken"}</p>
           <p class="wr-up d3 wr-serif" style="margin-top:14px;font-size:34px;color:#a9642f">${esc(s.line)}</p>
         </div>
-        <div class="wr-abs wr-row" style="left:540px;right:56px;bottom:0;align-items:flex-end;gap:14px">${columns}</div>
+        <div class="wr-abs wr-row" data-fixed style="left:540px;right:56px;bottom:0;align-items:flex-end;gap:14px">${columns}</div>
       </div>`;
     },
 
@@ -325,7 +325,7 @@
         </div>`).join("");
       const total = `€ ${num(s.total)}`;
       return `<div class="wr-slide" style="background:#262046">
-        <div class="wr-abs wr-pop d5 wr-round" style="left:380px;top:470px;width:220px;height:220px;background:#2f2858"></div>
+        <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="left:380px;top:470px;width:220px;height:220px;background:#2f2858"></div>
         <div class="wr-abs" style="left:64px;top:96px;width:450px">
           <p class="wr-up wr-eyebrow" style="color:#c9c2ff">Wat Pip kostte</p>
           <p class="wr-up d1" style="margin-top:16px;font-size:30px;font-weight:600">Jullie gaven ${s.since ? esc(s.since) : "dit jaar"}</p>
@@ -384,7 +384,7 @@
           <p class="wr-up d2 wr-serif" style="margin-top:14px;font-size:32px;color:#f3c77a">Dat was het jaar van Pip.</p>
         </div>
         <div class="wr-abs" style="left:400px;top:96px;right:64px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">${cells}</div>
-        <p class="wr-abs wr-up d6" style="left:400px;right:64px;bottom:34px;font-size:17px;color:rgba(251,247,242,.78)">${esc(thanks)} Tik om af te sluiten.</p>
+        <p class="wr-abs wr-up d6" data-fixed style="left:400px;right:64px;bottom:34px;font-size:17px;color:rgba(251,247,242,.78)">${esc(thanks)} Tik om af te sluiten.</p>
       </div>`;
     },
   };
@@ -513,10 +513,44 @@
     root.querySelector(".wr-stage").style.transform = `translate(-50%, -50%) scale(${s})`;
   }
 
+  // Elke pagina begint op dezelfde hoogte: de kop (bv. "SAMEN VOOR PIP") staat
+  // overal op 130 px, net als op "Samen voor Pip". Alleen een pagina die dan
+  // tegen de onderkant zou komen, schuift zoveel als nodig omhoog. Versiering
+  // schuift mee; wat aan de onderkant vastzit (data-fixed) blijft staan.
+  const HEADING_TOP = 130;
+  const MIN_TOP = 92;
+  const MIN_BOTTOM = 24;
+
+  function absoluteTop(el, slide) {
+    let top = 0;
+    for (let node = el; node && node !== slide; node = node.offsetParent) top += node.offsetTop;
+    return top;
+  }
+
+  function balance(slide) {
+    if (!slide) return;
+    const movable = [...slide.children].filter((el) => !el.hasAttribute("data-fixed"));
+    const content = movable.filter((el) => el.getAttribute("aria-hidden") !== "true");
+    if (!content.length) return;
+    const top = Math.min(...content.map((el) => el.offsetTop));
+    const bottom = Math.max(...content.map((el) => el.offsetTop + el.offsetHeight));
+    // De kop is het ijkpunt, als die bovenaan staat (anders de bovenkant van de inhoud).
+    const heading = slide.querySelector(".wr-eyebrow");
+    const headingTop = heading ? absoluteTop(heading, slide) : top;
+    const anchor = headingTop - top <= 20 ? headingTop : top;
+    let delta = HEADING_TOP - anchor;
+    delta = Math.min(delta, 600 - MIN_BOTTOM - bottom);
+    delta = Math.max(delta, MIN_TOP - top);
+    delta = Math.round(delta);
+    if (!delta) return;
+    movable.forEach((el) => { el.style.top = `${el.offsetTop + delta}px`; });
+  }
+
   function show(index) {
     state.index = index;
     const slide = state.slides[index];
     root.querySelector(".wr-host").innerHTML = slide.html;
+    balance(root.querySelector(".wr-host .wr-slide"));
     root.classList.toggle("light", slide.light);
     root.querySelector(".wr-progress").innerHTML = state.slides.map((_, i) =>
       `<span class="wr-seg"><i class="${i < index ? "full" : i === index ? "run" : ""}"></i></span>`).join("");

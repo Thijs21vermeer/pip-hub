@@ -339,7 +339,7 @@
         // Vinkjes worden pas sinds het jaarlog bewaard (daarvoor alleen het laatste
         // per taak): een dag daarvoor zonder vinkje is onbekend, niet vergeten.
         const tickStartKey = log.ticksSince ? dayKey(log.ticksSince, resetHour) : dayKey(careTicks[0].at, resetHour);
-        const startHeat = [dayKey(careTicks[0].at, resetHour), tickStartKey].sort()[0];
+        const startHeat = [[dayKey(careTicks[0].at, resetHour), tickStartKey].sort()[0], `${year}-01-01`].sort()[1];
         const start = keyNumber(startHeat);
         const end = keyNumber(lastKey);
         heat = { offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7, cells: [], days: [], first: shortDate(startHeat), last: shortDate(lastKey) };
