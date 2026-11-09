@@ -54,9 +54,12 @@
   function unlink() {
     try {
       localStorage.removeItem(CODE_KEY);
+      // Ook de bewaarde stand en plaatjes van dit huis weg.
+      Object.keys(localStorage).filter((key) => key.startsWith("pip-cache:")).forEach((key) => localStorage.removeItem(key));
     } catch (error) {
       // Geen opslag: dan was er ook niets gekoppeld.
     }
+    if (window.caches) caches.delete("pip-media").catch(() => {});
   }
 
   function auth(extra = {}) {
@@ -243,21 +246,109 @@
     return COLORS[(index < 0 ? 0 : index) % COLORS.length];
   }
 
-  // Profielfoto's: naam (kleine letters) → blob-URL.
+  // ---- Laatst bekende stand: meteen tonen, daarna verversen ----
+  // Zonder dit begon elke pagina leeg en verscheen alles pas als het servertje
+  // antwoordde (ook bij terugkomen op Thuis of het openen van de app).
+
+  const CACHE_PREFIX = "pip-cache:";
+  function remember(key, value) {
+    try {
+      localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(value));
+    } catch (error) {
+      // Vol of geen opslag: dan de volgende keer gewoon wachten.
+    }
+  }
+  function recall(key) {
+    try {
+      const raw = localStorage.getItem(CACHE_PREFIX + key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Plaatjes (foto's van Pip, profielfoto's) bewaard op de telefoon (Cache API),
+  // per adres. Een adres hoort altijd bij hetzelfde plaatje, dus eerst daar kijken.
+  const MEDIA_CACHE = "pip-media";
+  async function mediaUrl(url) {
+    try {
+      const cache = await caches.open(MEDIA_CACHE);
+      const hit = await cache.match(url, { ignoreVary: true });
+      if (hit) return URL.createObjectURL(await hit.blob());
+    } catch (error) {
+      // Geen Cache API: dan van het servertje.
+    }
+    const response = await fetch(url, { headers: auth() });
+    if (!response.ok) throw new Error(String(response.status));
+    const blob = await response.blob();
+    try {
+      const cache = await caches.open(MEDIA_CACHE);
+      await cache.put(url, new Response(blob, { headers: { "Content-Type": blob.type || "image/jpeg" } }));
+    } catch (error) {
+      // Niet bewaard: de volgende keer opnieuw ophalen.
+    }
+    return URL.createObjectURL(blob);
+  }
+  // Alleen wat op de telefoon staat (geen netwerk), of null.
+  async function storedMediaUrl(url) {
+    try {
+      const cache = await caches.open(MEDIA_CACHE);
+      const hit = await cache.match(url, { ignoreVary: true });
+      return hit ? URL.createObjectURL(await hit.blob()) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+  // Plaatjes die niet meer in de lijst staan weggooien.
+  async function pruneMedia(base, keep) {
+    try {
+      const cache = await caches.open(MEDIA_CACHE);
+      for (const request of await cache.keys()) {
+        if (request.url.startsWith(`${base}/`) && !keep.has(request.url)) await cache.delete(request);
+      }
+    } catch (error) {
+      // Niet erg: dan blijft er wat liggen.
+    }
+  }
+
+  // Profielfoto's: naam (kleine letters) → blob-URL. Haalt de lijst op en bewaart
+  // hem, zodat cachedAvatars de volgende keer meteen iets heeft.
   async function loadAvatars() {
     const result = new Map();
     const url = serverUrl("baasjes", (config.baasjes && config.baasjes.url) || "");
     if (!url) return result;
     try {
       const list = await getJson(url);
+      remember("avatars", list.map((avatar) => ({ id: avatar.id, name: avatar.name })));
       await Promise.all(list.map(async (avatar) => {
-        const response = await fetch(`${url}/${avatar.id}`, { headers: auth() });
-        if (response.ok) result.set(avatar.name.toLowerCase(), URL.createObjectURL(await response.blob()));
+        const photo = await mediaUrl(`${url}/${avatar.id}`).catch(() => null);
+        if (photo) result.set(avatar.name.toLowerCase(), photo);
       }));
+      pruneMedia(url, new Set(list.map((avatar) => `${url}/${avatar.id}`)));
     } catch (error) {
       // Zonder foto's: dan de eerste letter.
     }
     return result;
+  }
+
+  // De profielfoto's van de vorige keer, zonder netwerk.
+  async function cachedAvatars() {
+    const result = new Map();
+    const url = serverUrl("baasjes", (config.baasjes && config.baasjes.url) || "");
+    const list = recall("avatars");
+    if (!url || !Array.isArray(list)) return result;
+    await Promise.all(list.map(async (avatar) => {
+      const photo = await storedMediaUrl(`${url}/${avatar.id}`);
+      if (photo) result.set(String(avatar.name).toLowerCase(), photo);
+    }));
+    return result;
+  }
+
+  // Wat Thuis, Scores en Activiteit nodig hebben, voor de volgende keer. Zonder
+  // de Voerraad-koppelcode: die hoeft niet op de telefoon te staan.
+  function rememberHome(data) {
+    const { voerraadCode, ...settings } = (data && data.settings) || {};
+    remember("home", { settings, jaarlog: data.jaarlog || null, log: data.log || null });
   }
 
   // Een rondje met foto of eerste letter, als HTML-element.
@@ -377,6 +468,7 @@
   window.PipPhone = {
     config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp, isIos,
     pushSupported, pushState, enablePush, disablePush, activity, activityItem, pipDayKey,
+    remember, recall, rememberHome, mediaUrl, storedMediaUrl, pruneMedia, cachedAvatars,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
   };
 })();

@@ -10,15 +10,15 @@
   <meta name="apple-mobile-web-app-title" content="Pip">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <!-- Als app: een effen statusbalk in de kleur van de pagina (theme-color),
-       zonder de waas die iOS legt als de pagina onder de klok doorloopt. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!-- Als app: de pagina loopt door onder de klok en de batterij, zodat de
+       foto van Pip tot bovenin komt. iOS legt daar zelf een lichte waas over. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-51">
+  <link rel="stylesheet" href="stijl.css?v=20261109-52">
   <!-- Alle activiteit van de afgelopen 7 dagen, nieuwste bovenaan, per dag: Pip
        op de bak, de voerbak, de bak draaien, en wat de baasjes deden. Het
        thuisscherm toont alleen de laatste 5 van vandaag (telefoon.js, activity). -->
@@ -38,8 +38,8 @@
     <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
   </main>
 
-  <script src="config.js?v=20261109-51"></script>
-  <script src="telefoon.js?v=20261109-51"></script>
+  <script src="config.js?v=20261109-52"></script>
+  <script src="telefoon.js?v=20261109-52"></script>
   <script>
     (function () {
       "use strict";
@@ -83,17 +83,26 @@
       }
 
       async function load() {
+        // Lukt ophalen niet, dan de bewaarde stand houden (en die niet overschrijven).
+        const cached = P.recall("home") || {};
+        let fresh = true;
+        const fallback = (value) => () => { fresh = false; return value || null; };
         const [settings, jaarlog, log] = await Promise.all([
-          getJson(serverUrl("settings", config.settings.url)).catch(() => ({})),
-          getJson(serverUrl("jaarlog", config.jaarlog.url)).catch(() => null),
-          getJson(`${kattenbakUrl}${kattenbakUrl.includes("?") ? "&" : "?"}log=1`).catch(() => null),
+          getJson(serverUrl("settings", config.settings.url)).catch(fallback(cached.settings)),
+          getJson(serverUrl("jaarlog", config.jaarlog.url)).catch(fallback(cached.jaarlog)),
+          getJson(`${kattenbakUrl}${kattenbakUrl.includes("?") ? "&" : "?"}log=1`).catch(fallback(cached.log)),
         ]);
-        render(P.activity({ settings: settings || {}, jaarlog, log }));
+        const data = { settings: settings || {}, jaarlog, log };
+        if (fresh) P.rememberHome(data);
+        render(P.activity(data));
       }
 
       (async function start() {
         const { linked } = await P.showLinked();
         if (!linked) return;
+        // Meteen de stand van de vorige keer (van Thuis), daarna verversen.
+        const cached = P.recall("home");
+        if (cached && cached.settings) render(P.activity(cached));
         await load();
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") load();

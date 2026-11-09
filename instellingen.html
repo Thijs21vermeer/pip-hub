@@ -13,15 +13,15 @@
   <meta name="apple-mobile-web-app-title" content="Pip">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <!-- Als app: een effen statusbalk in de kleur van de pagina (theme-color),
-       zonder de waas die iOS legt als de pagina onder de klok doorloopt. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!-- Als app: de pagina loopt door onder de klok en de batterij, zodat de
+       foto van Pip tot bovenin komt. iOS legt daar zelf een lichte waas over. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-51">
+  <link rel="stylesheet" href="stijl.css?v=20261109-52">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -147,10 +147,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-51"></script>
-  <script src="telefoon.js?v=20261109-51"></script>
-  <script src="taken.js?v=20261109-51"></script>
-  <script src="stats.js?v=20261109-51"></script>
+  <script src="config.js?v=20261109-52"></script>
+  <script src="telefoon.js?v=20261109-52"></script>
+  <script src="taken.js?v=20261109-52"></script>
+  <script src="stats.js?v=20261109-52"></script>
   <script>
     (function () {
       "use strict";
@@ -174,12 +174,9 @@
       const photoUrls = new Map();
       let slide = 0;
 
+      // Bewaard op de telefoon (telefoon.js, mediaUrl): na de eerste keer meteen in beeld.
       async function photoUrl(id) {
-        if (!photoUrls.has(id)) {
-          const response = await fetch(`${urls.photos}/${id}`, { headers: auth() });
-          if (!response.ok) throw new Error(String(response.status));
-          photoUrls.set(id, URL.createObjectURL(await response.blob()));
-        }
+        if (!photoUrls.has(id)) photoUrls.set(id, await P.mediaUrl(`${urls.photos}/${id}`));
         return photoUrls.get(id);
       }
 
@@ -208,15 +205,27 @@
       }
 
       async function startSlides() {
+        // Eerst de foto van de vorige keer (staat op de telefoon), dan de lijst.
+        const known = P.recall("photos");
+        if (Array.isArray(known) && known.length) {
+          const first = await P.storedMediaUrl(`${urls.photos}/${known[0]}`);
+          if (first) {
+            photoUrls.set(known[0], first);
+            photoIds = known;
+            await showSlide(0);
+          }
+        }
         try {
           const list = await getJson(urls.photos);
           photoIds = list.map((photo) => photo.id);
+          P.remember("photos", photoIds);
+          P.pruneMedia(urls.photos, new Set(photoIds.map((id) => `${urls.photos}/${id}`)));
         } catch (error) {
-          photoIds = [];
+          if (!photoIds.length) photoIds = [];
         }
         $("photos-count").textContent = photoIds.length === 1 ? "1 foto in de lijst" : `${photoIds.length} foto's in de lijst`;
         if (!photoIds.length) return;
-        await showSlide(0);
+        if (!(Array.isArray(known) && known[0] === photoIds[0] && photoUrls.has(photoIds[0]))) await showSlide(0);
         photoUrl(photoIds[0]).then((url) => { $("photos-tile-image").src = url; }).catch(() => {});
         if (photoIds.length > 1) setInterval(() => showSlide(++slide), SLIDE_MS);
       }
@@ -797,31 +806,62 @@
       // ---- Laden ----
 
       async function load() {
+        // Lukt ophalen niet, dan blijft de vorige stand staan (en bewaard).
+        let fresh = true;
+        const keep = (value) => () => { fresh = false; return value; };
         const [settings, jaarlog, log] = await Promise.all([
-          getJson(urls.settings).catch(() => data.settings),
-          getJson(urls.jaarlog).catch(() => data.jaarlog),
-          getJson(`${urls.kattenbak}${urls.kattenbak.includes("?") ? "&" : "?"}log=1`).catch(() => data.log),
+          getJson(urls.settings).catch(keep(data.settings)),
+          getJson(urls.jaarlog).catch(keep(data.jaarlog)),
+          getJson(`${urls.kattenbak}${urls.kattenbak.includes("?") ? "&" : "?"}log=1`).catch(keep(data.log)),
         ]);
         const before = data.settings.play && data.settings.play.timer;
         data = { settings: settings || {}, jaarlog, log };
+        if (fresh) P.rememberHome(data);
         const after = data.settings.play || {};
         if (before && !after.timer) {
           const ended = (after.sessions || []).find((s) => s.by === before.by && s.at === before.endsAt);
           if (ended && Date.now() - ended.at < 15 * 60 * 1000) playDone = { session: ended, timeUp: true, until: Date.now() + 3 * 60 * 1000 };
         }
+        renderAll();
+      }
+
+      function renderAll() {
         renderTasks();
         renderWrapped();
         renderScores();
         renderSettings();
       }
 
+      // Eerste keer op deze telefoon (nog niets bewaard): lege lijstjes en regels
+      // als plaatshouders, tot het servertje antwoordt.
+      function renderSkeleton() {
+        const frame = (size, i) => `<div class="piece ${size} f${i % 3} skeleton" aria-hidden="true"><span class="frame"><span class="mat"><span class="art"></span></span></span><span class="label"><i class="sk-line" style="width:70%"></i><i class="sk-line short" style="width:45%"></i></span></div>`;
+        $("tiles").innerHTML = `<div class="wall-row">${frame("big", 0)}${frame("small", 1)}</div><div class="wall-row">${frame("small", 2)}${frame("big", 3)}</div>`;
+        $("progress").innerHTML = '<i class="sk-line" style="width:96px;margin:0"></i>';
+        $("timeline").innerHTML = [72, 58, 66].map((w) => `<li class="skeleton" aria-hidden="true"><i class="sk-line" style="width:38px"></i><i class="dot"></i><span><i class="sk-line" style="width:${w}%"></i><i class="sk-line short" style="width:40%"></i></span></li>`).join("");
+        $("activity-more").textContent = "";
+      }
+
       (async function start() {
         const { linked, fresh } = await P.showLinked();
         if (fresh === false && !linked) $("not-linked").textContent = "Deze QR-code werkt niet (meer). Tik op de Google Hub opnieuw op het QR-knopje en scan de nieuwe code.";
         if (!linked) return;
-        avatars = await P.loadAvatars();
-        await load();
+        // Meteen de stand van de vorige keer (of plaatshouders), daarna verversen.
+        avatars = await P.cachedAvatars();
+        const cached = P.recall("home");
+        if (cached && cached.settings) {
+          data = { settings: cached.settings, jaarlog: cached.jaarlog, log: cached.log };
+          renderAll();
+        } else {
+          renderSkeleton();
+        }
         startSlides();
+        P.loadAvatars().then((list) => {
+          if (!list.size) return;
+          avatars = list;
+          renderAll();
+        });
+        await load();
         setInterval(load, 60 * 1000);
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {

@@ -443,9 +443,17 @@ button.piece:active {
   width: 62%;
   height: 62%;
 }
-.piece.done:not(.all) .art {
-  filter: grayscale(0.9);
-  opacity: 0.45;
+/* Gedaan: een donkergroene waas over het schilderij (net als het vinkje). */
+.piece.done:not(.all) .art img,
+.piece.done:not(.all) .art svg {
+  filter: saturate(0.5);
+}
+.piece.done:not(.all) .art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 54, 24, 0.72);
+  pointer-events: none;
 }
 /* Bordje onder het schilderij. */
 .label {
@@ -1010,6 +1018,50 @@ button.piece:active .tick {
   background: transparent;
   font-size: 16px;
   font-weight: 600;
+}
+
+/* ---- Plaatshouders (allereerste keer laden, nog niets bewaard) ---- */
+.sk-line {
+  display: block;
+  height: 12px;
+  margin-top: 8px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--track) 25%, var(--line) 50%, var(--track) 75%);
+  background-size: 200% 100%;
+  animation: sk-shine 1.4s ease-in-out infinite;
+}
+.sk-line.short {
+  height: 10px;
+  margin-top: 6px;
+}
+.piece.skeleton .frame {
+  opacity: 0.55;
+  filter: saturate(0.3);
+}
+.piece.skeleton .art {
+  background: var(--track);
+  animation: sk-pulse 1.4s ease-in-out infinite;
+}
+.piece.skeleton .label .sk-line:first-child {
+  height: 16px;
+  margin-top: 0;
+}
+.timeline li.skeleton .dot {
+  border-color: var(--line);
+}
+.timeline li.skeleton > .sk-line {
+  margin: 0;
+}
+@keyframes sk-shine {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@keyframes sk-pulse {
+  50% { opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-line,
+  .piece.skeleton .art { animation: none; }
 }
 
 /* ---- Spelen met Pip ---- */
