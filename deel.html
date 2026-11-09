@@ -31,7 +31,7 @@
   <div class="card" id="card" hidden><img id="preview" alt="Deelkaart van Pip Wrapped"></div>
   <div class="buttons" id="buttons" hidden>
     <button class="share" id="share" type="button">Delen</button>
-    <button class="save" id="save" type="button">Bewaar als foto</button>
+    <button class="save" id="save" type="button">Bewaar in Foto's</button>
   </div>
   <p class="note" id="note">Deelkaart maken…</p>
 
@@ -177,12 +177,19 @@
       const blob = await toBlob(canvas);
       const file = new File([blob], `pip-wrapped-${data.y}.png`, { type: "image/png" });
       const url = URL.createObjectURL(blob);
-      els.preview.src = url;
+      // Een data-adres: dan werkt ingedrukt houden → "Voeg toe aan Foto's" ook.
+      els.preview.src = canvas.toDataURL("image/png");
       els.card.hidden = false;
       els.buttons.hidden = false;
       els.note.textContent = "Delen opent WhatsApp, Berichten of mail met deze kaart als foto.";
 
-      function save() {
+      // Een iPhone of iPad zet een download in Bestanden, niet in Foto's. Via het
+      // deelmenu kan het wel: daar staat "Bewaar afbeelding" bovenaan.
+      const apple = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const canShareFile = Boolean(navigator.canShare && navigator.canShare({ files: [file] }));
+
+      function download() {
         const link = document.createElement("a");
         link.href = url;
         link.download = file.name;
@@ -191,16 +198,30 @@
         link.remove();
       }
 
+      async function save() {
+        if (apple && canShareFile) {
+          els.note.textContent = 'Tik op "Bewaar afbeelding": dan staat hij in je fotoalbum.';
+          try {
+            await navigator.share({ files: [file] });
+          } catch (error) {
+            // Geannuleerd: niets aan de hand.
+          }
+          return;
+        }
+        download();
+        els.note.textContent = "De foto staat bij je downloads en in je fotoalbum onder Downloads.";
+      }
+
       els.save.addEventListener("click", save);
       els.share.addEventListener("click", async () => {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (canShareFile) {
           try {
             await navigator.share({ files: [file], title: `Pip Wrapped ${data.y}` });
           } catch (error) {
             // Delen geannuleerd: niets aan de hand.
           }
         } else {
-          save();
+          download();
           els.note.textContent = "Delen kan hier niet; de foto is bewaard.";
         }
       });

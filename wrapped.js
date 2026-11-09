@@ -551,9 +551,11 @@
   let state = null;
 
   function scale() {
-    if (!root) return;
+    // Na het sluiten is er geen scherm meer om te schalen.
+    const stage = root && root.querySelector(".wr-stage");
+    if (!stage) return;
     const s = Math.min(window.innerWidth / 1024, window.innerHeight / 600);
-    root.querySelector(".wr-stage").style.transform = `translate(-50%, -50%) scale(${s})`;
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
   }
 
   // Elke pagina begint op dezelfde hoogte: de kop (bv. "SAMEN VOOR PIP") staat
