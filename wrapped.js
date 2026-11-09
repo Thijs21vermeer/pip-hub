@@ -375,7 +375,6 @@
           <p class="wr-num" style="margin-top:8px;font-size:${fit(cell.value, 32, 230)}px;line-height:1">${esc(cell.value)}</p>
           <p style="margin-top:6px;font-size:15px;color:rgba(251,247,242,.72)">${esc(cell.sub)}</p>
         </div>`).join("");
-      const thanks = s.people.length ? `Bedankt ${s.people.length > 1 ? `${s.people.slice(0, -1).join(", ")} en ${s.people[s.people.length - 1]}` : s.people[0]}.` : "";
       return `<div class="wr-slide" style="background:#24170f;color:#fbf7f2">
         <div class="wr-abs" style="left:64px;top:96px;width:300px">
           <div class="wr-pop wr-round wr-photo" style="width:150px;height:150px;box-shadow:0 0 0 6px #f3c77a"><img src="${esc(ctx.portrait)}" alt="Pip"></div>
@@ -384,7 +383,7 @@
           <p class="wr-up d2 wr-serif" style="margin-top:14px;font-size:32px;color:#f3c77a">Dat was het jaar van Pip.</p>
         </div>
         <div class="wr-abs" style="left:400px;top:96px;right:64px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">${cells}</div>
-        <p class="wr-abs wr-up d6" data-fixed style="left:400px;right:64px;bottom:34px;font-size:17px;color:rgba(251,247,242,.78)">${esc(thanks)} Tik om af te sluiten.</p>
+        <button type="button" class="wr-abs wr-up d3 wr-share" data-share style="left:64px;top:452px">${stroke('<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M12 3v12M7 8l5-5 5 5"/>', 20)}Delen</button>
       </div>`;
     },
   };
@@ -502,6 +501,50 @@
     }, 800);
   }
 
+  // ---- Delen ----
+
+  // De Hub kan zelf niet delen: hij laat een QR-code zien naar deel.html, met de
+  // cijfers van de samenvatting in het adres. Daar maakt je telefoon er een foto
+  // van en deelt die. Er gaat geen code of account mee.
+  function shareUrl() {
+    const outro = state.data.slides.find((slide) => slide.type === "outro");
+    const payload = { y: state.data.year, s: (outro ? outro.summary : []).map((c) => [c.label, c.value, c.sub]) };
+    const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return `${new URL("deel.html", location.href).href.split("#")[0]}#d=${base64}`;
+  }
+
+  async function openShare() {
+    if (!state || !state.qr) return;
+    setPlaying(false);
+    const panel = root.querySelector(".wr-share-panel");
+    let svg = "";
+    try {
+      svg = await state.qr(shareUrl());
+    } catch (error) {
+      svg = "";
+    }
+    panel.innerHTML = `
+      <div class="wr-share-card">
+        <div class="wr-share-qr">${svg || '<p style="padding:40px 10px;text-align:center;color:#6b5f54">Geen internet voor de QR-code.</p>'}</div>
+        <div>
+          <p class="wr-eyebrow" style="color:#a9642f">Delen</p>
+          <p style="margin-top:10px;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1">Scan met je telefoon</p>
+          <p style="margin-top:12px;font-size:18px;line-height:1.45;color:#4a4038">Je krijgt de deelkaart van Pip Wrapped als foto, om te sturen via WhatsApp, Berichten of mail.</p>
+          <p style="margin-top:22px;font-size:15px;color:#6b5f54">Tik ergens om terug te gaan.</p>
+        </div>
+      </div>`;
+    panel.hidden = false;
+  }
+
+  function closeShare() {
+    const panel = root && root.querySelector(".wr-share-panel");
+    if (panel) {
+      panel.hidden = true;
+      panel.innerHTML = "";
+    }
+  }
+
   // ---- Afspelen ----
 
   let root = null;
@@ -591,6 +634,8 @@
     state = {
       index: 0,
       playing: true,
+      data,
+      qr: options.qr || null,
       onClose: options.onClose,
       slides: data.slides.filter((slide) => SLIDES[slide.type]).map((slide) => ({
         type: slide.type,
@@ -604,6 +649,7 @@
         <div class="wr-host"></div>
         <div class="wr-progress"></div>
         <div class="wr-song" hidden></div>
+        <div class="wr-share-panel" hidden></div>
         <button class="wr-tap wr-prev" aria-label="Vorige"></button>
         <button class="wr-tap wr-next" aria-label="Volgende"></button>
         <div class="wr-controls">
@@ -615,6 +661,10 @@
     root.querySelector(".wr-next").addEventListener("click", () => step(1));
     root.querySelector(".wr-pause").addEventListener("click", () => setPlaying(!state.playing));
     root.querySelector(".wr-close").addEventListener("click", close);
+    root.querySelector(".wr-host").addEventListener("click", (event) => {
+      if (event.target.closest("[data-share]")) openShare();
+    });
+    root.querySelector(".wr-share-panel").addEventListener("click", closeShare);
     root.hidden = false;
     scale();
     music.current = null;
@@ -632,6 +682,7 @@
   function close() {
     if (!root || !state) return;
     const done = state.onClose;
+    closeShare();
     stopMusic();
     state = null;
     root.hidden = true;

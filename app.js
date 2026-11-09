@@ -1680,6 +1680,14 @@
       photo: photoList()[0] || "pip-foto.jpg",
       portrait: "pip-icoon.jpg",
       music: config.wrappedMusic || [],
+      // QR-code naar de deelkaart (deel.html), met dezelfde bibliotheek als de ruststand.
+      qr: async (text) => {
+        await loadQrLibrary();
+        const code = window.qrcode(0, "M");
+        code.addData(text);
+        code.make();
+        return code.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+      },
       onClose: () => {
         if (els.rest.hidden) scheduleRest();
       },

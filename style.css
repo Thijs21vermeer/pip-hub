@@ -2337,6 +2337,60 @@ main {
 
 @keyframes wr-eq { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
 
+/* Delen: knop op het laatste scherm en de QR-code naar de deelkaart. */
+.wr-share {
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 24px 0 20px;
+  border: 0;
+  border-radius: 99px;
+  background: #f3c77a;
+  color: #24170f;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wr-share-panel {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(20 14 10 / 0.88);
+  animation: wr-fade 0.25s ease-out both;
+}
+
+.wr-share-panel[hidden] {
+  display: none;
+}
+
+.wr-share-card {
+  width: 760px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  align-items: center;
+  gap: 40px;
+  padding: 36px 40px;
+  border-radius: 28px;
+  background: #fbf7f2;
+  color: #24170f;
+}
+
+.wr-share-card p {
+  margin: 0;
+}
+
+.wr-share-qr svg {
+  display: block;
+  width: 300px;
+  height: 300px;
+}
+
 .wr-tap {
   position: absolute;
   z-index: 2;
