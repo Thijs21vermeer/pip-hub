@@ -785,9 +785,15 @@
     if (!kattenbak.online) return { text: ACTION_ERRORS.OFFLINE, kind: "warn" };
     if (action.id === "clean") {
       if (kattenbak.catInside) return { text: "Pip zit erin", kind: "warn" };
+      // Vandaag gedraaid: "3 bezoeken · gedraaid 13:15", anders "3 bezoeken vandaag · 2,9 kg".
+      // Kort gehouden, zodat het op één regel past.
       const parts = [];
-      if (kattenbak.catWeightKg) parts.push(`Pip ${String(kattenbak.catWeightKg).replace(".", ",")} kg`);
-      if (typeof kattenbak.visitsToday === "number") parts.push(`vandaag ${kattenbak.visitsToday}×`);
+      const visits = kattenbak.visitsToday;
+      const cleaned = kattenbak.lastCleanAt && new Date(kattenbak.lastCleanAt);
+      const cleanedToday = cleaned && cleaned.toDateString() === new Date().toDateString();
+      if (typeof visits === "number") parts.push(`${visits} ${visits === 1 ? "bezoek" : "bezoeken"}${cleanedToday ? "" : " vandaag"}`);
+      if (cleanedToday) parts.push(`gedraaid ${formatTime(cleaned)}`);
+      else if (kattenbak.catWeightKg) parts.push(`${String(kattenbak.catWeightKg).replace(".", ",")} kg`);
       return { text: parts.join(" · ") || "Klaar", kind: "" };
     }
     return kattenbak.binFull ? { text: "Opvangbak vol", kind: "warn" } : { text: "Opvangbak ok", kind: "" };

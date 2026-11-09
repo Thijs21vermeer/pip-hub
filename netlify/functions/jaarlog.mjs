@@ -13,6 +13,7 @@ import { getStore } from "@netlify/blobs";
 import { readPart, writePart } from "../lib/history.mjs";
 import { localTime } from "../lib/notify.mjs";
 import { accessToken, DAY_MS, readVisits } from "../lib/tuya.mjs";
+import { cleanVisits } from "../lib/visits.mjs";
 
 const WINDOW_DAYS = 7;
 
@@ -34,7 +35,8 @@ export default async () => {
 
   let visits = [];
   try {
-    visits = await readVisits(await accessToken(), WINDOW_DAYS);
+    // Alleen echte bezoeken van Pip (zie lib/visits.mjs).
+    visits = cleanVisits(await readVisits(await accessToken(), WINDOW_DAYS));
   } catch (error) {
     // Tuya even niet bereikbaar: de volgende run probeert het opnieuw.
     console.error(JSON.stringify({ event: "jaarlog.tuya.error", code: error.code || "UNKNOWN" }));

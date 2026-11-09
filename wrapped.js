@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  const SLIDE_SECONDS = 8;
+  const SLIDE_SECONDS = 12;
   const LIGHT = new Set(["total", "type", "human", "photos"]);
   const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
     "augustus", "september", "oktober", "november", "december"];
@@ -94,7 +94,7 @@
         </div>
         <div class="wr-abs" style="left:520px;top:118px;width:440px">
           <div class="wr-bars" style="height:330px">${bars}</div>
-          <p style="margin-top:14px;font-size:15px;color:rgba(255,255,255,.72)">Bezoeken per ${s.bucket === "month" ? "maand" : "week"}.</p>
+          <p style="margin-top:14px;font-size:15px;color:rgba(255,255,255,.72)">Bezoeken per ${{ month: "maand", week: "week", day: "dag" }[s.bucket]}.</p>
         </div>
       </div>`;
     },
@@ -149,6 +149,7 @@
           done: "background:#d18c4f",
           streak: "background:#ffe7b0",
           missed: "border:2px solid rgba(255,244,230,.6)",
+          unknown: "background:rgba(255,244,230,.12)",
           today: "border:2px dashed rgba(255,244,230,.6)",
         };
         const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
@@ -162,6 +163,7 @@
                 <span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#d18c4f"></i>Gedaan</span>
                 ${s.streak ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#ffe7b0"></i>Langste reeks</span>' : ""}
                 <span class="wr-row" style="gap:6px"><i class="wr-key" style="border:2px solid rgba(255,244,230,.6)"></i>Niet gedaan</span>
+                ${s.heat.hasUnknown ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:rgba(255,244,230,.12)"></i>Nog niet bijgehouden</span>' : ""}
               </div>
             </div>
             <div class="wr-heat" style="margin-top:16px;grid-template-rows:repeat(7,${size}px);grid-auto-columns:${size}px">${cells.join("")}</div>
@@ -443,6 +445,12 @@
     return audios.get(song.id);
   }
 
+  // Naar het refrein (config.js, start): pas kan dat als het fragment geladen is.
+  function seek(audio, seconds) {
+    if (audio.readyState >= 1) audio.currentTime = seconds;
+    else audio.addEventListener("loadedmetadata", () => { audio.currentTime = seconds; }, { once: true });
+  }
+
   function playSongFor(slide) {
     const song = songFor(slide);
     if (song === music.current) return;
@@ -453,7 +461,7 @@
     const audio = audioFor(song);
     music.audio = audio;
     if (!audio) return;
-    audio.currentTime = 0;
+    seek(audio, song.start || 0);
     audio.volume = 0;
     if (state && state.playing) {
       audio.play().then(() => fade(audio, VOLUME, 800)).catch(() => {});
@@ -582,5 +590,11 @@
   }
 
   window.addEventListener("resize", scale);
-  window.PipWrapped = { open, close, isOpen: () => Boolean(state), months: MONTHS };
+  // Voor het nakijken: welk nummer klinkt en waar het fragment is.
+  function nowPlaying() {
+    const audio = music.audio;
+    return music.current ? { title: `${music.current.artist} · ${music.current.title}`, at: audio ? Math.round(audio.currentTime * 10) / 10 : null, playing: Boolean(audio && !audio.paused) } : null;
+  }
+
+  window.PipWrapped = { open, close, isOpen: () => Boolean(state), nowPlaying, months: MONTHS };
 })();

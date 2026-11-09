@@ -24,6 +24,8 @@ export default async (request) => {
     return json(200, {
       year,
       startedAt: starts.length ? Math.min(...starts) : null,
+      // Sinds wanneer elk vinkje bewaard wordt (daarvoor alleen het laatste per taak).
+      ticksSince: (ticks && ticks.startedAt) || null,
       ticks: (ticks && ticks.list) || [],
       days: (days && days.days) || {},
       reminders: (reminders && reminders.list) || [],

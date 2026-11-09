@@ -199,8 +199,10 @@ NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --dir
   - elke 3 uur per dag de kattenbakbezoeken (aantal, gewicht, per uur), het voeren en het draaien (`jaarlog.mjs`, want Tuya bewaart maar 7 dagen);
   - wanneer een herinnering ging (`herinnering.mjs`).
   De Hub haalt het op via `/api/jaarlog` en rekent zelf (`stats.js`); `wrapped.js` tekent de schermen.
+- **Wat telt als bezoek aan de kattenbak** (`netlify/lib/visits.mjs`, voor het logboek, de teller onder Kattenbak draaien en het jaarlog): het gewicht is minstens 60% van Pips gewone gewicht (dus niet als iemand de bak schoonmaakt), meldingen binnen 5 minuten na elkaar zijn één bezoek, en een bezoek duurt minstens 15 seconden.
+- **Geschiedenis:** het jaarlog begint op 9 november 2026. Van daarvoor is alleen het laatste vinkje per taak bewaard, en Tuya bewaart de kattenbak en de voerbak maar 7 dagen (vanaf 3 november staat het erin).
 - **Kosten** in Wrapped komen uit Voerraad (aankopen en verzekering van dit jaar), via dezelfde koppelcode als de voorraad. Zonder die cijfers valt het kostenscherm weg.
-- **Muziek** onder Wrapped: per scherm een bekend nummer met een knipoog (Sandstorm bij de kattenbak, Hungry Like the Wolf bij het eten, Money, Money, Money bij de kosten; bij het kattentype hangt het nummer af van het type), als fragment van 30 seconden van Apple Music. De Hub haalt ze op bij het openen; in deze map staan alleen de titels (`wrappedMusic` in `config.js`). Ander nummer? Zoek het `id` op met `https://itunes.apple.com/search?term=artiest+titel&country=NL&entity=song`.
+- **Muziek** onder Wrapped: per scherm een bekend nummer met een knipoog (Sandstorm bij de kattenbak, Hungry Like the Wolf bij het eten, Money, Money, Money bij de kosten; bij het kattentype hangt het nummer af van het type), als fragment van 30 seconden van Apple Music, vanaf de zin uit het refrein (`start` in `config.js`). Een scherm duurt 12 seconden. De Hub haalt ze op bij het openen; in deze map staan alleen de titels (`wrappedMusic` in `config.js`). Ander nummer? Zoek het `id` op met `https://itunes.apple.com/search?term=artiest+titel&country=NL&entity=song`.
 
 ## 5. Eerste test op de Google Hub
 

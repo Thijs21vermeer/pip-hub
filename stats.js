@@ -174,7 +174,7 @@
     const variety = [...stats.values()].map((p) => ({ name: p.name, n: p.tasks.size })).filter((p) => p.n >= 2).sort((a, b) => b.n - a.n)[0];
     badges.push({ icon: "heart", title: "Alleskunner", text: variety ? `${variety.name} · ${variety.n} verschillende taken` : "Nog niemand" });
 
-    return { ranking, badges, total: ticks.length, label: periodLabel(period, now, resetHour, log.startedAt) };
+    return { ranking, badges, total: ticks.length, label: periodLabel(period, now, resetHour, ((log.ticks || [])[0] || {}).at || log.startedAt) };
   }
 
   // Wie staat er deze week bovenaan? null als nog niemand punten heeft.
@@ -206,9 +206,21 @@
     return CAT_TYPES.find((type) => hour >= type.from && hour <= type.to) || NIGHT_TYPE;
   }
 
-  // Bakjes voor een grafiek door de tijd: maanden als er minstens 3 zijn, anders weken.
+  // Bakjes voor een grafiek door de tijd: per dag als het om hooguit drie weken
+  // gaat, maanden als er minstens 3 zijn, en daartussen weken.
   function buckets(keys) {
+    const sorted = [...new Set(keys)].sort();
     const months = [...new Set(keys.map((key) => key.slice(0, 7)))].sort();
+    if (sorted.length && keyNumber(sorted[sorted.length - 1]) - keyNumber(sorted[0]) < 21) {
+      const list = [];
+      for (let n = keyNumber(sorted[0]); n <= keyNumber(sorted[sorted.length - 1]); n++) {
+        const key = numberKey(n);
+        const day = Number(key.slice(8));
+        // Eerste dag en elke 1e van de maand met de maand erbij.
+        list.push({ id: key, label: list.length === 0 || day === 1 ? `${day} ${MONTHS_SHORT[Number(key.slice(5, 7)) - 1]}` : String(day) });
+      }
+      return { kind: "day", list, of: (key) => key };
+    }
     if (months.length >= 3) {
       return { kind: "month", list: months.map((month) => ({ id: month, label: MONTHS_SHORT[Number(month.slice(5)) - 1] })), of: (key) => key.slice(0, 7) };
     }
@@ -324,19 +336,25 @@
         careTitle = careTicks[careTicks.length - 1].title;
         const doneDays = new Set(careTicks.map((tick) => dayKey(tick.at, resetHour)));
         stats.push({ value: String(doneDays.size), label: `${doneDays.size === 1 ? "dag" : "dagen"} ${careTitle.toLowerCase()}` });
-        const start = keyNumber(startKey);
+        // Vinkjes worden pas sinds het jaarlog bewaard (daarvoor alleen het laatste
+        // per taak): een dag daarvoor zonder vinkje is onbekend, niet vergeten.
+        const tickStartKey = log.ticksSince ? dayKey(log.ticksSince, resetHour) : dayKey(careTicks[0].at, resetHour);
+        const startHeat = [dayKey(careTicks[0].at, resetHour), tickStartKey].sort()[0];
+        const start = keyNumber(startHeat);
         const end = keyNumber(lastKey);
-        heat = { offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7, cells: [], first: shortDate(startKey), last: shortDate(lastKey) };
+        heat = { offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7, cells: [], first: shortDate(startHeat), last: shortDate(lastKey) };
         streak = longestRun([...doneDays]);
         for (let n = start; n <= end; n++) {
           const key = numberKey(n);
           const done = doneDays.has(key);
           const inStreak = streak.length >= 3 && key >= streak.from && key <= streak.to;
-          heat.cells.push(done ? (inStreak ? "streak" : "done") : key === today ? "today" : "missed");
+          heat.cells.push(done ? (inStreak ? "streak" : "done") : key === today ? "today" : key < tickStartKey ? "unknown" : "missed");
         }
+        heat.hasUnknown = heat.cells.includes("unknown");
         const remindedTimes = reminders.filter((r) => r.id === careId).length;
         if (remindedTimes > 0) stats.push({ value: String(remindedTimes), label: `keer was de herinnering nodig` });
-        summary.push({ label: careTitle, value: num(doneDays.size), sub: streak.length >= 2 ? `dagen, ${streak.length} op rij` : "dagen" });
+        const dayWord = doneDays.size === 1 ? "dag" : "dagen";
+        summary.push({ label: careTitle, value: num(doneDays.size), sub: streak.length >= 2 ? `${dayWord}, ${streak.length} op rij` : dayWord });
       }
       if (portions > 0) stats.splice(1, 0, { value: String(portions), label: "porties uit de voerbak" });
       slides.push({
@@ -370,8 +388,8 @@
         average: kg(average),
         points,
         line: points.length < 2 ? "Gewogen bij elk bezoek aan de kattenbak."
-          : Math.abs(first.kg - last.kg) < 0.05 ? `Mooi stabiel: elke ${plan.kind === "month" ? "maand" : "week"} rond de ${kg(last.kg)}.`
-            : `Van ${kg(first.kg)} in ${plan.kind === "month" ? "het begin" : "de eerste week"} naar ${kg(last.kg)} nu.`,
+          : Math.abs(first.kg - last.kg) < 0.05 ? `Mooi stabiel: elke ${{ month: "maand", week: "week", day: "dag" }[plan.kind]} rond de ${kg(last.kg)}.`
+            : `Van ${kg(first.kg)} ${{ month: "in het begin", week: "in de eerste week", day: `op ${first.label}` }[plan.kind]} naar ${kg(last.kg)} nu.`,
       });
       summary.push({ label: "Gewicht", value: kg(average), sub: "gemiddeld" });
     }

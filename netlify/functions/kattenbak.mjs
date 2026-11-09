@@ -16,7 +16,9 @@
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json, setting } from "../lib/http.mjs";
+import { localTime } from "../lib/notify.mjs";
 import { accessToken, DAY_MS, readVisits, tuya } from "../lib/tuya.mjs";
+import { cleanVisits } from "../lib/visits.mjs";
 
 // Pip-actie → datapunt van deze kattenbak (uitgelezen met tools/tuya_check.py).
 const ACTIONS = { clean: "Clean", odourless: "odourless" };
@@ -107,7 +109,8 @@ async function noteFeederRecord(lastFeed) {
 
 async function readLogbook() {
   const token = await accessToken();
-  const [visits, log] = await Promise.all([readVisits(token, LOG_DAYS), readLog()]);
+  const [raw, log] = await Promise.all([readVisits(token, LOG_DAYS), readLog()]);
+  const visits = cleanVisits(raw);
   return {
     visits,
     feeds: [...log.feeds].reverse(),
@@ -115,19 +118,33 @@ async function readLogbook() {
   };
 }
 
+// Bezoeken van vandaag, geteld uit de meldingen van de bak zelf. De teller in de
+// bak (excretion_times_day) gaat bij draaien terug naar 0 en klopt dan niet meer.
+async function countVisitsToday(token) {
+  const here = localTime(Date.now());
+  const sinceMidnight = (here.hour * 60 + here.minute + 1) * 60 * 1000;
+  const visits = cleanVisits(await readVisits(token, sinceMidnight / DAY_MS));
+  return visits.filter((visit) => localTime(visit.at).date === here.date).length;
+}
+
 async function readStatus() {
   const token = await accessToken();
-  const [{ online, value }, feeder] = await Promise.all([
+  const [{ online, value }, feeder, counted, log] = await Promise.all([
     readDevice(setting("TUYA_DEVICE_ID"), token),
     readFeeder(token),
+    countVisitsToday(token).catch(() => null),
+    readLog().catch(() => ({ cleans: [] })),
   ]);
+  const lastClean = log.cleans.reduce((latest, clean) => Math.max(latest, clean.at || 0), 0);
   // Het logboek mag de status nooit tegenhouden.
   await noteFeederRecord(feeder && feeder.lastFeed).catch(() => {});
   return {
     online,
     // cat_weight staat in grammen.
     catWeightKg: typeof value.cat_weight === "number" ? Math.round(value.cat_weight / 100) / 10 : null,
-    visitsToday: typeof value.excretion_times_day === "number" ? value.excretion_times_day : null,
+    visitsToday: counted ?? (typeof value.excretion_times_day === "number" ? value.excretion_times_day : null),
+    // Laatste keer gedraaid via het overzicht (ms), of null.
+    lastCleanAt: lastClean || null,
     binFull: Boolean(value.trash_status),
     catInside: Boolean(value.monitoring),
     fault: Boolean(value.fault),
