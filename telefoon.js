@@ -125,11 +125,19 @@
     return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
   }
 
-  // "on", "off", "denied" of "unsupported".
+  // "on", "off", "denied", "browser" (eerst op het beginscherm zetten) of
+  // "unsupported" (deze telefoon kan het niet).
   async function pushState() {
-    if (!pushSupported() || !pushUrl()) return "unsupported";
+    if (!pushSupported() || !pushUrl()) {
+      const iPhone = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      return iPhone && !isApp() ? "browser" : "unsupported";
+    }
     if (Notification.permission === "denied") return "denied";
-    const registration = await navigator.serviceWorker.getRegistration();
+    // Niet eeuwig wachten als het achtergrondscript niet antwoordt.
+    const registration = await Promise.race([
+      navigator.serviceWorker.getRegistration(),
+      new Promise((resolve) => setTimeout(() => resolve(null), 3000)),
+    ]);
     const subscription = registration && await registration.pushManager.getSubscription();
     return subscription && Notification.permission === "granted" ? "on" : "off";
   }
