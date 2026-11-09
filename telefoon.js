@@ -465,6 +465,58 @@
     return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
 
+  // ---- Kleur van de statusbalk (app op het beginscherm) ----
+  // iOS 26 neemt de kleur van de effen statusbalk van een vaste laag bovenaan,
+  // en kijkt pas opnieuw als zo'n laag verschijnt of verdwijnt (theme-color
+  // negeert hij). Daarom bij elke nieuwe kleur een nieuw strookje bovenaan in
+  // die kleur (stijl.css, .bar-strip). Android kleurt mee via theme-color.
+  let barColor = null;
+  function paintStatusBar(color) {
+    if (!color || color === barColor) return;
+    barColor = color;
+    const old = [...document.querySelectorAll(".bar-strip")];
+    const strip = document.createElement("div");
+    strip.className = "bar-strip";
+    strip.setAttribute("aria-hidden", "true");
+    strip.style.background = color;
+    document.body.appendChild(strip);
+    setTimeout(() => old.forEach((el) => el.remove()), 60);
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => { meta.content = color; });
+  }
+
+  // Gemiddelde kleur van de bovenste rand van een foto zoals hij in beeld staat
+  // (object-fit: cover, in het midden), of null.
+  function topColorOf(img, boxWidth, boxHeight) {
+    try {
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      if (!iw || !ih || !boxWidth || !boxHeight) return null;
+      const scale = Math.max(boxWidth / iw, boxHeight / ih);
+      const sw = boxWidth / scale;
+      const sh = Math.max(1, (boxHeight * 0.04) / scale);
+      const sx = (iw - sw) / 2;
+      const sy = (ih - boxHeight / scale) / 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = 24;
+      canvas.height = 3;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 24, 3);
+      const data = ctx.getImageData(0, 0, 24, 3).data;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+      }
+      const n = data.length / 4;
+      return `rgb(${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)})`;
+    } catch (error) {
+      return null;
+    }
+  }
+
   // ---- Nieuwe versie direct ----
   // GitHub Pages laat een pagina 10 minuten in de cache van de telefoon staan.
   // Na een update zag je dan nog even de oude (zoals de oude statusbalk). Bij
@@ -499,6 +551,7 @@
     config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp, isIos,
     pushSupported, pushState, enablePush, disablePush, activity, activityItem, pipDayKey,
     remember, recall, rememberHome, mediaUrl, storedMediaUrl, pruneMedia, cachedAvatars,
+    paintStatusBar, topColorOf,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
   };
 })();

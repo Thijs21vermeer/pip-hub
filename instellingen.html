@@ -13,15 +13,16 @@
   <meta name="apple-mobile-web-app-title" content="Pip">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <!-- Als app: de pagina loopt door onder de klok en de batterij, zodat de
-       foto van Pip tot bovenin komt. iOS legt daar zelf een lichte waas over. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Als app: een effen statusbalk (iOS 26 legt een waas over een pagina die
+       onder de klok doorloopt). De kleur neemt iOS van een vaste laag bovenaan:
+       op Thuis de bovenkant van de foto, in Wrapped het scherm (telefoon.js). -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-53">
+  <link rel="stylesheet" href="stijl.css?v=20261109-54">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -147,10 +148,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-53"></script>
-  <script src="telefoon.js?v=20261109-53"></script>
-  <script src="taken.js?v=20261109-53"></script>
-  <script src="stats.js?v=20261109-53"></script>
+  <script src="config.js?v=20261109-54"></script>
+  <script src="telefoon.js?v=20261109-54"></script>
+  <script src="taken.js?v=20261109-54"></script>
+  <script src="stats.js?v=20261109-54"></script>
   <script>
     (function () {
       "use strict";
@@ -195,6 +196,7 @@
         const slides = $("slides");
         const old = [...slides.children];
         slides.appendChild(image);
+        colorBarFrom(image);
         requestAnimationFrame(() => {
           image.classList.add("on");
           old.forEach((el) => el.classList.remove("on"));
@@ -202,6 +204,27 @@
         setTimeout(() => old.forEach((el) => el.remove()), 1300);
         // Alvast de volgende ophalen.
         photoUrl(photoIds[(index + 1) % photoIds.length]).catch(() => {});
+      }
+
+      // De statusbalk in de kleur van de bovenkant van de foto; scrol je voorbij
+      // de foto, dan in de kleur van de pagina (telefoon.js, paintStatusBar).
+      let photoColor = null;
+      function colorBarFrom(image) {
+        const box = $("slides");
+        photoColor = P.topColorOf(image, box.clientWidth, box.clientHeight) || photoColor;
+        updateBar();
+      }
+      function updateBar() {
+        const hero = document.querySelector(".hero");
+        const onPhoto = window.scrollY < (hero ? hero.offsetHeight * 0.6 : 0);
+        P.paintStatusBar(onPhoto && photoColor ? photoColor : getComputedStyle(document.body).backgroundColor);
+      }
+      // Goedkoop: alleen een nieuw strookje als de kleur echt verandert.
+      window.addEventListener("scroll", updateBar, { passive: true });
+      {
+        const first = document.querySelector("#slides img");
+        if (first.complete && first.naturalWidth) colorBarFrom(first);
+        else first.addEventListener("load", () => colorBarFrom(first), { once: true });
       }
 
       async function startSlides() {

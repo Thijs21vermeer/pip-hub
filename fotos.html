@@ -13,13 +13,14 @@
   <meta name="apple-mobile-web-app-title" content="Pip">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <!-- Als app: de pagina loopt door onder de klok en de batterij, zodat de
-       foto van Pip tot bovenin komt. iOS legt daar zelf een lichte waas over. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Als app: een effen statusbalk (iOS 26 legt een waas over een pagina die
+       onder de klok doorloopt). De kleur neemt iOS van een vaste laag bovenaan:
+       op Thuis de bovenkant van de foto, in Wrapped het scherm (telefoon.js). -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#fbf7f2" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="telefoon.css?v=20261109-53">
+  <link rel="stylesheet" href="telefoon.css?v=20261109-54">
 </head>
 <body>
   <main>
@@ -102,7 +103,7 @@
     </main>
   </section>
 
-  <script src="config.js?v=20261109-53"></script>
+  <script src="config.js?v=20261109-54"></script>
   <script>
     (function () {
       "use strict";

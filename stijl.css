@@ -1020,6 +1020,20 @@ button.piece:active .tick {
   font-weight: 600;
 }
 
+/* Strookje waar iOS de kleur van de statusbalk vandaan haalt (telefoon.js,
+   paintStatusBar): vast bovenaan, in dezelfde kleur als de balk, zodat het
+   lijkt alsof de balk een paar pixels hoger is. iOS kijkt naar de bovenste
+   vaste laag, dus hij ligt boven de foto. */
+.bar-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 8px;
+  pointer-events: none;
+}
+
 /* ---- Plaatshouders (allereerste keer laden, nog niets bewaard) ---- */
 .sk-line {
   display: block;
