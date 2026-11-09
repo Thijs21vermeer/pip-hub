@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-34">
+  <link rel="stylesheet" href="stijl.css?v=20261109-35">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -31,8 +31,6 @@
   </div>
 
   <main class="page" style="padding-top: 0">
-    <h1 class="date" id="date"></h1>
-
     <div id="linked" hidden>
       <!-- Taken als schilderijtjes aan de muur: groot en klein om en om.
            Tik op een open schilderijtje om af te vinken. -->
@@ -48,10 +46,12 @@
         <ol class="timeline" id="timeline"></ol>
       </section>
 
-      <section class="wrapped" id="wrapped" hidden aria-labelledby="wrapped-title">
-        <small>Nieuw · tot half januari</small>
+      <!-- Pip Wrapped staat er altijd; in december en de eerste helft van
+           januari als het hele jaar, daarbuiten als het jaar tot nu toe. -->
+      <section class="wrapped" id="wrapped" aria-labelledby="wrapped-title">
+        <small id="wrapped-kicker">Het jaar tot nu toe</small>
         <h2 id="wrapped-title"></h2>
-        <p>Het jaar van Pip in 12 schermen, met muziek.</p>
+        <p>Het jaar van Pip in schermen, met muziek.</p>
         <a class="play" href="wrapped.html"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Afspelen</a>
       </section>
 
@@ -90,10 +90,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-34"></script>
-  <script src="telefoon.js?v=20261109-34"></script>
-  <script src="taken.js?v=20261109-34"></script>
-  <script src="stats.js?v=20261109-34"></script>
+  <script src="config.js?v=20261109-35"></script>
+  <script src="telefoon.js?v=20261109-35"></script>
+  <script src="taken.js?v=20261109-35"></script>
+  <script src="stats.js?v=20261109-35"></script>
   <script>
     (function () {
       "use strict";
@@ -366,9 +366,9 @@
       // ---- Wrapped, scores en instellen ----
 
       function renderWrapped() {
-        const year = P.wrappedSeason();
-        $("wrapped").hidden = !year;
-        if (year) $("wrapped-title").textContent = `Pip Wrapped ${year}`;
+        const season = P.wrappedSeason();
+        $("wrapped-kicker").textContent = season ? "Nieuw · tot half januari" : "Het jaar tot nu toe";
+        $("wrapped-title").textContent = `Pip Wrapped ${season || new Date().getFullYear()}`;
       }
 
       function renderScores() {
@@ -431,7 +431,6 @@
       }
 
       (async function start() {
-        $("date").textContent = P.longDate(new Date());
         const { linked, fresh } = await P.showLinked();
         if (fresh === false && !linked) $("not-linked").textContent = "Deze QR-code werkt niet (meer). Tik op de Google Hub opnieuw op het QR-knopje en scan de nieuwe code.";
         if (!linked) return;
@@ -441,7 +440,6 @@
         setInterval(load, 60 * 1000);
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
-            $("date").textContent = P.longDate(new Date());
             load();
           }
         });

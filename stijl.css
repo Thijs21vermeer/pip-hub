@@ -178,7 +178,7 @@ a {
 }
 .hero-slides {
   position: absolute;
-  inset: 0 0 30px;
+  inset: 0;
   overflow: hidden;
 }
 .hero-slides img {
@@ -201,7 +201,7 @@ a {
 .hero-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 48%, var(--bg) 86%, var(--bg) 100%);
+  background: linear-gradient(180deg, transparent 56%, color-mix(in srgb, var(--bg) 55%, transparent) 78%, var(--bg) 97%);
   pointer-events: none;
 }
 .hero-camera {
@@ -221,15 +221,6 @@ a {
   height: 22px;
 }
 
-.date {
-  position: relative;
-  margin: -24px 0 0;
-  padding: 0 24px;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: 42px;
-  line-height: 1;
-}
 
 .tasks-head {
   display: flex;
@@ -255,7 +246,7 @@ a {
    moet, daaronder twee kolommen die verspringen, met boogjes en ronde
    tegels. Elke taak een eigen aardetint en een groot lijnicoon. */
 .task-gallery {
-  margin-top: 44px;
+  margin-top: 40px;
 }
 .gallery-head {
   display: flex;
