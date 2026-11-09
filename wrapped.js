@@ -903,11 +903,16 @@
 
   // Per hoofdstuk een bekend nummer (config.js, wrappedMusic): een fragment van
   // 30 seconden van Apple Music, zacht in en uit. Lukt ophalen niet, dan stil.
+  //
+  // Eén speler voor alle nummers: wisselen = een ander fragment in dezelfde
+  // speler. Zo kunnen er nooit twee nummers tegelijk klinken, ook niet op een
+  // iPhone (die negeert het volume en liet eerder bij het starten of snel
+  // doortikken een tweede nummer door het eerste heen spelen). De speler start
+  // tijdens de tik op Afspelen; daarna mag hij op een iPhone ook vanzelf verder.
   const VOLUME = 0.6;
-  const music = { songs: [], urls: new Map(), current: null, audio: null };
-  // Een iPhone negeert het volume (leest altijd 1): daar kan niets uitfaden, dus
-  // stopt het oude nummer meteen. Anders klinken bij snel doortikken twee
-  // nummers door elkaar.
+  const music = { songs: [], urls: new Map(), current: null, audio: null, player: null, turn: 0 };
+  // Kan het volume omlaag (niet op een iPhone: die leest altijd 1)? Dan in- en
+  // uitfaden, anders meteen wisselen.
   const CAN_FADE = (() => {
     try {
       const probe = new Audio();
@@ -918,7 +923,7 @@
     }
   })();
 
-  // Een nieuwe fade op hetzelfde fragment stopt de vorige (snel heen en weer tikken).
+  // Een nieuwe fade stopt de vorige (snel heen en weer tikken).
   function fade(audio, to, ms, done) {
     const from = audio.volume;
     const start = performance.now();
@@ -952,22 +957,19 @@
     return true;
   }
 
-  // iPhone: een fragment mag pas vanzelf spelen (bij het automatisch doorgaan
-  // naar het volgende scherm) als het één keer tijdens een tik is gestart.
-  // Daarom bij het openen, en dat is een tik op Afspelen, elk fragment heel
-  // even stil starten. De telefoonpagina haalt de fragmenten daarvoor al vooraf
-  // op (preloadMusic).
+  function player() {
+    if (!music.player) {
+      music.player = new Audio();
+      music.player.preload = "auto";
+      music.player.loop = true;
+    }
+    return music.player;
+  }
+
+  // Voor de telefoon (wrapped.html): de speler alvast maken. Het eerste nummer
+  // start in dezelfde tik (open → show → playSongFor), daarna mag het vanzelf.
   function unlockMusic() {
-    music.songs.forEach((song) => {
-      const audio = audioFor(song);
-      if (!audio || audio.pipUnlocked) return;
-      audio.pipUnlocked = true;
-      audio.muted = true;
-      audio.play()
-        .then(() => { if (audio !== music.audio) audio.pause(); })
-        .catch(() => {})
-        .then(() => { audio.muted = false; });
-    });
+    player();
   }
 
   function renderSong() {
@@ -987,67 +989,75 @@
     return fits.find((s) => s.when && s.when === slide.variant) || fits.find((s) => !s.when) || null;
   }
 
-  // Elk fragment één keer klaarzetten, zodat het volgende scherm meteen klinkt.
-  const audios = new Map();
-
-  function audioFor(song) {
-    const url = song && music.urls.get(song.id);
-    if (!url) return null;
-    if (!audios.has(song.id)) {
-      const audio = new Audio(url);
-      audio.preload = "auto";
-      audio.loop = true;
-      audio.volume = 0;
-      audios.set(song.id, audio);
-    }
-    return audios.get(song.id);
-  }
-
   // Naar het refrein (config.js, start): pas kan dat als het fragment geladen is.
-  function seek(audio, seconds) {
+  function seek(audio, seconds, turn) {
     if (audio.readyState >= 1) audio.currentTime = seconds;
-    else audio.addEventListener("loadedmetadata", () => { audio.currentTime = seconds; }, { once: true });
+    else audio.addEventListener("loadedmetadata", () => { if (turn === music.turn) audio.currentTime = seconds; }, { once: true });
   }
 
   function playSongFor(slide) {
     const song = songFor(slide);
     if (song === music.current) return;
-    const old = music.audio;
-    if (old && CAN_FADE) fade(old, 0, 500, () => { if (music.audio !== old) old.pause(); });
-    else if (old) old.pause();
     music.current = song;
     renderSong();
-    const audio = audioFor(song);
-    music.audio = audio;
-    if (!audio) return;
-    seek(audio, song.start || 0);
-    audio.volume = 0;
-    if (state && state.playing) {
-      // Was het laden trager dan het doortikken, dan is dit nummer al niet meer
-      // aan de beurt: niet alsnog laten klinken.
-      audio.play().then(() => {
-        if (music.audio !== audio) audio.pause();
-        else fade(audio, VOLUME, 800);
-      }).catch(() => {});
+    const audio = player();
+    const url = song && music.urls.get(song.id);
+    // Alleen de laatste wissel telt (snel doortikken).
+    const turn = ++music.turn;
+    let swapped = false;
+    const swap = () => {
+      if (swapped || turn !== music.turn) return;
+      swapped = true;
+      if (!url) {
+        audio.pause();
+        music.audio = null;
+        return;
+      }
+      music.audio = audio;
+      if (audio.src !== url) audio.src = url;
+      seek(audio, song.start || 0, turn);
+      if (CAN_FADE) audio.volume = 0;
+      if (state && state.playing) {
+        audio.play().then(() => {
+          if (turn === music.turn && CAN_FADE) fade(audio, VOLUME, 800);
+        }).catch(() => {});
+      }
+    };
+    // Klinkt er al iets en kan het zacht, dan eerst even uitfaden. Een fade
+    // loopt op beeldjes; staat de pagina even stil, dan na 400 ms toch wisselen.
+    if (CAN_FADE && music.audio && !audio.paused) {
+      fade(audio, 0, 300, swap);
+      setTimeout(swap, 400);
+    } else {
+      swap();
     }
   }
 
+  // Het volgende fragment alvast laten ophalen (alleen ophalen, nooit afspelen).
+  const warm = new Map();
   function preloadAfter(index) {
     const next = state && state.slides[index + 1];
-    if (next) audioFor(songFor(next));
+    const song = next && songFor(next);
+    const url = song && music.urls.get(song.id);
+    if (!url || warm.has(url)) return;
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.src = url;
+    warm.set(url, audio);
   }
 
   function stopMusic() {
-    const old = music.audio;
-    if (old && CAN_FADE) fade(old, 0, 600, () => old.pause());
-    else if (old) old.pause();
+    const audio = music.player;
+    music.turn += 1;
+    if (audio && CAN_FADE && !audio.paused) fade(audio, 0, 600, () => audio.pause());
+    else if (audio) audio.pause();
     music.audio = null;
     music.current = null;
-    // Na het uitfaden de klaargezette fragmenten loslaten.
+    // Na het uitfaden de opgehaalde fragmenten loslaten.
     setTimeout(() => {
       if (state) return;
-      audios.forEach((audio) => audio.pause());
-      audios.clear();
+      warm.forEach((audio) => audio.removeAttribute("src"));
+      warm.clear();
     }, 800);
   }
 
@@ -1279,7 +1289,7 @@
     root.classList.toggle("paused", !playing);
     if (music.audio) {
       const audio = music.audio;
-      if (playing) audio.play().then(() => { if (music.audio === audio) fade(audio, VOLUME, 600); else audio.pause(); }).catch(() => {});
+      if (playing) audio.play().then(() => { if (music.audio === audio && CAN_FADE) fade(audio, VOLUME, 600); }).catch(() => {});
       else music.audio.pause();
     }
     const button = root.querySelector(".wr-pause");
