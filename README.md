@@ -169,6 +169,13 @@ Hoe het werkt:
   - In **Alle taken → Bewerken** zie je het als "seintje 22:00".
 - **De meldingen gaan via ntfy.sh** naar een geheim onderwerp: `NTFY_TOPIC` in Netlify, en op de Mac in `~/.config/pip/ntfy-topic.txt`. Wie dat onderwerp kent, kan meelezen; zet het dus niet in GitHub.
 
+**Meldingen van de Pip-app zelf.** Tik je op een ntfy-melding, dan opent ntfy; een iPhone opent een link uit een melding altijd in de browser, nooit in een app op het beginscherm. Daarom stuurt het servertje elke melding ook als melding van Pip zelf (web-push): tik je daarop, dan opent de Pip-app.
+
+- **Aanzetten:** open Pip vanaf het beginscherm, tik op Thuis bij Instellen op **Meldingen** en sta ze toe. Uitzetten kan op dezelfde plek. Werkt op een iPhone vanaf iOS 16.4, alleen in Pip op het beginscherm.
+- **Hoe:** de telefoon meldt zich aan bij `/api/push` (`netlify/functions/push.mjs`, met de kattenbak-code); `notify` in `netlify/lib/notify.mjs` stuurt naar ntfy én naar elke aangemelde telefoon (`netlify/lib/push.mjs`, bibliotheek `web-push`); `sw.js` laat de melding zien en opent Pip bij een tik. Een aanmelding die niet meer bestaat, gaat vanzelf uit de lijst.
+- **Sleutels:** `VAPID_PUBLIC_KEY` en `VAPID_PRIVATE_KEY` in de Netlify-instellingen (eenmalig gemaakt met `web-push`; een reservekopie staat op de Mac in `~/.config/pip/vapid.json`). Zonder die twee gaan er alleen ntfy-meldingen uit.
+- **Dubbel?** Wie de Pip-meldingen aan heeft, kan zich in de ntfy-app afmelden voor het onderwerp; anders komt elke melding twee keer.
+
 Meldingen aanzetten, op elke telefoon:
 
 1. Installeer de app **ntfy** (App Store of Google Play).

@@ -2,13 +2,25 @@
 // huis abonneert zich in de app op hetzelfde onderwerp, NTFY_TOPIC. Dat onderwerp
 // is lang en willekeurig, want wie het kent kan meelezen. Zonder NTFY_TOPIC: stil.
 
+import { sendPush } from "./push.mjs";
+
 const TIMEZONE = "Europe/Amsterdam";
 // Foto van Pip bij elke melding: op Android als icoontje, op de iPhone als plaatje
 // in de melding (daar blijft het icoon het ntfy-logo).
 const PHOTO_URL = "https://thijs21vermeer.github.io/pip-hub/pip-icoon.jpg";
 const RESET_HOUR = 4; // net als Pip (config.js resetHour): een nieuwe dag begint om 04:00
 
+// Elke melding gaat naar ntfy én naar de telefoons die meldingen van de Pip-app
+// aan hebben gezet (web-push, netlify/lib/push.mjs). Geeft terug of ntfy lukte.
 export async function notify({ title, message, priority = 3 }) {
+  const [ntfy] = await Promise.all([
+    sendNtfy({ title, message, priority }),
+    sendPush({ title, message }).catch(() => 0),
+  ]);
+  return ntfy;
+}
+
+async function sendNtfy({ title, message, priority }) {
   const topic = process.env.NTFY_TOPIC;
   if (!topic) return false;
   // JSON in plaats van headers: dan mogen titels ook ë bevatten.

@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-38">
+  <link rel="stylesheet" href="stijl.css?v=20261109-39">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -78,6 +78,7 @@
           </a>
         </div>
         <div id="more-pages"></div>
+        <button class="link-row" id="push-row" type="button" hidden><i class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><span>Meldingen<small id="push-sub"></small></span><b aria-hidden="true">›</b></button>
         <button class="link-row" id="unlink" type="button"><i class="led" aria-hidden="true"></i><span>Gekoppeld met de Google Hub</span><b aria-hidden="true">›</b></button>
       </section>
     </div>
@@ -107,10 +108,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-38"></script>
-  <script src="telefoon.js?v=20261109-38"></script>
-  <script src="taken.js?v=20261109-38"></script>
-  <script src="stats.js?v=20261109-38"></script>
+  <script src="config.js?v=20261109-39"></script>
+  <script src="telefoon.js?v=20261109-39"></script>
+  <script src="taken.js?v=20261109-39"></script>
+  <script src="stats.js?v=20261109-39"></script>
   <script>
     (function () {
       "use strict";
@@ -425,6 +426,40 @@
           more.appendChild(a);
         }
       }
+
+      // Meldingen van de Pip-app zelf: tik je erop, dan opent Pip (sw.js). Op een
+      // iPhone alleen in Pip op het beginscherm.
+      const PUSH_TEXT = {
+        on: "Aan: seintjes van Pip komen op deze telefoon",
+        off: "Uit: tik om de seintjes van Pip hier te krijgen",
+        denied: "Geblokkeerd: zet ze aan bij Instellingen › Meldingen › Pip",
+      };
+      async function showPush() {
+        const state = await P.pushState().catch(() => "unsupported");
+        $("push-row").hidden = state === "unsupported";
+        $("push-row").dataset.state = state;
+        if (PUSH_TEXT[state]) $("push-sub").textContent = PUSH_TEXT[state];
+      }
+      $("push-row").addEventListener("click", async () => {
+        const state = $("push-row").dataset.state;
+        if (state === "denied") return;
+        if (state === "on") {
+          if (!confirm("Meldingen van Pip op deze telefoon uitzetten?")) return;
+          await P.disablePush().catch(() => {});
+        } else {
+          $("push-sub").textContent = "Even aanzetten…";
+          try {
+            await P.enablePush();
+          } catch (error) {
+            $("push-sub").textContent = error.code === "DENIED"
+              ? PUSH_TEXT.denied
+              : "Aanzetten lukte niet. Probeer het zo nog eens.";
+            return;
+          }
+        }
+        showPush();
+      });
+      showPush();
 
       // Achter "Gekoppeld met de Google Hub": de koppelcode kopiëren (voor Pip op
       // het beginscherm, die eigen opslag heeft) of ontkoppelen.

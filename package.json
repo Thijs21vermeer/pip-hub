@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Alleen voor de Netlify-functies (netlify/functions); Pip zelf heeft niets nodig.",
   "dependencies": {
-    "@netlify/blobs": "11.1.4"
+    "@netlify/blobs": "11.1.4",
+    "web-push": "3.6.7"
   }
 }

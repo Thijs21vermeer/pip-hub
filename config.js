@@ -81,6 +81,9 @@ window.PIP_CONFIG = {
   // Profielfoto's van de baasjes (Scores, held van de week, Pip Wrapped). Je zet
   // ze erop onder Baasjes op fotos.html. Zelfde servertje en code.
   baasjes: { url: "https://pip-kattenbak.netlify.app/api/baasjes" },
+  // Meldingen van de Pip-app zelf (web-push), aan te zetten op Thuis in de app op
+  // het beginscherm (netlify/functions/push.mjs, sw.js).
+  push: { url: "https://pip-kattenbak.netlify.app/api/push" },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is

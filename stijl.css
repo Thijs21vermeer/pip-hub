@@ -826,6 +826,19 @@ button.piece:active .tick {
   font-size: 20px;
   font-weight: 400;
 }
+.link-row .row-ico {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  color: var(--accent);
+}
+.link-row .row-ico svg {
+  width: 20px;
+  height: 20px;
+}
+.link-row[hidden] {
+  display: none;
+}
 .link-row small {
   display: block;
   margin-top: 2px;

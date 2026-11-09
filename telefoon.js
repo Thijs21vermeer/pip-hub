@@ -108,6 +108,61 @@
     return window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
   }
 
+  // ---- Meldingen van de Pip-app (web-push) ----
+  // Op een iPhone kan dat alleen in Pip op het beginscherm (iOS 16.4+). Tik je
+  // op zo'n melding, dan opent de Pip-app (sw.js).
+
+  function pushSupported() {
+    return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  }
+
+  function pushUrl() {
+    return serverUrl("push", (config.push && config.push.url) || "");
+  }
+
+  function keyBytes(base64) {
+    const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+    return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+  }
+
+  // "on", "off", "denied" of "unsupported".
+  async function pushState() {
+    if (!pushSupported() || !pushUrl()) return "unsupported";
+    if (Notification.permission === "denied") return "denied";
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = registration && await registration.pushManager.getSubscription();
+    return subscription && Notification.permission === "granted" ? "on" : "off";
+  }
+
+  // Meteen na een tik aanroepen: iOS vraagt alleen dan om toestemming.
+  async function enablePush() {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") throw Object.assign(new Error("DENIED"), { code: "DENIED" });
+    await navigator.serviceWorker.register("sw.js");
+    const registration = await navigator.serviceWorker.ready;
+    const { publicKey } = await getJson(pushUrl());
+    const subscription = (await registration.pushManager.getSubscription())
+      || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+    const response = await fetch(pushUrl(), {
+      method: "PUT",
+      headers: auth({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ subscription: subscription.toJSON() }),
+    });
+    if (!response.ok) throw new Error(String(response.status));
+  }
+
+  async function disablePush() {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = registration && await registration.pushManager.getSubscription();
+    if (!subscription) return;
+    await fetch(pushUrl(), {
+      method: "DELETE",
+      headers: auth({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+    }).catch(() => {});
+    await subscription.unsubscribe();
+  }
+
   // Nog niet gekoppeld: onder de uitleg een knop om de koppelcode te plakken
   // (gekopieerd op Thuis in de browser) of hem te typen.
   function showPairing() {
@@ -237,6 +292,7 @@
 
   window.PipPhone = {
     config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp,
+    pushSupported, pushState, enablePush, disablePush,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
   };
 })();
