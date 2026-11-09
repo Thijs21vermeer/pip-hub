@@ -41,6 +41,9 @@ window.PIP_CONFIG = {
   // zodat ze een herstart van de Hub overleven.
   settings: { url: "https://pip-kattenbak.netlify.app/api/pip-settings" },
 
+  // Jaarlog voor het scoreboard en Pip Wrapped (zelfde servertje en code).
+  jaarlog: { url: "https://pip-kattenbak.netlify.app/api/jaarlog", refreshMinutes: 30 },
+
   // Foto's van Pip voor de ruststand (fotos.html). Zelfde servertje en code als
   // de kattenbak.
   // Hoe de fotolijst wisselt (tempo, volgorde, zoom) stel je in op fotos.html.

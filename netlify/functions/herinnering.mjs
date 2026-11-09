@@ -3,18 +3,20 @@
 // er hoeft thuis niets aan te staan. Per taak hooguit één seintje per dag.
 //
 // Een taak krijgt een tijd met remind: "22:00" (zie pip-settings.mjs).
+//
+// Zondag vanaf 20:00 komt hier ook de melding "Held van de week" vandaan: wie
+// deze week de meeste punten haalde (zie lib/history.mjs).
 
 import { getStore } from "@netlify/blobs";
+import { readPart, recordReminder, weekScores, weekStart, yearOf } from "../lib/history.mjs";
 import { localTime, notify, pipDay } from "../lib/notify.mjs";
 
 // Liep de planner even niet, dan tot 2 uur na de tijd nog sturen.
 const LATE_MINUTES = 120;
+const HERO_HOUR = 20;
 
-export default async () => {
-  const store = getStore({ name: "pip", consistency: "strong" });
-  const settings = (await store.get("settings", { type: "json" })) || {};
+async function remindOpenTasks(store, settings, now) {
   const sent = (await store.get("reminders-sent", { type: "json" })) || {};
-  const now = Date.now();
   const here = localTime(now);
   const today = pipDay(now);
   let changed = false;
@@ -32,8 +34,44 @@ export default async () => {
     });
     sent[task.id] = today;
     changed = true;
+    await recordReminder(task.id, now).catch(() => {});
   }
   if (changed) await store.setJSON("reminders-sent", sent);
+}
+
+// Zondag 20:00 tot middernacht, één keer per week.
+async function announceHero(store, now) {
+  const here = localTime(now);
+  const weekday = new Date(`${here.date}T12:00:00Z`).getUTCDay();
+  if (weekday !== 0 || here.hour < HERO_HOUR) return;
+  const week = weekStart(now);
+  const last = await store.get("hero-sent", { type: "text" });
+  if (last === week) return;
+  // Een week kan over de jaargrens lopen: dan beide jaren.
+  const years = new Set([yearOf(now), yearOf(now - 6 * 24 * 60 * 60 * 1000)]);
+  const ticks = [];
+  for (const year of years) {
+    const part = await readPart(year, "ticks");
+    if (part) ticks.push(...part.list);
+  }
+  const scores = weekScores(ticks, now);
+  await store.set("hero-sent", week);
+  if (!scores.length) return;
+  const [[name, points], ...rest] = scores;
+  const others = rest.slice(0, 3).map(([who, pts]) => `${who} ${pts}`).join(", ");
+  await notify({
+    title: `Held van de week: ${name}`,
+    message: `${points} ${points === 1 ? "punt" : "punten"} deze week.${others ? ` Daarna: ${others}.` : ""} Morgen begint een nieuwe week.`,
+  });
+}
+
+export default async () => {
+  const store = getStore({ name: "pip", consistency: "strong" });
+  const settings = (await store.get("settings", { type: "json" })) || {};
+  const now = Date.now();
+  await remindOpenTasks(store, settings, now);
+  await announceHero(store, now).catch((error) =>
+    console.error(JSON.stringify({ event: "hero.error", code: error.code || error.name || "UNKNOWN" })));
 };
 
 export const config = { schedule: "*/5 * * * *" };

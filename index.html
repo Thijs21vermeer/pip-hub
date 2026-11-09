@@ -7,10 +7,10 @@
   <link rel="icon" href="pip.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
   <!-- ?v= bij elke nieuwe versie ophogen: GitHub Pages laat bestanden 10 minuten cachen,
        zonder nieuw nummer draait de Google Hub dan nog half de oude versie. -->
-  <link rel="stylesheet" href="style.css?v=20261029-25">
+  <link rel="stylesheet" href="style.css?v=20261109-1">
 </head>
 <body>
   <header class="top">
@@ -38,7 +38,10 @@
     <div class="left">
       <div class="group-head">
         <h2 class="group-title">Taken</h2>
-        <button class="group-link" id="tasks-more" data-action="all-tasks"></button>
+        <div class="group-links">
+          <button class="group-link" data-action="scores-open">Scores ›</button>
+          <button class="group-link" id="tasks-more" data-action="all-tasks"></button>
+        </div>
       </div>
       <section class="tasks" id="tasks" aria-label="Taken"></section>
       <div class="group-head">
@@ -79,17 +82,48 @@
     <div class="log-columns" id="log-columns"></div>
   </section>
 
+  <!-- Scores: punten per huisgenoot (week, maand, jaar) en badges, uit het jaarlog
+       van het servertje. Vanaf hier ook Pip Wrapped. -->
+  <section class="page" id="scores" hidden aria-label="Scores">
+    <header class="page-head scores-head">
+      <button class="page-back" data-action="scores-close">‹ Terug</button>
+      <div>
+        <h2>Scores</h2>
+        <p id="scores-label"></p>
+      </div>
+      <button class="scores-wrapped" data-action="wrapped-open">Pip Wrapped</button>
+      <div class="page-tabs" role="tablist" aria-label="Periode" id="scores-tabs">
+        <button role="tab" data-action="scores-period" data-period="week">Week</button>
+        <button role="tab" data-action="scores-period" data-period="month">Maand</button>
+        <button role="tab" data-action="scores-period" data-period="year">Jaar</button>
+      </div>
+    </header>
+    <div class="scores-body">
+      <div class="scores-ranking" id="scores-ranking"></div>
+      <div class="scores-badges">
+        <h3>Badges</h3>
+        <div class="scores-badge-list" id="scores-badges"></div>
+      </div>
+    </div>
+    <p class="scores-foot">Dagtaak 1 punt · weektaak 3 · maand- of kwartaaltaak 5. Zondag om 20:00 is er een held van de week; maandag begint de week opnieuw.</p>
+  </section>
+
+  <!-- Pip Wrapped: het jaar van Pip in schermen die vanzelf doorlopen (wrapped.js). -->
+  <section class="wrapped" id="wrapped" hidden aria-label="Pip Wrapped"></section>
+
   <!-- Ruststand: foto van Pip met de klok. Tik ergens om het dashboard te openen;
        na 2 minuten niets doen komt de ruststand vanzelf terug. -->
   <section class="rest" id="rest" data-action="wake" aria-label="Ruststand">
     <!-- Twee lagen die in elkaar overvloeien: de standaardfoto en de foto's die
          jullie via de startpagina sturen. -->
-    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261029-25" alt="Pip"></div>
+    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-1" alt="Pip"></div>
     <div class="rest-photo"><img class="rest-bg" alt=""><img class="rest-fg" alt="Pip"></div>
     <div class="rest-card" id="rest-card" hidden></div>
     <!-- Telefoon koppelen: QR-knopje linksonder; de QR-code klapt daar open. Hij
          bevat de koppelcode, dus hij staat alleen open als je erom vraagt. -->
     <button class="rest-qr-button" id="rest-qr-button" data-action="rest-qr" aria-label="QR-code om een telefoon te koppelen"></button>
+    <!-- In december: Pip Wrapped van dit jaar (in de eerste helft van januari nog dat van vorig jaar). -->
+    <button class="rest-wrapped-button" id="rest-wrapped-button" data-action="wrapped-open" hidden></button>
     <div class="rest-qr" id="rest-qr" data-action="rest-qr-close" hidden>
       <div class="rest-qr-code" id="rest-qr-code"></div>
       <div class="rest-qr-text">
@@ -117,8 +151,10 @@
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
   </div>
 
-  <script src="config.js?v=20261029-25"></script>
-  <script src="app.js?v=20261029-25"></script>
-  <script src="cast.js?v=20261029-25"></script>
+  <script src="config.js?v=20261109-1"></script>
+  <script src="stats.js?v=20261109-1"></script>
+  <script src="wrapped.js?v=20261109-1"></script>
+  <script src="app.js?v=20261109-1"></script>
+  <script src="cast.js?v=20261109-1"></script>
 </body>
 </html>

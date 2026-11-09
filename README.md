@@ -189,6 +189,18 @@ NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --dir
 
 - **Welke commando's kent de kattenbak?** `python3 tools/tuya_check.py` laat het zien. Dit script leest alleen.
 
+## Scores en Pip Wrapped
+
+- **Scores ›** (naast Taken) toont wie het meest voor Pip deed, per week, maand of jaar, met badges. Punten: dagtaak 1, weektaak of om de week 3, maand- of kwartaaltaak 5. De week begint maandag om 04:00.
+- **Ruststand:** het kaartje linksboven zegt wie deze week leidt. Zondag vanaf 20:00 staat er de held van de week (met confetti, zonder geluid), en komt er een ntfy-melding.
+- **Pip Wrapped:** het jaar van Pip in schermen die vanzelf doorlopen (tik rechts voor verder, links voor terug). In december en de eerste helft van januari staat er een knop in de ruststand; via **Scores › Pip Wrapped** kan het altijd ("tot nu toe"). Een scherm zonder genoeg cijfers wordt overgeslagen.
+- **Waar de cijfers vandaan komen:** het servertje houdt een jaarlog bij in Netlify Blobs (`netlify/lib/history.mjs`):
+  - elk vinkje, met naam en tijd (`pip-settings.mjs`; "Toch niet gedaan" haalt het weer weg);
+  - elke 3 uur per dag de kattenbakbezoeken (aantal, gewicht, per uur), het voeren en het draaien (`jaarlog.mjs`, want Tuya bewaart maar 7 dagen);
+  - wanneer een herinnering ging (`herinnering.mjs`).
+  De Hub haalt het op via `/api/jaarlog` en rekent zelf (`stats.js`); `wrapped.js` tekent de schermen.
+- **Kosten** in Wrapped komen uit Voerraad (aankopen en verzekering van dit jaar), via dezelfde koppelcode als de voorraad. Zonder die cijfers valt het kostenscherm weg.
+
 ## 5. Eerste test op de Google Hub
 
 - [ ] Pip verschijnt op de Google Hub

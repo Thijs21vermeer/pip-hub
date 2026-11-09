@@ -14,15 +14,9 @@
 // optioneel TUYA_FEEDER_ID (voerbak), TUYA_REGION (standaard eu) en
 // ALLOWED_ORIGINS (komma's).
 
-import { createHash, createHmac, randomUUID } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json, setting } from "../lib/http.mjs";
-
-const BASES = {
-  eu: "https://openapi.tuyaeu.com",
-  "eu-west": "https://openapi-weaz.tuyaeu.com",
-  us: "https://openapi.tuyaus.com",
-};
+import { accessToken, DAY_MS, readVisits, tuya } from "../lib/tuya.mjs";
 
 // Pip-actie → datapunt van deze kattenbak (uitgelezen met tools/tuya_check.py).
 const ACTIONS = { clean: "Clean", odourless: "odourless" };
@@ -32,10 +26,8 @@ const CLEAN_COOLDOWN_MS = 2 * 60 * 1000;
 // Voerbak (F14-W): manual_feed geeft 1-10 porties; niet dubbel na een dubbele tik.
 const MAX_PORTIONS = 10;
 const FEED_COOLDOWN_MS = 60 * 1000;
-const EMPTY_HASH = createHash("sha256").update("").digest("hex");
 // Logboek: Tuya bewaart de bezoeken aan de kattenbak, maar niet de voerbeurten
 // (alleen de laatste) en niet het schoonmaken. Die houden we hier zelf bij.
-const DAY_MS = 24 * 60 * 60 * 1000;
 const LOG_DAYS = 7;
 const LOG_KEY = "action-log";
 // Na een voerbeurt via het overzicht meldt de voerbak hem zelf ook; zelfde beurt.
@@ -43,41 +35,6 @@ const SAME_FEED_MS = 3 * 60 * 1000;
 
 let lastClean = 0;
 let lastFeed = 0;
-let cachedToken = null;
-
-// ---- Tuya OpenAPI (HMAC-SHA256-ondertekening) ----
-
-async function tuya(method, url, payload, token = "") {
-  const body = payload === undefined ? "" : JSON.stringify(payload);
-  const t = String(Date.now());
-  const nonce = randomUUID().replaceAll("-", "");
-  const contentHash = body ? createHash("sha256").update(body).digest("hex") : EMPTY_HASH;
-  const stringToSign = [method, contentHash, "", url].join("\n");
-  const sign = createHmac("sha256", setting("TUYA_ACCESS_SECRET"))
-    .update(setting("TUYA_ACCESS_ID") + token + t + nonce + stringToSign)
-    .digest("hex")
-    .toUpperCase();
-  const headers = {
-    client_id: setting("TUYA_ACCESS_ID"),
-    t,
-    nonce,
-    sign_method: "HMAC-SHA256",
-    sign,
-    "Content-Type": "application/json",
-  };
-  if (token) headers.access_token = token;
-  const response = await fetch(BASES[process.env.TUYA_REGION || "eu"] + url, { method, headers, body: body || undefined });
-  const data = await response.json();
-  if (!data.success) throw Object.assign(new Error(`TUYA_${data.code}`), { code: String(data.code) });
-  return data.result;
-}
-
-async function accessToken() {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60 * 1000) return cachedToken.value;
-  const result = await tuya("GET", "/v1.0/token?grant_type=1");
-  cachedToken = { value: result.access_token, expiresAt: Date.now() + result.expire_time * 1000 };
-  return cachedToken.value;
-}
 
 async function readDevice(device, token) {
   const [shadow, info] = await Promise.all([
@@ -148,38 +105,9 @@ async function noteFeederRecord(lastFeed) {
   await logStore().setJSON(LOG_KEY, log);
 }
 
-// Bezoeken aan de kattenbak van de afgelopen week: per bezoek het gewicht en
-// hoe lang het duurde (twee meldingen op hetzelfde moment).
-async function readVisits(token) {
-  const end = Date.now();
-  const visits = new Map();
-  let rowKey = "";
-  for (let page = 0; page < 5; page++) {
-    // Tuya ondertekent de query letterlijk en op alfabet: geen %2C voor de komma.
-    const query = [
-      "codes=cat_weight,excretion_time_day",
-      `end_time=${end}`,
-      rowKey && `last_row_key=${rowKey}`,
-      "size=100",
-      `start_time=${end - LOG_DAYS * DAY_MS}`,
-    ].filter(Boolean).join("&");
-    const result = await tuya("GET", `/v2.0/cloud/thing/${setting("TUYA_DEVICE_ID")}/report-logs?${query}`, undefined, token);
-    for (const entry of result.logs || []) {
-      const key = Math.round(entry.event_time / 5000);
-      const visit = visits.get(key) || { at: entry.event_time };
-      if (entry.code === "cat_weight") visit.weightKg = Math.round(Number(entry.value) / 100) / 10;
-      if (entry.code === "excretion_time_day") visit.seconds = Number(entry.value);
-      visits.set(key, visit);
-    }
-    if (!result.has_more || !result.last_row_key) break;
-    rowKey = result.last_row_key;
-  }
-  return [...visits.values()].sort((a, b) => b.at - a.at);
-}
-
 async function readLogbook() {
   const token = await accessToken();
-  const [visits, log] = await Promise.all([readVisits(token), readLog()]);
+  const [visits, log] = await Promise.all([readVisits(token, LOG_DAYS), readLog()]);
   return {
     visits,
     feeds: [...log.feeds].reverse(),

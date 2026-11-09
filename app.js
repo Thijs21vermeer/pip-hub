@@ -106,6 +106,8 @@
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
     home: svg('<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>'),
     qr: svg('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20v.01M17 20h3v-3"/>'),
+    flame: svg('<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 .8 1.5 1.5 2 2 2 0-2.5-.5-4.5 1-7z"/>'),
+    crown: svg('<path d="M3 18h18l-1.6-10-5 4.5L12 5l-2.4 7.5-5-4.5z"/>'),
   };
 
   // Zoals in Voerraad (components/ProductCard.tsx).
@@ -135,6 +137,12 @@
     pageEdit: document.getElementById("page-edit"),
     log: document.getElementById("log"),
     logColumns: document.getElementById("log-columns"),
+    scores: document.getElementById("scores"),
+    scoresLabel: document.getElementById("scores-label"),
+    scoresTabs: document.getElementById("scores-tabs"),
+    scoresRanking: document.getElementById("scores-ranking"),
+    scoresBadges: document.getElementById("scores-badges"),
+    restWrappedButton: document.getElementById("rest-wrapped-button"),
     rest: document.getElementById("rest"),
     restClock: document.getElementById("rest-clock"),
     restDate: document.getElementById("rest-date"),
@@ -319,6 +327,7 @@
     }
     const wasAllDone = allDueDone();
     state.done[task.id] = entry;
+    noteTick(task, entry);
     saveState();
     render();
     if (!wasAllDone && allDueDone()) celebrate();
@@ -335,6 +344,7 @@
     const stock = stockFor(task);
     if (stock && entry.took) state.stock[stock.id] += entry.took;
     delete state.done[task.id];
+    if (jaarlog) jaarlog.ticks = jaarlog.ticks.filter((tick) => !(tick.id === task.id && tick.at === entry.at));
     saveState();
     render();
   }
@@ -404,7 +414,7 @@
         throw new Error(String(response.status));
       } else {
         const data = await response.json();
-        voerraad = { items: data.items, pets: data.pets || [], fetchedAt: Date.now(), error: null };
+        voerraad = { items: data.items, pets: data.pets || [], costs: data.costs || [], fetchedAt: Date.now(), error: null };
         writeStorage(VOERRAAD_CACHE_KEY, JSON.stringify(voerraad));
       }
     } catch (error) {
@@ -1165,8 +1175,8 @@
   const CONFETTI_PER_SIDE = 90;
   const CONFETTI_MS = 5000;
 
-  function celebrate() {
-    playParty();
+  function celebrate(silent) {
+    if (!silent) playParty();
     const canvas = document.createElement("canvas");
     const ratio = window.devicePixelRatio || 1;
     const width = window.innerWidth;
@@ -1270,7 +1280,8 @@
   function renderRest() {
     const open = dueTasks().filter((task) => !currentDone(task));
     const stock = restStock();
-    let html = "";
+    let html = restScores();
+    renderWrappedButton();
     if (open.length) {
       const rows = open.slice(0, REST_TASKS).map((task) =>
         restRow(ICONS[task.icon] || ICONS.paw, task.title, restWhen(task)));
@@ -1290,11 +1301,12 @@
   }
 
   function showRest() {
-    // Niet midden in het typen of tijdens een video: dan later nog eens.
-    if (editor || !els.video.hidden) return scheduleRest();
+    // Niet midden in het typen, tijdens een video of Pip Wrapped: dan later nog eens.
+    if (editor || !els.video.hidden || window.PipWrapped.isOpen()) return scheduleRest();
     closeSheet();
     closePage();
     closeLog();
+    closeScores();
     renderRest();
     els.rest.hidden = false;
   }
@@ -1478,6 +1490,192 @@
     logOpen = false;
     els.log.hidden = true;
     clearTimeout(logTimer);
+  }
+
+  // ---- Scores en Pip Wrapped ----
+
+  // Het servertje schrijft elk vinkje in een jaarlog (netlify/lib/history.mjs);
+  // de Hub haalt dat op en rekent zelf (stats.js). Een vinkje dat hier net is
+  // gezet telt meteen mee, ook voordat het servertje het heeft.
+  const SCORES_TIMEOUT_MS = 2 * 60 * 1000;
+  const POINTS = { daily: 1, weekly: 3, biweekly: 3, monthly: 5, quarterly: 5 };
+  const HERO_SHOWN_KEY = "pip-hub-hero-shown";
+  let jaarlog = null; // { year, startedAt, ticks, days, reminders }
+  let scoresOpen = false;
+  let scoresTimer = null;
+  let scoresPeriod = "week";
+
+  function jaarlogUrl() {
+    return localOverride("jaarlog") || (config.jaarlog && config.jaarlog.url);
+  }
+
+  async function fetchJaarlog(year) {
+    if (!actionCode() || !jaarlogUrl()) return null;
+    try {
+      const response = await fetch(`${jaarlogUrl()}?year=${year}`, { headers: authHeader(), cache: "no-store" });
+      return response.ok ? await response.json() : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async function refreshJaarlog() {
+    const data = await fetchJaarlog(new Date().getFullYear());
+    if (!data) return;
+    jaarlog = data;
+    renderScores();
+    renderRest();
+  }
+
+  function noteTick(task, entry) {
+    if (!jaarlog) return;
+    jaarlog.ticks = jaarlog.ticks.concat({
+      id: task.id,
+      title: task.title,
+      icon: task.icon || "paw",
+      repeat: repeatOf(task),
+      by: entry.by,
+      at: entry.at,
+      pts: POINTS[repeatOf(task)] || 1,
+    });
+  }
+
+  function renderScores() {
+    if (!scoresOpen) return;
+    els.scoresTabs.querySelectorAll("button").forEach((button) =>
+      button.setAttribute("aria-selected", String(button.dataset.period === scoresPeriod)));
+    if (!jaarlog) {
+      els.scoresLabel.textContent = actionCode() ? "Laden…" : "Koppel eerst het servertje op de startpagina";
+      els.scoresRanking.innerHTML = "";
+      els.scoresBadges.innerHTML = "";
+      return;
+    }
+    const result = window.PipStats.scores(jaarlog, scoresPeriod, Date.now(), people(), config.resetHour);
+    els.scoresLabel.textContent = result.label;
+    const max = Math.max(1, ...result.ranking.map((person) => person.points));
+    els.scoresRanking.innerHTML = result.ranking.slice(0, 5).map((person, index) => {
+      const first = index === 0 && person.points > 0;
+      return `
+        <div class="score-row${first ? " first" : ""}">
+          <span class="score-place">${index + 1}</span>
+          <span class="score-avatar">${escapeHtml(person.name.charAt(0).toUpperCase())}</span>
+          <div class="score-main">
+            <div class="score-name">${escapeHtml(person.name)}${first ? ICONS.crown : ""}</div>
+            <div class="score-bar"><i style="width:${Math.round((person.points / max) * 100)}%"></i></div>
+            <p class="score-detail">${escapeHtml(person.detail)}</p>
+          </div>
+          <div class="score-points"><strong>${person.points}</strong><span>${person.points === 1 ? "punt" : "punten"}</span></div>
+        </div>`;
+    }).join("");
+    els.scoresBadges.innerHTML = result.badges.map((badge) => `
+      <div class="badge${badge.text === "Nog niemand" ? " empty" : ""}">
+        <span class="icon">${ICONS[badge.icon] || ICONS.paw}</span>
+        <div><strong>${escapeHtml(badge.title)}</strong><span>${escapeHtml(badge.text)}</span></div>
+      </div>`).join("");
+  }
+
+  function touchScores() {
+    clearTimeout(scoresTimer);
+    scoresTimer = setTimeout(closeScores, SCORES_TIMEOUT_MS);
+  }
+
+  function openScores() {
+    scoresOpen = true;
+    els.scores.hidden = false;
+    renderScores();
+    refreshJaarlog();
+    touchScores();
+  }
+
+  function closeScores() {
+    scoresOpen = false;
+    els.scores.hidden = true;
+    clearTimeout(scoresTimer);
+  }
+
+  // Bovenin het kaartje van de ruststand: wie deze week leidt, en zondag vanaf
+  // 20:00 de held van de week (met één keer confetti).
+  function restScores() {
+    if (!jaarlog) return "";
+    const now = Date.now();
+    const hero = window.PipStats.hero(jaarlog, now, config.resetHour);
+    if (hero) {
+      if (readStorage(HERO_SHOWN_KEY) !== hero.week && !els.rest.hidden) {
+        writeStorage(HERO_SHOWN_KEY, hero.week);
+        setTimeout(() => celebrate(true), 600);
+      }
+      const others = hero.others.map((person) => `${escapeHtml(person.name)} ${person.points}`).join(", ");
+      return `
+        <div class="rest-hero">
+          <div class="rest-title">Held van de week</div>
+          <div class="rest-hero-name">${escapeHtml(hero.name)}</div>
+          <div class="rest-hero-points">${hero.points} punten${others ? ` · daarna ${others}` : ""}</div>
+        </div>`;
+    }
+    const lead = window.PipStats.leader(jaarlog, now, config.resetHour);
+    if (!lead) return "";
+    return `<div class="rest-title">Deze week</div><ul class="rest-list">${restRow(ICONS.crown, `${lead.name} leidt`, `${lead.points} pt`)}</ul>`;
+  }
+
+  // Welk jaar Pip Wrapped laat zien: in december dit jaar, in de eerste helft
+  // van januari nog het vorige. Daarbuiten alleen via Scores (tot nu toe).
+  function wrappedSeason(date) {
+    if (date.getMonth() === 11) return date.getFullYear();
+    if (date.getMonth() === 0 && date.getDate() <= 15) return date.getFullYear() - 1;
+    return null;
+  }
+
+  function renderWrappedButton() {
+    const year = wrappedSeason(new Date());
+    const show = Boolean(year && actionCode() && (year !== new Date().getFullYear() || (jaarlog && jaarlog.ticks.length)));
+    els.restWrappedButton.hidden = !show;
+    if (show) els.restWrappedButton.textContent = `Pip Wrapped ${year}`;
+  }
+
+  function photoList() {
+    return slides.filter((slide) => slide !== DEFAULT_SLIDE).map((slide) => slide.url);
+  }
+
+  // Kosten van Pip uit Voerraad (alleen-lezen), voor het kostenscherm in Wrapped.
+  function wrappedCosts(year) {
+    if (!voerraad || !voerraad.costs || !voerraad.pets) return null;
+    const pet = voerraad.pets.find((p) => p.name.toLowerCase() === String(config.petName || "").toLowerCase()) || voerraad.pets[0];
+    const costs = pet && voerraad.costs.find((c) => c.petId === pet.id && c.year === year);
+    if (!costs || !(costs.total > 0)) return null;
+    const label = (category) => (category === "insurance" ? "Verzekering" : (CATEGORIES[category] || CATEGORIES.other).label);
+    const priciest = costs.months.indexOf(Math.max(...costs.months));
+    const since = costs.since && costs.since > `${year}-01-07`
+      ? `sinds ${Number(costs.since.slice(8))} ${MONTHS[Number(costs.since.slice(5, 7)) - 1]}` : "";
+    return {
+      total: costs.total,
+      days: costs.days,
+      since,
+      rows: costs.categories.map((c) => ({ name: label(c.category), amount: c.amount })),
+      priciest: costs.months.length >= 3 ? MONTHS[priciest] : null,
+    };
+  }
+
+  async function openWrapped() {
+    const now = new Date();
+    const year = wrappedSeason(now) || now.getFullYear();
+    let log = year === now.getFullYear() ? jaarlog : null;
+    if (!log) log = await fetchJaarlog(year);
+    if (!log) log = { year, startedAt: null, ticks: [], days: {}, reminders: [] };
+    const data = window.PipStats.wrapped(log, {
+      people: people(),
+      tasks: tasks(),
+      photos: photoList(),
+      costs: wrappedCosts(year),
+    }, Date.now(), config.resetHour);
+    clearTimeout(restTimer);
+    hideRestQr();
+    window.PipWrapped.open(data, {
+      photo: photoList()[0] || "pip-foto.jpg",
+      portrait: "pip-icoon.jpg",
+      onClose: () => {
+        if (els.rest.hidden) scheduleRest();
+      },
+    });
   }
 
   // ---- Taak toevoegen of wijzigen (met schermtoetsenbord) ----
@@ -1991,6 +2189,7 @@
     audio(); // geluid mag pas na een tik
     if (pageOpen) touchPage();
     if (logOpen) touchLog();
+    if (scoresOpen) touchScores();
     if (els.rest.hidden) scheduleRest(); // elke tik stelt de ruststand uit
     const target = event.target.closest("[data-action]");
     if (!target || target.disabled) {
@@ -2024,6 +2223,15 @@
       openLog();
     } else if (action === "log-close") {
       closeLog();
+    } else if (action === "scores-open") {
+      openScores();
+    } else if (action === "scores-close") {
+      closeScores();
+    } else if (action === "scores-period") {
+      scoresPeriod = target.dataset.period;
+      renderScores();
+    } else if (action === "wrapped-open") {
+      openWrapped();
     } else if (action === "page-edit") {
       pageEditing = !pageEditing;
       renderPage();
@@ -2109,6 +2317,8 @@
   setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
   refreshPhotos();
   setInterval(refreshPhotos, 5 * 60 * 1000); // wijzigingen op fotos.html binnen 5 minuten
+  refreshJaarlog();
+  setInterval(refreshJaarlog, ((config.jaarlog && config.jaarlog.refreshMinutes) || 30) * 60 * 1000);
   scheduleSlide();
   // Lukte het eerste ophalen niet (geen netwerk), elke minuut opnieuw proberen.
   setInterval(() => {
@@ -2127,5 +2337,5 @@
   }, 10000);
 
   // Voor cast.js: de startknop stuurt de codes en de huisgenoten naar de Hub.
-  window.Pip = { setVoerraadCode, setActionCode, setPeople, playVideo, closeVideo };
+  window.Pip = { setVoerraadCode, setActionCode, setPeople, playVideo, closeVideo, openWrapped };
 })();

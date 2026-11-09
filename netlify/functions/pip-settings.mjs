@@ -12,6 +12,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
+import { recordTicks } from "../lib/history.mjs";
 import { localTime, notify } from "../lib/notify.mjs";
 
 const ICONS = new Set(["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"]);
@@ -185,6 +186,11 @@ export default async (request) => {
     next.updatedAt = new Date().toISOString();
     await store.setJSON("settings", next);
     await announceDone(current, next).catch(() => {}); // een melding mag het opslaan nooit tegenhouden
+    // Elk vinkje in het jaarlog (scoreboard en Pip Wrapped); mag ook nooit tegenhouden.
+    if ("done" in body) {
+      await recordTicks(current, next).catch((error) =>
+        console.error(JSON.stringify({ event: "jaarlog.ticks.error", code: error.code || error.name || "UNKNOWN" })));
+    }
     return json(200, next, headers);
   } catch (error) {
     console.error(JSON.stringify({ event: "pip-settings.error", code: error.code || error.name || "UNKNOWN" }));
