@@ -137,6 +137,10 @@ a {
   color: var(--muted);
   font-size: 14px;
 }
+.status:empty {
+  min-height: 0;
+  margin: 0;
+}
 .status.ok {
   color: var(--done-text);
 }
@@ -227,10 +231,6 @@ a {
   line-height: 1;
 }
 
-.tasks {
-  margin: 56px 12px 0;
-  padding: 22px 18px 10px;
-}
 .tasks-head {
   display: flex;
   align-items: baseline;
@@ -250,113 +250,284 @@ a {
   font-size: 15px;
   font-weight: 600;
 }
-.bars {
-  display: flex;
-  gap: 4px;
-  margin: 12px 4px 0;
-}
-.bars i {
-  flex: 1;
-  height: 5px;
-  border-radius: 99px;
-  background: var(--line);
-}
-.bars i.on {
-  background: var(--accent);
-}
 
-.callout {
+/* Taken als galerij (instellingen.html): een brede tegel voor wat het eerst
+   moet, daaronder twee kolommen die verspringen, met boogjes en ronde
+   tegels. Elke taak een eigen aardetint en een groot lijnicoon. */
+.task-gallery {
+  margin-top: 44px;
+}
+.gallery-head {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 18px;
-  padding: 16px 16px 16px 18px;
-  border-radius: 22px;
-  background: var(--accent);
-  color: #fff8f0;
-}
-.callout-text {
-  flex: 1;
-  min-width: 0;
-}
-.callout small {
-  display: block;
-  color: rgba(255, 248, 240, 0.82);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.callout strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 22px;
-  line-height: 1.15;
-}
-.callout button {
-  flex: none;
-  min-height: 46px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 99px;
-  background: #fff8f0;
-  color: var(--accent-dark);
-  font-size: 16px;
-  font-weight: 700;
-}
-.also {
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.also li {
-  display: flex;
-  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
-  padding: 0 4px;
-  border-bottom: 1px solid var(--line);
+  margin: 0 12px 36px;
 }
-.also li span {
-  flex: 1;
-  min-width: 0;
+.gallery-head .section-title {
+  margin: 0;
+  font-size: 46px;
 }
-.also li strong {
-  display: block;
-  font-size: 16px;
-}
-.also li small {
-  color: var(--muted);
-  font-size: 13px;
-}
-.also li button {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1.5px solid var(--line);
+/* Voortgang: een label met een ringetje dat volloopt. */
+.progress-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px 9px 10px;
   border-radius: 99px;
-  background: transparent;
-  font-size: 15px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.progress-pill b {
+  font-weight: 800;
+}
+.progress-pill.all {
+  background: var(--done-bg);
+  color: var(--done-text);
+  font-weight: 700;
+}
+.progress-ring {
+  width: 26px;
+  height: 26px;
+}
+.ring-track {
+  stroke: var(--track);
+}
+.ring-fill {
+  stroke: var(--accent);
+}
+.progress-pill.all .ring-track,
+.progress-pill.all .ring-fill {
+  stroke: var(--done-text);
+}
+/* De muur: rijen van twee, groot en klein om en om, op één ooghoogte. */
+.wall {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 4px 6px 0;
+}
+.wall-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+.wall-row.single {
+  justify-content: center;
+}
+.piece {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.piece.big { width: 46%; }
+.piece.small { width: 33%; }
+.piece.single { width: 42%; }
+button.piece {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease;
+}
+button.piece:active {
+  transform: scale(0.97);
+}
+/* Klassieke lijst: verguld profiel met licht en schaduw (de rand), een
+   parelrandje in het lijstwerk (::before), een gouden binnenrand tegen het
+   passe-partout, en een schuin gesneden venster rond het kunstwerk. Drie
+   soorten om en om: goud, notenhout met goud, ebbenhout met goud. */
+.frame {
+  position: relative;
+  display: block;
+  padding: 9px;
+  border: 2px solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  background: var(--moulding);
+  box-shadow: 0 0 0 1px var(--edge), 0 10px 18px rgba(43, 32, 25, 0.2), 0 2px 4px rgba(43, 32, 25, 0.14);
+}
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1.5px dotted var(--bead);
+  pointer-events: none;
+}
+.mat {
+  display: block;
+  padding: 9px;
+  background: #f8f1e3;
+  box-shadow: inset 0 0 0 2px var(--lip-dark), inset 0 0 0 4px var(--lip), inset 0 3px 8px rgba(43, 32, 25, 0.28);
+}
+.piece.small .frame {
+  padding: 7px;
+}
+.piece.small .frame::before {
+  inset: 2px;
+  border-width: 1px;
+}
+.piece.small .mat {
+  padding: 7px;
+}
+.f0 {
+  --moulding: linear-gradient(135deg, #fbe6a8 0%, #c9973f 22%, #f4d98f 45%, #a8742c 68%, #e3bd6b 100%);
+  --hi: #fdf0c4;
+  --lo: #7a5420;
+  --edge: #4a3112;
+  --bead: rgba(255, 244, 210, 0.85);
+  --lip: #e9c97a;
+  --lip-dark: #8a6224;
+}
+.f1 {
+  --moulding: linear-gradient(135deg, #7a5638 0%, #4a3020 35%, #6b4a30 60%, #33210f 100%);
+  --hi: #9a7350;
+  --lo: #20140a;
+  --edge: #1a1008;
+  --bead: rgba(222, 182, 104, 0.8);
+  --lip: #d9b264;
+  --lip-dark: #6e4a1c;
+}
+.f2 {
+  --moulding: linear-gradient(135deg, #4a423d 0%, #1c1816 45%, #36302c 75%, #121010 100%);
+  --hi: #5e5550;
+  --lo: #050404;
+  --edge: #000;
+  --bead: rgba(222, 182, 104, 0.7);
+  --lip: #d9b264;
+  --lip-dark: #6e4a1c;
+}
+.art {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  background: var(--tone, var(--accent));
+  color: rgba(255, 248, 240, 0.92);
+  box-shadow: 0 0 0 1px rgba(90, 60, 25, 0.35), 0 0 0 4px #fffaf0, 0 0 0 5px rgba(90, 60, 25, 0.18), inset 0 0 18px rgba(0, 0, 0, 0.14);
+}
+.art svg {
+  width: 58%;
+  height: 58%;
+}
+.art.t0 { --tone: #b3562a; }
+.art.t1 { --tone: #5f7a4e; }
+.art.t2 { --tone: #9a6b22; }
+.art.t3 { --tone: #7a4a5e; }
+.art.t4 { --tone: #4f6b7d; }
+.art.all { --tone: #6f8f5c; }
+/* Foto van het apparaat: op licht getint papier, het witte van de foto valt weg. */
+.art {
+  position: relative;
+}
+.art.photo {
+  background: color-mix(in srgb, var(--tone) 16%, #fbf6ee);
+}
+.art.photo img {
+  display: block;
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+/* Schoonmaken: sterretjes in een rondje op het schilderij. */
+.art-badge {
+  position: absolute;
+  top: 7%;
+  right: 7%;
+  display: grid;
+  place-items: center;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--tone);
+  color: #fff8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+}
+.art-badge svg {
+  width: 62%;
+  height: 62%;
+}
+.piece.done:not(.all) .art {
+  filter: grayscale(0.9);
+  opacity: 0.45;
+}
+/* Bordje onder het schilderij. */
+.label {
+  display: block;
+  margin-top: 14px;
+  padding: 0 2px;
+}
+.label strong {
+  display: block;
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+.piece.big .label strong,
+.piece.single .label strong {
+  font-size: 23px;
+}
+.piece.done:not(.all) .label strong {
+  color: var(--soft);
+}
+.label small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+.label small.soon {
+  color: var(--accent);
   font-weight: 600;
 }
-.all-done {
-  margin-top: 18px;
-  padding: 16px 18px;
-  border-radius: 22px;
+.label .avatar {
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+/* Stickertje op de hoek van de lijst, zoals de stip naast een schilderij in
+   een galerie: leeg = nog doen, groen met vinkje = gedaan. */
+.tick {
+  position: absolute;
+  right: -11px;
+  bottom: -11px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  transition: background 0.15s;
+}
+button.piece:active .tick {
+  background: var(--accent);
+}
+.piece.done .tick {
+  border: 0;
   background: var(--done-bg);
   color: var(--done-text);
 }
-.all-done small {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.tick svg {
+  width: 13px;
+  height: 13px;
 }
-.all-done strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 18px;
-  font-weight: 600;
+
+/* Activiteit: een eigen kaart onder de taken. */
+.activity {
+  margin: 56px 12px 0;
+  padding: 22px 18px 12px;
 }
 
 .timeline {
@@ -367,7 +538,7 @@ a {
 }
 .timeline li {
   display: grid;
-  grid-template-columns: 46px 12px 1fr 28px;
+  grid-template-columns: 46px 12px 1fr;
   align-items: center;
   gap: 10px;
   min-height: 52px;
@@ -383,9 +554,6 @@ a {
   border-radius: 50%;
   background: var(--card);
   border: 2px solid var(--muted);
-}
-.timeline .dot.by-someone {
-  border-color: var(--accent);
 }
 .timeline strong {
   display: block;

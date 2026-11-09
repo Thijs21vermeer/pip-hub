@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-33">
+  <link rel="stylesheet" href="stijl.css?v=20261109-34">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -34,13 +34,19 @@
     <h1 class="date" id="date"></h1>
 
     <div id="linked" hidden>
-      <section class="card tasks" aria-labelledby="tasks-title">
-        <div class="tasks-head"><h2 id="tasks-title">Taken</h2><span id="progress"></span></div>
-        <div class="bars" id="bars" aria-hidden="true"></div>
-        <div id="todo"></div>
-        <ol class="timeline" id="timeline" aria-label="Vandaag"></ol>
+      <!-- Taken als schilderijtjes aan de muur: groot en klein om en om.
+           Tik op een open schilderijtje om af te vinken. -->
+      <section class="section task-gallery" aria-labelledby="tasks-title">
+        <div class="gallery-head"><h2 class="section-title" id="tasks-title">Taken</h2><span class="progress-pill" id="progress"></span></div>
+        <div class="wall" id="tiles"></div>
       </section>
       <p class="status" id="status" role="status"></p>
+
+      <!-- Wat Pip en de apparaten vandaag deden; los van de taken. -->
+      <section class="card activity" aria-labelledby="activity-title">
+        <div class="tasks-head"><h2 id="activity-title">Activiteit</h2><span>Vandaag</span></div>
+        <ol class="timeline" id="timeline"></ol>
+      </section>
 
       <section class="wrapped" id="wrapped" hidden aria-labelledby="wrapped-title">
         <small>Nieuw · tot half januari</small>
@@ -84,10 +90,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-33"></script>
-  <script src="telefoon.js?v=20261109-33"></script>
-  <script src="taken.js?v=20261109-33"></script>
-  <script src="stats.js?v=20261109-33"></script>
+  <script src="config.js?v=20261109-34"></script>
+  <script src="telefoon.js?v=20261109-34"></script>
+  <script src="taken.js?v=20261109-34"></script>
+  <script src="stats.js?v=20261109-34"></script>
   <script>
     (function () {
       "use strict";
@@ -167,6 +173,38 @@
         return start.getTime();
       }
 
+      const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+      // Dezelfde iconen als op de Hub (app.js), als grote lijntekening op de tegels.
+      const ICONS = {
+        paw: '<circle cx="5.5" cy="10" r="2"/><circle cx="9.5" cy="5.5" r="2"/><circle cx="14.5" cy="5.5" r="2"/><circle cx="18.5" cy="10" r="2"/><path d="M12 11c3 0 6 3.5 6 6.2 0 2-1.6 2.8-3.2 2.8-1.2 0-1.8-.6-2.8-.6s-1.6.6-2.8.6C7.6 20 6 19.2 6 17.2 6 14.5 9 11 12 11z"/>',
+        sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+        moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+        drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+        box: '<path d="M3 10h18l-1.8 8.2a2 2 0 0 1-2 1.8H6.8a2 2 0 0 1-2-1.8z"/><path d="M8 14.5h.01M12 15.5h.01M16 14.5h.01"/>',
+        bowl: '<path d="M3 12h18a9 7 0 0 1-18 0z"/><path d="M9 8.5h.01M12 7h.01M15 8.5h.01"/>',
+        heart: '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>',
+        pill: '<path d="M10.5 20.5l-7-7a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>',
+        wind: '<path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>',
+        scissors: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/>',
+        ball: '<circle cx="12" cy="12" r="9"/><path d="M5.5 6.5c3 2 4.5 6 4 11.5M18.5 6.5c-3 2-4.5 6-4 11.5M3.5 11c5-1 12-1 17 0"/>',
+        flame: '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 .8 1.5 1.5 2 2 2 0-2.5-.5-4.5 1-7z"/>',
+      };
+      const art = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.paw}</svg>`;
+      const TONES = 5;
+      // Foto's van de spullen in de lijstjes (map taken/), gekozen op de naam van
+      // de taak; een taak zonder foto houdt zijn icoon. Schoonmaaktaken krijgen
+      // er sterretjes bij.
+      const PICTURES = [
+        [/natvoer|blikje|zakje/i, "taken/natvoer.jpg"],
+        [/fontein/i, "taken/fontein.jpg"],
+        [/voerbak|brokjes|droogvoer/i, "taken/voerbak.jpg"],
+        [/kattenbak|\bbak\b/i, "taken/kattenbak.jpg"],
+        [/water/i, "taken/fontein.jpg"],
+      ];
+      const CLEANING = /schoonma|reinig|poets|afwas/i;
+      const SPARKLES = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2.5l1.6 4.4 4.4 1.6-4.4 1.6L11 14.5l-1.6-4.4L5 8.5l4.4-1.6z"/><path d="M18 12.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/><path d="M6.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
+      const pictureFor = (title) => (PICTURES.find(([test]) => test.test(title)) || [])[1] || null;
+
       // Belangrijkste eerst: dagtaken met een seintje, dan dagtaken, dan de rest.
       function urgency(item) {
         const repeat = window.PipTasks.repeatOf(item.task);
@@ -180,49 +218,80 @@
         const list = window.PipTasks.status(tasks, settings.done || {}, new Date(), config.resetHour);
         const done = list.filter((item) => item.done);
         const open = list.filter((item) => !item.done).sort((a, b) => urgency(a) - urgency(b));
-        $("progress").textContent = `${done.length} van ${list.length} gedaan`;
-        $("bars").innerHTML = list.map((_, i) => `<i class="${i < done.length ? "on" : ""}"></i>`).join("");
+        const allDone = list.length > 0 && !open.length;
+        // Voortgang als label met een ringetje dat volloopt.
+        const part = list.length ? done.length / list.length : 0;
+        const ring = `<svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke-width="5" class="ring-track"/><circle cx="18" cy="18" r="14" fill="none" stroke-width="5" stroke-linecap="round" class="ring-fill" stroke-dasharray="${(part * 87.96).toFixed(1)} 87.96" transform="rotate(-90 18 18)"/></svg>`;
+        $("progress").innerHTML = allDone ? `${ring}<span>Alles gedaan</span>` : `${ring}<span><b>${done.length} van ${list.length}</b> gedaan</span>`;
+        $("progress").classList.toggle("all", allDone);
 
-        const todo = $("todo");
-        todo.innerHTML = "";
-        if (!open.length && list.length) {
-          const last = done.slice().sort((a, b) => b.done.at - a.done.at)[0];
-          todo.innerHTML = '<div class="all-done"><small>Alles gedaan</small><strong></strong></div>';
-          todo.querySelector("strong").textContent = `${last.task.title}: ${last.done.by}, om ${P.clock(last.done.at)}`;
-        } else if (open.length) {
-          const first = open[0];
-          const callout = document.createElement("div");
-          callout.className = "callout";
-          callout.innerHTML = '<div class="callout-text"><small></small><strong></strong></div><button type="button">Gedaan</button>';
-          callout.querySelector("small").textContent = `Nog doen · ${first.task.remind || first.when}`;
-          callout.querySelector("strong").textContent = first.task.title;
-          callout.querySelector("button").addEventListener("click", () => askWho(first.task));
-          todo.appendChild(callout);
-          if (open.length > 1) {
-            const also = document.createElement("ul");
-            also.className = "also";
-            for (const item of open.slice(1)) {
-              const li = document.createElement("li");
-              li.innerHTML = '<span><strong></strong><small></small></span><button type="button">Gedaan</button>';
-              li.querySelector("strong").textContent = item.task.title;
-              li.querySelector("small").textContent = item.task.remind ? `Seintje om ${item.task.remind}` : `Nog doen ${item.when}`;
-              li.querySelector("button").addEventListener("click", () => askWho(item.task));
-              also.appendChild(li);
-            }
-            todo.appendChild(also);
+        const people = P.people(settings);
+        const today = todayStart(new Date());
+        const tone = new Map(tasks.map((task, i) => [task.id, i % TONES]));
+        const doneSorted = done.slice().sort((a, b) => b.done.at - a.done.at);
+        const box = $("tiles");
+        box.innerHTML = "";
+
+        // Eén ingelijst schilderijtje met een bordje eronder. Open: in kleur,
+        // leeg rondje, tik = wie heeft het gedaan? Gedaan: vaal, met een vinkje.
+        const piece = (item, size, index) => {
+          const isOpen = !item.all && !item.done;
+          const el = document.createElement(isOpen ? "button" : "div");
+          if (isOpen) el.type = "button";
+          const color = item.all ? "all" : `t${tone.get(item.task.id) || 0}`;
+          const photo = item.all ? null : pictureFor(item.task.title);
+          const inside = (photo ? `<img src="${photo}" alt="">` : art(item.all ? "heart" : item.task.icon))
+            + (!item.all && CLEANING.test(item.task.title) ? `<span class="art-badge">${SPARKLES}</span>` : "");
+          el.className = `piece ${size} f${index % 3} ${isOpen ? "open" : "done"}${item.all ? " all" : ""}`;
+          el.innerHTML = `<span class="frame"><span class="mat"><span class="art ${color}${photo ? " photo" : ""}" aria-hidden="true">${inside}</span></span><i class="tick" aria-hidden="true">${isOpen ? "" : CHECK}</i></span>
+            <span class="label"><strong></strong><small></small></span>`;
+          const title = el.querySelector("strong");
+          const sub = el.querySelector("small");
+          if (item.all) {
+            title.textContent = "Alles gedaan";
+            sub.textContent = "Pip is helemaal verzorgd.";
+          } else if (isOpen) {
+            title.textContent = item.task.title;
+            const due = item.task.remind ? `Vandaag om ${item.task.remind}` : item.when.charAt(0).toUpperCase() + item.when.slice(1);
+            sub.textContent = due;
+            sub.classList.toggle("soon", Boolean(item.task.remind));
+            el.setAttribute("aria-label", `${item.task.title} afvinken (${due.toLowerCase()})`);
+            el.addEventListener("click", () => askWho(item.task));
+          } else {
+            title.textContent = item.task.title;
+            const at = item.done.at >= today ? P.clock(item.done.at) : P.longDate(new Date(item.done.at)).replace(/^\w+ /, "");
+            sub.append(P.avatarElement(item.done.by, people, avatars), `${item.done.by} · ${at}`);
           }
+          return el;
+        };
+
+        // Opgehangen in rijen van twee op één ooghoogte. De belangrijkste van
+        // het paar hangt groot, afwisselend links en rechts. Een laatste losse
+        // hangt in het midden.
+        const pieces = allDone ? [{ all: true }, ...doneSorted] : [...open, ...doneSorted];
+        let flip = false;
+        for (let i = 0; i < pieces.length; i += 2) {
+          const row = document.createElement("div");
+          row.className = "wall-row";
+          if (i + 1 >= pieces.length) {
+            row.classList.add("single");
+            row.appendChild(piece(pieces[i], "single", i));
+          } else {
+            const big = piece(pieces[i], "big", i);
+            const small = piece(pieces[i + 1], "small", i + 1);
+            if (flip) row.append(small, big);
+            else row.append(big, small);
+            flip = !flip;
+          }
+          box.appendChild(row);
         }
         renderTimeline();
       }
 
-      // Wat er vandaag gebeurde: vinkjes, voeren, de bak draaien en Pip op de bak.
+      // Wat Pip en de apparaten vandaag deden: op de bak, voeren, de bak draaien.
       function renderTimeline() {
         const start = todayStart(new Date());
-        const people = P.people(data.settings);
         const events = [];
-        for (const tick of (data.jaarlog && data.jaarlog.ticks) || []) {
-          if (tick.at >= start) events.push({ at: tick.at, text: tick.title, sub: `door ${tick.by}`, who: tick.by });
-        }
         const log = data.log || {};
         for (const feed of log.feeds || []) {
           if (feed.at >= start) events.push({ at: feed.at, text: "Gevoerd uit de voerbak", sub: `${feed.portions} ${feed.portions === 1 ? "portie" : "porties"}${feed.source === "overzicht" ? " · via de Hub" : ""}` });
@@ -233,7 +302,7 @@
         const visits = (log.visits || []).filter((visit) => visit.at >= start).sort((a, b) => a.at - b.at);
         visits.forEach((visit, i) => events.push({ at: visit.at, text: "Pip op de kattenbak", sub: `${i + 1}e keer vandaag${visit.weightKg ? ` · ${String(visit.weightKg).replace(".", ",")} kg` : ""}` }));
         events.sort((a, b) => a.at - b.at);
-        const shown = events.slice(-6);
+        const shown = events.slice(-8);
         const list = $("timeline");
         list.innerHTML = "";
         if (!shown.length) {
@@ -244,11 +313,10 @@
         list.style.background = "";
         for (const event of shown) {
           const li = document.createElement("li");
-          li.innerHTML = `<time></time><i class="dot${event.who ? " by-someone" : ""}" aria-hidden="true"></i><span><strong></strong><small></small></span><span></span>`;
+          li.innerHTML = '<time></time><i class="dot" aria-hidden="true"></i><span><strong></strong><small></small></span>';
           li.querySelector("time").textContent = P.clock(event.at);
           li.querySelector("strong").textContent = event.text;
           li.querySelector("small").textContent = event.sub;
-          if (event.who) li.lastElementChild.appendChild(P.avatarElement(event.who, people, avatars));
           list.appendChild(li);
         }
       }
