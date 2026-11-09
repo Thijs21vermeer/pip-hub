@@ -209,13 +209,15 @@
 
   // ---- Pip Wrapped ----
 
+  // Pips wc-ritme: het uur waarop Pip het vaakst op de kattenbak zit (plassen
+  // en poepen), als kattentype.
   const CAT_TYPES = [
-    { from: 4, to: 8, name: "De Ochtendkat", line: "Het drukst in de vroege ochtend." },
-    { from: 9, to: 11, name: "De Uitslaper", line: "Het drukst halverwege de ochtend." },
-    { from: 12, to: 16, name: "De Middagkat", line: "Het drukst in de middag." },
-    { from: 17, to: 20, name: "De Avondkat", line: "Het drukst rond etenstijd." },
+    { from: 4, to: 8, name: "De Ochtendkat", line: "Het vaakst op de pot in de vroege ochtend." },
+    { from: 9, to: 11, name: "De Uitslaper", line: "Het vaakst op de pot halverwege de ochtend." },
+    { from: 12, to: 16, name: "De Middagkat", line: "Het vaakst op de pot in de middag." },
+    { from: 17, to: 20, name: "De Avondkat", line: "Het vaakst op de pot rond etenstijd." },
   ];
-  const NIGHT_TYPE = { name: "De Nachtkat", line: "Het drukst als iedereen slaapt." };
+  const NIGHT_TYPE = { name: "De Nachtkat", line: "Het vaakst op de pot als iedereen slaapt." };
 
   function catType(hour) {
     return CAT_TYPES.find((type) => hour >= type.from && hour <= type.to) || NIGHT_TYPE;
@@ -327,11 +329,12 @@
           { name: "'s avonds", from: 18, to: 23 },
           { name: "'s nachts", from: 0, to: 5 },
         ].map((part) => ({ ...part, share: Math.round((sum(hours.slice(part.from, part.to + 1), (n) => n) / counted) * 100) }))
+          .filter((part) => part.share > 0)
           .sort((a, b) => b.share - a.share)
           .slice(0, 3)
           .map((part) => `${part.share}% ${part.name}`);
         slides.push({ type: "type", name: typeOfCat.name, line: typeOfCat.line, hours, peak: `${pad(peak)}:00`, chips: parts });
-        summary.unshift({ label: "Kattentype", value: typeOfCat.name.replace(/^De /, ""), sub: `het drukst rond ${pad(peak)}:00` });
+        summary.unshift({ label: "Wc-ritme", value: `${pad(peak)}:00`, sub: typeOfCat.name });
       }
     }
 

@@ -48,7 +48,7 @@ window.PIP_CONFIG = {
   // van 30 seconden van Apple Music dat de Hub tijdens het afspelen ophaalt (hier
   // staan alleen de titels). id = nummer in de Nederlandse iTunes Store
   // (itunes.apple.com/lookup?id=…&country=NL); slides = bij welk scherm; when =
-  // alleen bij dit kattentype; start = seconde in het fragment waar de zin van het
+  // alleen bij dit type uit Pips wc-ritme; start = seconde in het fragment waar de zin van het
   // refrein begint (opgezocht met spraakherkenning; een scherm duurt 12 seconden,
   // dus start hooguit 17,5). Leeg laten = zonder muziek.
   wrappedMusic: [

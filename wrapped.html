@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261109-32">
+  <link rel="stylesheet" href="style.css?v=20261109-33">
   <!-- Pip Wrapped op de telefoon: dezelfde schermen als op de Hub (wrapped.js),
        met de cijfers van het servertje. Eerst een tik op Afspelen, want een
        telefoon speelt pas geluid af na een tik. Delen opent meteen de deelkaart. -->
@@ -55,10 +55,10 @@
   </div>
   <section class="wrapped" id="wrapped" hidden aria-label="Pip Wrapped"></section>
 
-  <script src="config.js?v=20261109-32"></script>
-  <script src="telefoon.js?v=20261109-32"></script>
-  <script src="stats.js?v=20261109-32"></script>
-  <script src="wrapped.js?v=20261109-32"></script>
+  <script src="config.js?v=20261109-33"></script>
+  <script src="telefoon.js?v=20261109-33"></script>
+  <script src="stats.js?v=20261109-33"></script>
+  <script src="wrapped.js?v=20261109-33"></script>
   <script>
     (function () {
       "use strict";
@@ -128,11 +128,14 @@
         $("kicker").textContent = year === now.getFullYear() && !P.wrappedSeason(now) ? "Het jaar tot nu toe" : "Staat klaar";
         $("heading").textContent = `Pip Wrapped ${year}`;
         const jaarlogUrl = serverUrl("jaarlog", config.jaarlog.url);
+        // De muziek alvast ophalen: dan kan het eerste nummer meteen starten bij
+        // de tik op Afspelen (op een iPhone mag het alleen dan).
         const [settings, log, photos, avatars] = await Promise.all([
           getJson(serverUrl("settings", config.settings.url)).catch(() => ({})),
           getJson(`${jaarlogUrl}${jaarlogUrl.includes("?") ? "&" : "?"}year=${year}`).catch(() => null),
           photoUrls(8),
           P.loadAvatars(),
+          window.PipWrapped.preloadMusic(config.wrappedMusic || []).catch(() => false),
         ]);
         let voerraad = null;
         if (settings.voerraadCode && config.voerraad && config.voerraad.url) {
@@ -158,6 +161,7 @@
           photo: photos[0] || "pip-foto.jpg",
           portrait: "pip-icoon.jpg",
           music: config.wrappedMusic || [],
+          unlockMusic: true,
           avatar: (name) => avatars.get(String(name).toLowerCase()) || null,
           share: (url) => { location.href = url; },
           onClose: () => {

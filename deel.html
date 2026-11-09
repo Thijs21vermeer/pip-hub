@@ -134,12 +134,16 @@
         const index = cells.findIndex((cell) => cell.label === label);
         return index >= 0 ? cells.splice(index, 1)[0] : null;
       };
-      const type = take("Kattentype");
+      // Wc-ritme: het type staat in de uitleg. "Kattentype" is de oude naam
+      // (links gedeeld voor november 2026), daar stond het type in de waarde.
+      const wc = take("Wc-ritme");
+      const old = wc ? null : take("Kattentype");
+      const typeName = wc ? wc.sub : old ? `De ${old.value}` : null;
       const baasje = take("Favoriete baasje");
 
       text(ctx, "PIP WRAPPED", 90, 930, '700 40px "Outfit"', "#f3c77a", "left", 8);
       text(ctx, String(data.y), 80, 1120, '800 210px "Outfit"', "#fbf7f2", "left", -10);
-      if (type) text(ctx, `De ${type.value}`, 90, 1210, 'italic 400 80px "Instrument Serif"', "#f3c77a");
+      if (typeName) text(ctx, typeName, 90, 1210, 'italic 400 80px "Instrument Serif"', "#f3c77a");
 
       // Per vak: het onderwerp klein erboven, het getal groot, de uitleg eronder.
       cells.slice(0, 4).forEach((cell, i) => {

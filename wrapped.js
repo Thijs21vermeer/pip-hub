@@ -31,6 +31,12 @@
     return guess > width ? Math.floor(size * (width / guess)) : size;
   }
 
+  // Pips wc-ritme: hoe laat Pip het vaakst op de kattenbak zit. Eronder
+  // waar het op gebaseerd is, en een knipoog: spelen doet Pip 's avonds, daar
+  // is geen kattenbak voor nodig.
+  const TYPE_NOTE = "Elk bezoek aan de kattenbak telt mee, per uur van de dag.";
+  const PLAY_STICKER = `<div class="wr-sticker"><small>En met spelen?</small><strong>'s Avonds.</strong><span>Precies als jullie op de bank willen zitten.</span></div>`;
+
   // ---- Schermen ----
 
   const SLIDES = {
@@ -124,12 +130,14 @@
             <text x="200" y="224" text-anchor="middle" font-size="14" fill="#5a2f1a">piekuur</text>
             ${label(200, 16, "middle", "0:00")}${label(394, 205, "end", "6:00")}${label(200, 396, "middle", "12:00")}${label(6, 205, "start", "18:00")}
           </svg>
+          <div class="wr-abs" style="right:-34px;bottom:-34px;transform:rotate(-5deg)"><div class="wr-pop d6">${PLAY_STICKER}</div></div>
         </div>
         <div class="wr-abs" style="left:64px;top:96px;width:460px">
-          <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips kattentype</p>
+          <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips wc-ritme</p>
           <h2 class="wr-pop d1 wr-num" style="margin-top:16px;font-size:78px;line-height:.92">${esc(s.name)}</h2>
           <p class="wr-up d2 wr-serif" style="margin-top:18px;font-size:34px">${esc(s.line)}</p>
-          <div class="wr-wrap" style="margin-top:28px">${chips}</div>
+          <p class="wr-up d3" style="margin-top:12px;font-size:17px;line-height:1.4;color:#5a2f1a">${TYPE_NOTE}</p>
+          <div class="wr-wrap" style="margin-top:24px">${chips}</div>
         </div>
       </div>`;
     },
@@ -416,7 +424,7 @@
   const tall = (bg, color, inner) =>
     `<div class="wr-slide wr-tall" style="background:${bg}${color ? `;color:${color}` : ""}">${inner}</div>`;
 
-  // De klok van het kattentype, zoals op het brede scherm maar met grotere letters.
+  // De klok van Pips wc-ritme, zoals op het brede scherm maar met grotere letters.
   function clockSvg(s, size) {
     const max = Math.max(...s.hours, 1);
     let base = "";
@@ -519,14 +527,16 @@
       const chips = s.chips.map((chip, i) => `<span class="wr-up wr-chip" style="font-size:15px;padding:9px 14px;background:#2a1508;color:#ffe1d4;${delay(0.5 + i * 0.12)}">${esc(chip)}</span>`).join("");
       return tall("#ff8c66", "#2a1508", `
         <div>
-          <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips kattentype</p>
-          <h2 class="wr-pop d1 wr-num" style="margin-top:16px;font-size:64px;line-height:.92">${esc(s.name)}</h2>
+          <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips wc-ritme</p>
+          <h2 class="wr-pop d1 wr-num wr-type-name" style="margin-top:16px;line-height:.92">${esc(s.name)}</h2>
           <p class="wr-up d2 wr-serif" style="margin-top:16px;font-size:32px">${esc(s.line)}</p>
-          <div class="wr-wrap" style="margin-top:22px">${chips}</div>
+          <p class="wr-up d3" style="margin-top:10px;font-size:15px;line-height:1.4;color:#5a2f1a">${TYPE_NOTE}</p>
+          <div class="wr-wrap" style="margin-top:18px">${chips}</div>
         </div>
         <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-top:16px">
-          <div class="wr-pop d1 wr-round" style="height:100%;max-height:316px;aspect-ratio:1/1;padding:10px;background:#ffa585">
+          <div class="wr-pop d1 wr-round" style="position:relative;height:100%;max-height:316px;aspect-ratio:1/1;padding:10px;background:#ffa585">
             <div class="wr-pop d2" style="width:100%;height:100%">${clockSvg(s, "100%")}</div>
+            <div class="wr-abs wr-sticker-spot" style="transform:rotate(-5deg)"><div class="wr-pop d6">${PLAY_STICKER}</div></div>
           </div>
         </div>`);
     },
@@ -840,10 +850,11 @@
     requestAnimationFrame(step);
   }
 
+  // Geeft true als er iets opgehaald moest worden (music.songs staat meteen goed).
   async function loadMusic(songs) {
     music.songs = Array.isArray(songs) ? songs : [];
     const missing = music.songs.filter((song) => !music.urls.has(song.id));
-    if (!missing.length) return;
+    if (!missing.length) return false;
     try {
       const ids = missing.map((song) => song.id).join(",");
       const response = await fetch(`https://itunes.apple.com/lookup?id=${ids}&country=NL`);
@@ -854,6 +865,25 @@
     } catch (error) {
       // Geen internet of Apple niet bereikbaar: Wrapped speelt zonder muziek.
     }
+    return true;
+  }
+
+  // iPhone: een fragment mag pas vanzelf spelen (bij het automatisch doorgaan
+  // naar het volgende scherm) als het één keer tijdens een tik is gestart.
+  // Daarom bij het openen, en dat is een tik op Afspelen, elk fragment heel
+  // even stil starten. De telefoonpagina haalt de fragmenten daarvoor al vooraf
+  // op (preloadMusic).
+  function unlockMusic() {
+    music.songs.forEach((song) => {
+      const audio = audioFor(song);
+      if (!audio || audio.pipUnlocked) return;
+      audio.pipUnlocked = true;
+      audio.muted = true;
+      audio.play()
+        .then(() => { if (audio !== music.audio) audio.pause(); })
+        .catch(() => {})
+        .then(() => { audio.muted = false; });
+    });
   }
 
   function renderSong() {
@@ -867,7 +897,7 @@
     }
   }
 
-  // Het nummer bij een scherm; bij het kattentype het nummer van dat type.
+  // Het nummer bij een scherm; bij het wc-ritme het nummer van dat type.
   function songFor(slide) {
     const fits = music.songs.filter((s) => (s.slides || []).includes(slide.type));
     return fits.find((s) => s.when && s.when === slide.variant) || fits.find((s) => !s.when) || null;
@@ -999,6 +1029,8 @@
     const s = Math.min(window.innerWidth / width, window.innerHeight / height);
     stage.style.transform = `translate(-50%, -50%) scale(${s})`;
     root.classList.toggle("tall", tallNow);
+    // Korte telefoon (bv. iPhone SE): op een paar schermen alles iets kleiner.
+    root.classList.toggle("short", tallNow && height < 780);
     // Telefoon gedraaid: hetzelfde scherm opnieuw, in de andere opbouw.
     if (tallNow !== state.tall) {
       state.tall = tallNow;
@@ -1168,11 +1200,14 @@
     root.hidden = false;
     scale();
     music.current = null;
+    const loading = loadMusic(options.music);
+    if (options.unlockMusic) unlockMusic();
     setPlaying(true);
     show(0);
-    // De fragmenten komen pas als Apple antwoordt; dan het nummer van dit scherm.
-    loadMusic(options.music).then(() => {
-      if (!state) return;
+    // Waren de fragmenten er nog niet, dan komen ze als Apple antwoordt; dan
+    // alsnog het nummer van dit scherm.
+    loading.then((fetched) => {
+      if (!state || !fetched) return;
       music.current = null;
       playSongFor(state.slides[state.index]);
       preloadAfter(state.index);
@@ -1197,5 +1232,5 @@
     return music.current ? { title: `${music.current.artist} · ${music.current.title}`, at: audio ? Math.round(audio.currentTime * 10) / 10 : null, playing: Boolean(audio && !audio.paused) } : null;
   }
 
-  window.PipWrapped = { open, close, isOpen: () => Boolean(state), nowPlaying, months: MONTHS };
+  window.PipWrapped = { open, close, isOpen: () => Boolean(state), nowPlaying, preloadMusic: loadMusic, months: MONTHS };
 })();
