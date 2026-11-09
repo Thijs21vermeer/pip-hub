@@ -1080,14 +1080,13 @@ button.piece.open:active .tick {
 }
 
 /* ---- Acties: de kattenbak laten draaien en voeren (instellingen.html) ---- */
+/* Tussen alle blokken op Thuis (Acties, Activiteit, Wrapped, Scores, Instellen)
+   dezelfde ruimte: 56px. */
 /* Lichte tegels met een schaduw en een rond oranjebruin pijltje: zo zie je dat
    je erop kunt tikken. Elk één regel naam en één regel stand. */
 .acties {
   margin: 56px 12px 0;
   padding: 22px 18px 18px;
-}
-.acties + .activity {
-  margin-top: 30px;
 }
 .acts {
   display: grid;
