@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-40">
+  <link rel="stylesheet" href="stijl.css?v=20261109-41">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -78,13 +78,25 @@
           </a>
         </div>
         <div id="more-pages"></div>
-        <button class="link-row" id="push-row" type="button"><i class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><span>Meldingen<small id="push-sub">Even kijken…</small></span><b aria-hidden="true">›</b></button>
+        <button class="link-row" id="push-row" type="button"><i class="led off" id="push-led" aria-hidden="true"></i><span id="push-label">Meldingen</span><b aria-hidden="true">›</b></button>
         <button class="link-row" id="unlink" type="button"><i class="led" aria-hidden="true"></i><span>Gekoppeld met de Google Hub</span><b aria-hidden="true">›</b></button>
       </section>
     </div>
 
     <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
   </main>
+
+  <!-- Achter "Meldingen": uitleg en aan- of uitzetten. -->
+  <div class="sheet" id="push-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="push-title">
+      <h2 id="push-title">Meldingen</h2>
+      <p id="push-text"></p>
+      <div class="sheet-actions">
+        <button type="button" class="sheet-action" id="push-toggle"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><span id="push-toggle-label">Zet meldingen aan<small id="push-toggle-sub"></small></span></button>
+      </div>
+      <button class="sheet-cancel" id="push-close" type="button">Sluiten</button>
+    </div>
+  </div>
 
   <!-- Achter "Gekoppeld met de Google Hub": koppelcode kopiëren of ontkoppelen. -->
   <div class="sheet" id="link-sheet" hidden>
@@ -108,10 +120,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-40"></script>
-  <script src="telefoon.js?v=20261109-40"></script>
-  <script src="taken.js?v=20261109-40"></script>
-  <script src="stats.js?v=20261109-40"></script>
+  <script src="config.js?v=20261109-41"></script>
+  <script src="telefoon.js?v=20261109-41"></script>
+  <script src="taken.js?v=20261109-41"></script>
+  <script src="stats.js?v=20261109-41"></script>
   <script>
     (function () {
       "use strict";
@@ -429,36 +441,47 @@
 
       // Meldingen van de Pip-app zelf: tik je erop, dan opent Pip (sw.js). Op een
       // iPhone alleen in Pip op het beginscherm.
-      const PUSH_TEXT = {
-        on: "Aan: seintjes van Pip komen op deze telefoon",
-        off: "Uit: tik om de seintjes van Pip hier te krijgen",
-        denied: "Geblokkeerd: zet ze aan bij Instellingen › Meldingen › Pip",
-        browser: "Werkt alleen in Pip op je beginscherm",
-        unsupported: "Kan niet op deze telefoon (iOS 16.4 of nieuwer nodig)",
+      // Per stand: de regel (bolletje en tekst), de uitleg in het paneel en de knop.
+      const PUSH = {
+        on: { led: "", label: "Meldingen aan", text: "Seintjes van Pip komen op deze telefoon, zoals natvoer om 22:00 en de held van de week. Tik je op een melding, dan opent Pip.", button: "Zet meldingen uit", sub: "Je krijgt dan geen seintjes van Pip meer op deze telefoon" },
+        off: { led: "off", label: "Meldingen uit", text: "Zet ze aan om de seintjes van Pip op deze telefoon te krijgen. Tik je op een melding, dan opent Pip.", button: "Zet meldingen aan", sub: "Je iPhone vraagt één keer om toestemming" },
+        denied: { led: "warn", label: "Meldingen geblokkeerd", text: "Meldingen staan uit voor Pip op je iPhone. Zet ze aan bij Instellingen › Meldingen › Pip, en open Pip daarna opnieuw." },
+        browser: { led: "off", label: "Meldingen", text: "Meldingen werken alleen in Pip op je beginscherm. Open Pip daar en zet ze hier aan." },
+        unsupported: { led: "off", label: "Meldingen niet beschikbaar", text: "Deze telefoon kan geen meldingen van Pip krijgen (iOS 16.4 of nieuwer nodig)." },
       };
-      async function showPush() {
-        const state = await P.pushState().catch(() => "unsupported");
+      function paintPush(state, note) {
+        const look = PUSH[state] || PUSH.unsupported;
         $("push-row").dataset.state = state;
-        $("push-sub").textContent = PUSH_TEXT[state] || PUSH_TEXT.unsupported;
-      }
-      $("push-row").addEventListener("click", async () => {
-        const state = $("push-row").dataset.state;
-        if (state !== "on" && state !== "off") return;
-        if (state === "on") {
-          if (!confirm("Meldingen van Pip op deze telefoon uitzetten?")) return;
-          await P.disablePush().catch(() => {});
-        } else {
-          $("push-sub").textContent = "Even aanzetten…";
-          try {
-            await P.enablePush();
-          } catch (error) {
-            $("push-sub").textContent = error.code === "DENIED"
-              ? PUSH_TEXT.denied
-              : "Aanzetten lukte niet. Probeer het zo nog eens.";
-            return;
-          }
+        $("push-led").className = `led ${look.led}`;
+        $("push-label").textContent = look.label;
+        $("push-text").textContent = note || look.text;
+        $("push-toggle").hidden = !look.button;
+        if (look.button) {
+          $("push-toggle-label").firstChild.textContent = look.button;
+          $("push-toggle-sub").textContent = look.sub;
         }
-        showPush();
+      }
+      async function showPush(note) {
+        paintPush(await P.pushState().catch(() => "unsupported"), note);
+      }
+      $("push-row").addEventListener("click", () => { $("push-sheet").hidden = false; });
+      $("push-close").addEventListener("click", () => { $("push-sheet").hidden = true; });
+      $("push-sheet").addEventListener("click", (event) => { if (event.target === $("push-sheet")) $("push-sheet").hidden = true; });
+      $("push-toggle").addEventListener("click", async () => {
+        const state = $("push-row").dataset.state;
+        if (state === "on") {
+          await P.disablePush().catch(() => {});
+          return showPush();
+        }
+        if (state !== "off") return;
+        $("push-toggle-sub").textContent = "Even aanzetten…";
+        try {
+          await P.enablePush();
+          showPush();
+        } catch (error) {
+          if (error.code === "DENIED") showPush();
+          else showPush("Aanzetten lukte niet. Probeer het zo nog eens.");
+        }
       });
       showPush();
 

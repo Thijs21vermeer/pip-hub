@@ -1110,6 +1110,24 @@
     movable.forEach((el) => { el.style.top = `${el.offsetTop + delta}px`; });
   }
 
+  // Telefoon als app: de onderrand en de statusbalk krijgen de kleur van het
+  // scherm (iOS kleurt ze met theme-color, en daaronder ligt de pagina zelf).
+  function paintEdges(slide) {
+    const color = slide ? getComputedStyle(slide).backgroundColor : "";
+    if (!color) return;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!state.edges) state.edges = { meta: meta ? meta.content : null, html: document.documentElement.style.background };
+    if (meta) meta.content = color;
+    document.documentElement.style.background = color;
+  }
+
+  function restoreEdges(edges) {
+    if (!edges) return;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta && edges.meta !== null) meta.content = edges.meta;
+    document.documentElement.style.background = edges.html;
+  }
+
   function show(index) {
     state.index = index;
     state.shown = true;
@@ -1117,6 +1135,7 @@
     const look = state.tall && TALL[slide.type] ? TALL : SLIDES;
     root.querySelector(".wr-host").innerHTML = look[slide.type](slide.data, state.ctx);
     const el = root.querySelector(".wr-host .wr-slide");
+    paintEdges(el);
     if (look === TALL) {
       fitText(el);
     } else {
@@ -1219,9 +1238,11 @@
   function close() {
     if (!root || !state) return;
     const done = state.onClose;
+    const edges = state.edges;
     closeShare();
     stopMusic();
     state = null;
+    restoreEdges(edges);
     root.hidden = true;
     root.innerHTML = "";
     if (done) done();

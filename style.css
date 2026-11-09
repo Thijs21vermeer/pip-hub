@@ -2122,12 +2122,9 @@ img.score-avatar {
 
 /* ---- Pip Wrapped (wrapped.js): schermen op 1024×600, geschaald ---- */
 
-/* Als app met de statusbalk doorzichtig schuift iOS het scherm omhoog; een
-   schermvullende laag loopt daarom even ver door onder de onderrand. */
 .wrapped {
   position: fixed;
   inset: 0;
-  bottom: calc(-1 * env(safe-area-inset-top));
   z-index: 8;
   overflow: hidden;
   background: #000;
@@ -2609,20 +2606,6 @@ img.score-avatar {
   flex-direction: column;
   box-sizing: border-box;
   padding: calc(100px + env(safe-area-inset-top)) 28px calc(36px + env(safe-area-inset-bottom));
-}
-/* Als app: een zachte schaduw onder de klok en de batterij (wit). */
-@media (display-mode: standalone) {
-  .wrapped::after {
-    content: "";
-    position: absolute;
-    z-index: 9;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(env(safe-area-inset-top) + 16px);
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0));
-    pointer-events: none;
-  }
 }
 .wr-tall [data-fit] {
   white-space: nowrap;

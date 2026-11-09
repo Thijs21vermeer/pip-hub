@@ -11,28 +11,30 @@
   <meta name="mobile-web-app-capable" content="yes">
   <!-- Als app: de pagina loopt door onder de klok en de batterij (wit). -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#1b140f">
+  <!-- Randkleur (onderrand en statusbalk in de app): de onderkant van het
+       startscherm; tijdens het afspelen de kleur van elk scherm (wrapped.js). -->
+  <meta name="theme-color" content="#56344f">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261109-40">
+  <link rel="stylesheet" href="style.css?v=20261109-41">
   <!-- Pip Wrapped op de telefoon: dezelfde schermen als op de Hub (wrapped.js),
        met de cijfers van het servertje. Eerst een tik op Afspelen, want een
        telefoon speelt pas geluid af na een tik. Delen opent meteen de deelkaart. -->
   <style>
-    body { padding: 0; background: #1b140f; }
+    html { background: #56344f; }
+    body { padding: 0; background: transparent; }
     [hidden] { display: none !important; }
     .start {
       position: fixed;
       inset: 0;
-      bottom: calc(-1 * env(safe-area-inset-top));
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 18px;
       padding: 24px;
-      background: linear-gradient(140deg, #2b2152 0%, #3a2a5e 55%, #6b3f4f 100%);
+      background: linear-gradient(180deg, #2b2152 0%, #3a2a5e 50%, #56344f 100%);
       color: #f4f0ff;
       text-align: center;
     }
@@ -60,10 +62,10 @@
   </div>
   <section class="wrapped" id="wrapped" hidden aria-label="Pip Wrapped"></section>
 
-  <script src="config.js?v=20261109-40"></script>
-  <script src="telefoon.js?v=20261109-40"></script>
-  <script src="stats.js?v=20261109-40"></script>
-  <script src="wrapped.js?v=20261109-40"></script>
+  <script src="config.js?v=20261109-41"></script>
+  <script src="telefoon.js?v=20261109-41"></script>
+  <script src="stats.js?v=20261109-41"></script>
+  <script src="wrapped.js?v=20261109-41"></script>
   <script>
     (function () {
       "use strict";

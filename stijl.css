@@ -71,22 +71,6 @@ a {
   padding: max(20px, calc(env(safe-area-inset-top) + 12px)) 0 calc(44px + env(safe-area-inset-bottom));
 }
 
-/* Als app vanaf het beginscherm staan de klok en de batterij wit over de
-   pagina; een zachte schaduw bovenin houdt ze leesbaar, ook op lichte foto's. */
-@media (display-mode: standalone) {
-  body::before {
-    content: "";
-    position: fixed;
-    z-index: 20;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: calc(env(safe-area-inset-top) + 18px);
-    background: linear-gradient(180deg, rgba(20, 12, 8, 0.38), rgba(20, 12, 8, 0));
-    pointer-events: none;
-  }
-}
-
 .page-head {
   padding: 0 24px;
 }
@@ -811,10 +795,18 @@ button.piece:active .tick {
   text-align: left;
 }
 .link-row .led {
+  flex: none;
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: #6f9461;
+}
+/* Status-bolletje: groen = aan, grijs = uit, oranje = geblokkeerd. */
+.link-row .led.off {
+  background: var(--muted);
+}
+.link-row .led.warn {
+  background: var(--accent);
 }
 .link-row span {
   flex: 1;
@@ -899,12 +891,9 @@ button.piece:active .tick {
 }
 
 /* Wie heeft het gedaan? */
-/* Als app met de statusbalk doorzichtig schuift iOS het scherm omhoog; een
-   schermvullende laag loopt daarom even ver door onder de onderrand. */
 .sheet {
   position: fixed;
   inset: 0;
-  bottom: calc(-1 * env(safe-area-inset-top));
   z-index: 10;
   display: flex;
   align-items: flex-end;
@@ -994,6 +983,9 @@ button.piece:active .tick {
   font-size: 13px;
   font-weight: 500;
   line-height: 1.35;
+}
+.sheet-action[hidden] {
+  display: none;
 }
 .sheet-action.danger {
   color: var(--accent);
