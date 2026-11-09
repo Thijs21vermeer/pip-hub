@@ -171,8 +171,10 @@
   let synced = false; // al een keer met het servertje gelijkgetrokken?
   // Alleen een zelf gewijzigde takenlijst gaat mee naar het servertje: zo
   // overschrijft een oude kopie op de Hub geen instellingen die daar staan
-  // (zoals een seintje om 22:00).
+  // (zoals een seintje om 22:00). Zo ook de huisgenoten: die kun je ook op de
+  // fotopagina toevoegen.
   let tasksChanged = false;
+  let peopleChanged = false;
   let editor = null; // taak die nu gewijzigd wordt: { id, title, icon, confirmDelete }
   let pageOpen = false;
   let pageEditing = false;
@@ -528,6 +530,7 @@
   function setPeople(list) {
     const clean = cleanPeople(list);
     if (clean.length) {
+      peopleChanged = true;
       saveSettings({ people: clean });
     } else {
       const { people: removed, ...rest } = settings;
@@ -576,7 +579,8 @@
     };
     const sendTasks = tasksChanged && settings.tasks;
     if (sendTasks) body.tasks = settings.tasks;
-    if (settings.people) body.people = settings.people;
+    const sendPeople = peopleChanged && settings.people;
+    if (sendPeople) body.people = settings.people;
     try {
       const response = await fetch(settingsUrl(), {
         method: "PUT",
@@ -584,12 +588,14 @@
         body: JSON.stringify(body),
       });
       if (sendTasks && response.ok) tasksChanged = false;
+      if (sendPeople && response.ok) peopleChanged = false;
     } catch (error) {
       // Niet bereikbaar: de Hub houdt zijn eigen kopie, de volgende wijziging probeert opnieuw.
     }
   }
 
-  async function pullSettings() {
+  // push: false bij het ophalen om de 5 minuten (dan valt er niets terug te sturen).
+  async function pullSettings({ push = true } = {}) {
     if (!actionCode() || !settingsUrl()) return;
     try {
       const response = await fetch(settingsUrl(), {
@@ -599,7 +605,12 @@
       if (!response.ok) return;
       const remote = await response.json();
       if (remote.tasks || remote.people) {
-        settings = { ...settings, tasks: remote.tasks || settings.tasks, people: remote.people || settings.people };
+        // Wat op de Hub net gewijzigd is en nog niet verstuurd, blijft staan.
+        settings = {
+          ...settings,
+          tasks: tasksChanged ? settings.tasks : remote.tasks || settings.tasks,
+          people: peopleChanged ? settings.people : remote.people || settings.people,
+        };
         writeStorage(SETTINGS_KEY, JSON.stringify(settings));
       }
       // Vinkjes terug: per taak de laatste keer (vroegere versies stuurden "today").
@@ -619,7 +630,7 @@
       }
       synced = true;
       render();
-      schedulePush(); // ook wat sinds de start op de Hub veranderde
+      if (push) schedulePush(); // ook wat sinds de start op de Hub veranderde
     } catch (error) {
       // Niet bereikbaar: dan maar met de kopie op de Hub, later opnieuw.
     }
@@ -1501,7 +1512,7 @@
 
   // ---- Profielfoto's van de baasjes ----
 
-  // Gezet op fotos.html onder Baasjes; bewaard op het servertje (baasjes.mjs).
+  // Gezet op baasjes.html (op de telefoon); bewaard op het servertje (baasjes.mjs).
   const avatarUrls = new Map(); // naam in kleine letters → { id, url }
 
   function avatarsUrl() {
@@ -2425,6 +2436,11 @@
   setInterval(() => {
     if (!synced) pullSettings();
   }, 60 * 1000);
+  // Elke 5 minuten de takenlijst en huisgenoten ophalen: een baasje dat op de
+  // fotopagina is toegevoegd staat er dan vanzelf bij. Niet midden in het wijzigen.
+  setInterval(() => {
+    if (synced && !editor) pullSettings({ push: false });
+  }, 5 * 60 * 1000);
   setInterval(() => {
     if (rollOverIfNewDay()) {
       closeSheet();

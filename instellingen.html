@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pip instellen</title>
+  <link rel="icon" href="pip.png">
+  <link rel="apple-touch-icon" href="pip.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="telefoon.css?v=20261109-30">
+  <!-- Het beginpunt op de telefoon: een menu met de pagina's om Pip op de Google
+       Hub in te stellen. De lijst staat in telefoon.js (PAGES); een nieuwe pagina
+       erbij zetten is daar één regel. -->
+</head>
+<body>
+  <main>
+    <header>
+      <img src="pip.png" alt="">
+      <div>
+        <h1>Pip instellen</h1>
+        <p class="sub" id="summary">Even laden…</p>
+      </div>
+    </header>
+
+    <div id="linked" hidden>
+      <nav class="card menu" id="menu" aria-label="Instellingen"></nav>
+
+      <h2>Koppeling</h2>
+      <div class="card">
+        <p style="margin:14px 0 4px">Deze telefoon is gekoppeld met de Google Hub. Daardoor kun je hier foto's en baasjes aanpassen.</p>
+        <button class="unlink" id="unlink" type="button">Ontkoppelen</button>
+        <p class="status" id="status"></p>
+      </div>
+    </div>
+
+    <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
+  </main>
+
+  <script src="config.js?v=20261109-30"></script>
+  <script src="telefoon.js?v=20261109-30"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const { PAGES, $, unlink, statusLine } = window.PipPhone;
+      const status = statusLine("status");
+
+      function renderMenu() {
+        $("menu").innerHTML = "";
+        for (const page of PAGES) {
+          const link = document.createElement("a");
+          link.href = page.href;
+          link.innerHTML = `<span class="icon" aria-hidden="true">${page.icon}</span>
+            <span class="text"><strong></strong><span></span></span>
+            <span class="chevron" aria-hidden="true">›</span>`;
+          link.querySelector("strong").textContent = page.title;
+          const sub = link.querySelector(".text span");
+          sub.textContent = page.sub;
+          // Telt er iets (foto's, baasjes)? Dan dat erachter.
+          if (page.count) {
+            page.count().then((count) => { sub.textContent = `${page.sub} · ${count}`; }).catch(() => {});
+          }
+          $("menu").appendChild(link);
+        }
+      }
+
+      $("unlink").addEventListener("click", () => {
+        if (!confirm("Deze telefoon ontkoppelen? Daarna moet je de QR-code op de Google Hub opnieuw scannen.")) return;
+        unlink();
+        location.reload();
+      });
+
+      (async function start() {
+        const { linked, fresh } = await window.PipPhone.showLinked();
+        $("summary").textContent = linked ? "Foto's, baasjes en meer" : "";
+        if (fresh === false && !linked) $("not-linked").textContent = "Deze QR-code werkt niet (meer). Tik op de Google Hub opnieuw op het QR-knopje en scan de nieuwe code.";
+        else if (fresh === false) status("Deze QR-code werkt niet (meer). Scan hem opnieuw op de Google Hub.", "error");
+        if (linked) renderMenu();
+      })();
+    })();
+  </script>
+</body>
+</html>

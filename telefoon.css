@@ -1,0 +1,552 @@
+/* Stijl van de telefoonpagina's: instellingen.html, fotos.html, baasjes.html. */
+
+/* Kleuren en lettertype van Voerraad, net als het overzicht op de Google Hub. */
+:root {
+  --bg: #fbf7f2;
+  --surface: #ffffff;
+  --line: #eee7de;
+  --text: #1a1612;
+  --muted: #7c7264;
+  --accent: #a9642f;
+  --accent-soft: #f4e6d9;
+  --done: #5c7f52;
+  --warn: #a8701f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14110e;
+    --surface: #1f1a16;
+    --line: #332b24;
+    --text: #f3ece4;
+    --muted: #a89c8e;
+    --accent: #d08a50;
+    --accent-soft: #3a2a1d;
+    --done: #8db27f;
+    --warn: #e2ae5e;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Outfit", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 16px 48px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+header img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+.person + .person {
+  border-top: 1px solid var(--line);
+}
+.avatar {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.person-name {
+  flex: 1;
+  min-width: 0;
+}
+.person-name strong {
+  display: block;
+  font-size: 1.05rem;
+}
+.person-name span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.person-actions {
+  display: flex;
+  gap: 6px;
+}
+.person-actions button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.person-actions .pick {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+.person-add {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--line);
+}
+.person-add .avatar {
+  box-sizing: border-box;
+  border: 2px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+.person-add input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+.person-add button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.person-add button:disabled {
+  opacity: 0.5;
+}
+
+h2 {
+  margin: 32px 0 12px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 0.98rem;
+  font-weight: 500;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.add span {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.status {
+  min-height: 1.4em;
+  margin-top: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+.status.ok {
+  color: var(--done);
+}
+
+.status.error {
+  color: var(--warn);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 18px;
+}
+
+@media (min-width: 560px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.tile {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: var(--line);
+}
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile.off img {
+  opacity: 0.35;
+}
+
+.tile .label {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.card {
+  padding: 6px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--line);
+}
+
+.row > span {
+  font-weight: 600;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pills button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.pills button.on {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+
+.switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--line);
+  transition: background 0.2s;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transition: transform 0.2s;
+}
+
+.switch.on {
+  background: var(--accent);
+}
+
+.switch.on::after {
+  transform: translateX(20px);
+}
+
+.note {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.empty {
+  margin-top: 40px;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  color: var(--muted);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Bewerken: één foto, en hoe hij op de Google Hub staat. */
+.editor {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.editor[hidden] {
+  display: none;
+}
+
+.editor main {
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+
+.editor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.back {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  font-weight: 600;
+}
+
+.saved {
+  color: var(--done);
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.saved.show {
+  opacity: 1;
+}
+
+.hub {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1024 / 600;
+  margin-top: 10px;
+  border: 6px solid #2a2420;
+  border-radius: 18px;
+  background: #000;
+}
+
+.hub img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hub .bg {
+  visibility: hidden;
+}
+
+.hub.whole .fg {
+  object-fit: contain;
+}
+
+.hub.whole .bg {
+  visibility: visible;
+  filter: blur(16px) brightness(0.8);
+  transform: scale(1.15);
+}
+
+/* Vullen: in het Hub-lijstje slepen en knijpen. */
+.hub.crop {
+  touch-action: none;
+  cursor: grab;
+}
+
+.zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.zoom-row input {
+  flex: 1;
+  height: 32px;
+  accent-color: var(--accent);
+}
+
+.zoom-row button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.reset {
+  margin-top: 6px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.remove {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* ---- Gedeeld door de telefoonpagina's (instellingen, foto's, baasjes) ---- */
+
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin: -8px 0 4px -4px;
+  padding: 0 4px;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.menu {
+  margin-top: 22px;
+  padding: 4px 18px;
+}
+.menu a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  color: inherit;
+  text-decoration: none;
+}
+.menu a + a {
+  border-top: 1px solid var(--line);
+}
+.menu .icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.menu .icon svg {
+  width: 24px;
+  height: 24px;
+}
+.menu .text {
+  flex: 1;
+  min-width: 0;
+}
+.menu .text strong {
+  display: block;
+  font-size: 1.05rem;
+}
+.menu .text span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.menu .chevron {
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+
+.unlink {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  font-weight: 600;
+}
+
+/* Baasjes: wat lucht tussen de kop en de lijst. */
+#people {
+  margin-top: 22px;
+}
