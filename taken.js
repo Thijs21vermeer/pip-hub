@@ -78,12 +78,25 @@
     return dayNumber(new Date(entry.at), resetHour) >= start ? entry : null;
   }
 
-  // Alle taken die nu meetellen, met per taak het vinkje (of null).
-  function status(tasks, done, now = new Date(), resetHour = 4) {
-    return tasks
-      .filter((task) => !upcoming(task, now, resetHour))
-      .map((task) => ({ task, done: currentDone(task, done, now, resetHour), when: REPEATS[repeatOf(task)].when }));
+  // Spelen met Pip (play: true): zo vaak als je wilt. Alle keren van vandaag.
+  function playToday(play, now = new Date(), resetHour = 4) {
+    const today = dayNumber(now, resetHour);
+    const sessions = play && Array.isArray(play.sessions) ? play.sessions : [];
+    return sessions.filter((session) => dayNumber(new Date(session.at), resetHour) === today);
   }
 
-  root.PipTasks = { status, repeatOf };
+  // Alle taken die nu meetellen, met per taak het vinkje (of null). Spelen telt
+  // als gedaan zodra iemand vandaag speelde (de laatste keer).
+  function status(tasks, done, now = new Date(), resetHour = 4, play = null) {
+    const played = playToday(play, now, resetHour);
+    return tasks
+      .filter((task) => !upcoming(task, now, resetHour))
+      .map((task) => ({
+        task,
+        done: task.play ? played[played.length - 1] || null : currentDone(task, done, now, resetHour),
+        when: REPEATS[repeatOf(task)].when,
+      }));
+  }
+
+  root.PipTasks = { status, repeatOf, playToday };
 })(typeof window !== "undefined" ? window : globalThis);

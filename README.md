@@ -116,6 +116,24 @@ De code hoort **nooit** in `config.js`: die map is openbaar. Code kwijt of uitge
 - **Opslag:** de lijst wordt op de Google Hub bewaard en op het servertje (`/api/pip-settings`, Netlify Blobs), met dezelfde kattenbak-code. Zo overleeft hij een herstart van de Google Hub. Ook de huisgenoten van de startpagina komen daar terecht.
 - `config.js` bevat alleen de standaardlijst voor als er nog niets is opgeslagen.
 
+### Spelen met Pip
+
+Een taak met `play: true` (standaard "Spelen met Pip") kun je zo vaak doen als je wilt, ook met verschillende mensen. Elke keer spelen is 1 punt voor wie speelde.
+
+- **Tik op de tegel** (Hub) of het schilderijtje (telefoon). Je kiest in drie groepen:
+  - wie er speelt;
+  - **Timer** of **Al gespeeld**;
+  - hoe lang (10, 15, 30 of 45 minuten).
+- **Timer:** de Hub toont hem groot, met een knop bovenin naast Scores. Op de telefoon staat een timerkaart boven de taken.
+  - Is de tijd om, dan krijgt wie speelde het punt, gaat er een melding naar de telefoons en geeft de Hub een feestje.
+  - **Klaar** telt het punt meteen, voor de minuten tot dan. **Stoppen** haalt de timer weg zonder punt (de Hub vraagt het eerst).
+  - Er loopt één timer tegelijk. De telefoon ziet een Hub-timer zodra je Pip opent; de Hub ziet een telefoon-timer binnen 5 minuten.
+- **Al gespeeld:** het punt telt meteen, zonder timer.
+- Hoe vaker er vandaag gespeeld is, hoe groener de tegel (1× licht, 4× of vaker diepgroen). Voor "x van y gedaan" telt hij zodra iemand vandaag speelde.
+- **Opslag:** de timer en de keren van vandaag staan in een eigen blob (`play`) op het servertje, zodat het terugschrijven van de vinkjes door de Hub ze nooit wegveegt. Elke keer komt met de minuten in het jaarlog (`min`, `play: true`).
+- Stond niets open toen de tijd om was (Hub uit, telefoon dicht)? Dan geeft de planner van de herinneringen (elke 5 minuten) het punt alsnog, met de melding.
+- Op de telefoon staat de foto `taken/hengel.jpg` in het lijstje.
+
 ## Foto's en geluid
 
 **Telefoonpagina's.** Op je telefoon is `instellingen.html` het beginscherm (titel "Pip"), in dezelfde stijl als de pagina's erachter (`stijl.css`, gedeelde code in `telefoon.js`):

@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
   <!-- ?v= bij elke nieuwe versie ophogen: GitHub Pages laat bestanden 10 minuten cachen,
        zonder nieuw nummer draait de Google Hub dan nog half de oude versie. -->
-  <link rel="stylesheet" href="style.css?v=20261109-43">
+  <link rel="stylesheet" href="style.css?v=20261109-45">
 </head>
 <body>
   <header class="top">
@@ -22,6 +22,8 @@
       </div>
     </div>
     <div class="top-right">
+      <!-- Wie er nu met Pip speelt (Spelen met Pip, met een timer). -->
+      <button class="to-scores play-pill" id="play-pill" data-action="play-open" hidden></button>
       <!-- Scores: wie het meest voor Pip deed, en van daaruit Pip Wrapped. -->
       <button class="to-scores" id="to-scores" data-action="scores-open"></button>
       <div class="when">
@@ -108,6 +110,16 @@
   </section>
 
   <!-- Pip Wrapped: het jaar van Pip in schermen die vanzelf doorlopen (wrapped.js). -->
+  <!-- Spelen met Pip: de timer groot in beeld. -->
+  <section class="page play-page" id="play" hidden aria-label="Spelen met Pip">
+    <header class="page-head">
+      <button class="page-back" data-action="play-close">‹ Terug</button>
+      <span></span>
+      <span></span>
+    </header>
+    <div class="play-view" id="play-view"></div>
+  </section>
+
   <section class="wrapped" id="wrapped" hidden aria-label="Pip Wrapped"></section>
 
   <!-- Ruststand: foto van Pip met de klok. Tik ergens om het dashboard te openen;
@@ -115,7 +127,7 @@
   <section class="rest" id="rest" data-action="wake" aria-label="Ruststand">
     <!-- Twee lagen die in elkaar overvloeien: de standaardfoto en de foto's die
          jullie via de startpagina sturen. -->
-    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-43" alt="Pip"></div>
+    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-45" alt="Pip"></div>
     <div class="rest-photo"><img class="rest-bg" alt=""><img class="rest-fg" alt="Pip"></div>
     <div class="rest-card" id="rest-card" hidden></div>
     <!-- Telefoon koppelen: QR-knopje linksonder; de QR-code klapt daar open. Hij
@@ -153,10 +165,10 @@
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
   </div>
 
-  <script src="config.js?v=20261109-43"></script>
-  <script src="stats.js?v=20261109-43"></script>
-  <script src="wrapped.js?v=20261109-43"></script>
-  <script src="app.js?v=20261109-43"></script>
-  <script src="cast.js?v=20261109-43"></script>
+  <script src="config.js?v=20261109-45"></script>
+  <script src="stats.js?v=20261109-45"></script>
+  <script src="wrapped.js?v=20261109-45"></script>
+  <script src="app.js?v=20261109-45"></script>
+  <script src="cast.js?v=20261109-45"></script>
 </body>
 </html>

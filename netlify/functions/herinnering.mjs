@@ -7,11 +7,13 @@
 // Een taak krijgt een tijd met remind: "22:00" (zie pip-settings.mjs).
 //
 // Zondag vanaf 20:00 komt hier ook de melding "Held van de week" vandaan: wie
-// deze week de meeste punten haalde (zie lib/history.mjs).
+// deze week de meeste punten haalde (zie lib/history.mjs). En een speeltimer die
+// afliep terwijl niemand keek, wordt hier alsnog een punt (lib/play.mjs).
 
 import { getStore } from "@netlify/blobs";
 import { readPart, recordReminder, weekScores, weekStart, yearOf } from "../lib/history.mjs";
 import { localTime, notify, pipDay } from "../lib/notify.mjs";
+import { readPlay } from "../lib/play.mjs";
 
 // Liep de planner even niet, dan tot 2 uur na de tijd nog sturen.
 const LATE_MINUTES = 120;
@@ -93,6 +95,10 @@ export default async () => {
   await remindOpenTasks(store, settings, now);
   await announceHero(store, now).catch((error) =>
     console.error(JSON.stringify({ event: "hero.error", code: error.code || error.name || "UNKNOWN" })));
+  // Spelen: een timer die af is maar nog door niemand is gezien (Hub uit, telefoon
+  // dicht) wordt hier een punt, met de melding "Tijd om".
+  await readPlay(settings.tasks, now).catch((error) =>
+    console.error(JSON.stringify({ event: "play.settle.error", code: error.code || error.name || "UNKNOWN" })));
 };
 
 export const config = { schedule: "*/5 * * * *" };

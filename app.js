@@ -102,6 +102,7 @@
     right: svg('<path d="M9 6l6 6-6 6"/>'),
     erase: svg('<path d="M9 5h11v14H9l-6-7z"/><path d="M12 9l5 6M17 9l-5 6"/>'),
     check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    timer: svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M10 2h4"/>'),
     minus: svg('<path d="M5 12h14"/>'),
     plus: svg('<path d="M12 5v14M5 12h14"/>'),
     home: svg('<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>'),
@@ -159,6 +160,9 @@
     stock: document.getElementById("stock"),
     sheet: document.getElementById("sheet"),
     sheetBody: document.getElementById("sheet-body"),
+    playPill: document.getElementById("play-pill"),
+    play: document.getElementById("play"),
+    playView: document.getElementById("play-view"),
   };
 
   let state = loadState();
@@ -268,6 +272,7 @@
   // Met een vaste dag telt de dag ervoor ook mee: de kattenbak op vrijdag al
   // verschoond is goed voor zaterdag.
   function currentDone(task) {
+    if (task.play) return lastPlayToday();
     const entry = state.done[task.id];
     if (!entry) return null;
     const start = periodStart(task, new Date()) - (dayOf(task) === null ? 0 : 1);
@@ -650,6 +655,7 @@
       }
       // Vinkjes terug: per taak de laatste keer (vroegere versies stuurden "today").
       mergeRemoteDone(remote);
+      if (remote.play) setPlay(remote.play);
       if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
       // Pip is terug (vanzelf of via de startknop): de pauze is voorbij.
@@ -702,6 +708,7 @@
       // Melding als hij gedaan is en een seintje op een vaste tijd (op het servertje ingesteld).
       if (task.notify) item.notify = true;
       if (task.remind) item.remind = task.remind;
+      if (task.play) item.play = true; // Spelen met Pip
       return item;
     });
     tasksChanged = true;
@@ -798,6 +805,7 @@
   // compact: kleine tegel op een vol startscherm, dus kortere tekst ("Deze week",
   // "Thijs · 19:00" in plaats van "Deze week nog doen", "Thijs · vandaag 19:00").
   function taskCard(task, compact = false) {
+    if (task.play) return playCard(task, compact);
     const done = currentDone(task);
     const later = !done && upcomingDay(task) !== null;
     const when = done && compact
@@ -1332,6 +1340,11 @@
     const stock = restStock();
     let html = restScores();
     renderWrappedButton();
+    const timer = activeTimer();
+    if (timer) {
+      const minutes = Math.max(1, Math.ceil((timer.endsAt - Date.now()) / 60000));
+      html += `<div class="rest-title">Spelen</div><ul class="rest-list">${restRow(ICONS.ball, `${timer.by} speelt met Pip`, `nog ${minutes} min`)}</ul>`;
+    }
     if (open.length) {
       const rows = open.slice(0, REST_TASKS).map((task) =>
         restRow(ICONS[task.icon] || ICONS.paw, task.title, restWhen(task)));
@@ -1357,6 +1370,7 @@
     closePage();
     closeLog();
     closeScores();
+    closePlayPage();
     renderRest();
     els.rest.hidden = false;
   }
@@ -1381,6 +1395,8 @@
     els.tasks.dataset.layout = `${cols}x${rows}`;
     els.tasks.innerHTML = list.map((task) => taskCard(task, cols > 2)).join("");
     els.tasksMore.textContent = "Beheren ›";
+    renderPlayPill();
+    renderPlayPage();
     renderActions();
     renderStock();
     renderPage();
@@ -1954,6 +1970,373 @@
     if (list.length) setTasks(list);
   }
 
+  // ---- Spelen met Pip ----
+
+  // Een taak met play: true (op het servertje, zie netlify/lib/play.mjs) kun je
+  // zo vaak doen als je wilt, ook met verschillende mensen: elke keer een punt.
+  // Met een timer, die de telefoon ook ziet, of meteen ("Al gespeeld"). Hoe
+  // vaker er vandaag gespeeld is, hoe groener de tegel.
+  const PLAY_MINUTES = [10, 15, 30, 45];
+  const PLAY_GREEN = {
+    light: { bg: ["#f1f5ee", "#c9ddbe"], line: ["#dfe8d9", "#a9c49b"], dot: ["#8fae84", "#4a6b41"] },
+    dark: { bg: ["#1e2a1b", "#2f4a28"], line: ["#2c3a28", "#4d6e43"], dot: ["#5f7f55", "#8db27f"] },
+  };
+  let play = { timer: null, sessions: [] }; // van het servertje
+  let playChoice = null; // het keuzevenster: { who, minutes, noTimer, busy, error }
+  let playPageOpen = false;
+  let playTicker = null;
+
+  function playTask() {
+    return tasks().find((task) => task.play) || null;
+  }
+
+  function playToday() {
+    const today = dayNumber(new Date());
+    return play.sessions.filter((session) => dayNumber(new Date(session.at)) === today);
+  }
+
+  // Voor "x van N gedaan": gespeeld zodra iemand vandaag speelde.
+  function lastPlayToday() {
+    const today = playToday();
+    return today.length ? today[today.length - 1] : null;
+  }
+
+  function activeTimer() {
+    return play.timer && play.timer.endsAt > Date.now() ? play.timer : null;
+  }
+
+  function playLeft(timer) {
+    const seconds = Math.max(0, Math.ceil((timer.endsAt - Date.now()) / 1000));
+    return `${Math.floor(seconds / 60)}:${pad(seconds % 60)}`;
+  }
+
+  function playPart(timer) {
+    return Math.max(0, Math.min(1, (timer.endsAt - Date.now()) / (timer.endsAt - timer.startedAt)));
+  }
+
+  function namesText(list) {
+    return list.length > 1 ? `${list.slice(0, -1).join(", ")} en ${list[list.length - 1]}` : list.join("");
+  }
+
+  // "Vandaag 2× · Bou en Thijs"
+  function playTodayText(compact = false) {
+    const today = playToday();
+    const names = namesText([...new Set(today.map((session) => session.by))]);
+    return compact ? names : `Vandaag ${today.length}× · ${names}`;
+  }
+
+  function mixColor(a, b, t) {
+    return `#${[1, 3, 5].map((i) => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t)
+      .toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  // 1× lichtgroen, 4× of vaker diepgroen.
+  function playLook(count) {
+    const palette = PLAY_GREEN[document.documentElement.dataset.theme === "dark" ? "dark" : "light"];
+    const t = Math.min(count, 4) / 4;
+    return { bg: mixColor(...palette.bg, t), line: mixColor(...palette.line, t), dot: mixColor(...palette.dot, t) };
+  }
+
+  function playRing(timer, size, stroke) {
+    const r = (size - stroke) / 2;
+    const c = 2 * Math.PI * r;
+    return `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke-width="${stroke}" class="play-track"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke-width="${stroke}" stroke-linecap="round" class="play-fill" data-play-ring="${c.toFixed(2)}" stroke-dasharray="${(playPart(timer) * c).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 ${size / 2} ${size / 2})"/></svg>`;
+  }
+
+  function playCard(task, compact) {
+    const timer = activeTimer();
+    if (timer) {
+      return `
+      <button class="task play running" data-action="play-open">
+        <span class="icon">${playRing(timer, 52, 5)}</span>
+        <span>
+          <span class="title">${escapeHtml(timer.by)} speelt met Pip</span>
+          <span class="status">Nog <span data-play-left>${playLeft(timer)}</span></span>
+        </span>
+      </button>`;
+    }
+    const today = playToday();
+    if (today.length) {
+      const look = playLook(today.length);
+      return `
+      <button class="task play played" data-action="play" style="background:${look.bg};border-color:${look.line}">
+        <span class="icon" style="background:${look.dot}">${today.length}×</span>
+        <span>
+          <span class="title">${escapeHtml(task.title)}</span>
+          <span class="status">${escapeHtml(playTodayText(compact))}</span>
+        </span>
+      </button>`;
+    }
+    return `
+      <button class="task play" data-action="play">
+        <span class="icon">${ICONS.ball}</span>
+        <span>
+          <span class="title">${escapeHtml(task.title)}</span>
+          <span class="status">Tik om te spelen</span>
+        </span>
+      </button>`;
+  }
+
+  // Nieuwe stand van het servertje. Liep er hier een timer die nu een sessie is
+  // op precies zijn eindtijd, dan is de tijd om: feestje.
+  function setPlay(next) {
+    if (!next || typeof next !== "object") return;
+    const before = play.timer;
+    play = {
+      timer: next.timer && Number.isFinite(next.timer.endsAt) ? next.timer : null,
+      sessions: Array.isArray(next.sessions) ? next.sessions : [],
+    };
+    if (before && !play.timer) {
+      const ended = play.sessions.find((s) => s.by === before.by && s.at === before.endsAt);
+      if (ended && Date.now() - ended.at < 15 * 60 * 1000) showPlayDone(ended, true);
+    }
+    startPlayTicker();
+  }
+
+  async function sendPlay(action) {
+    const response = await fetch(settingsUrl(), {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${actionCode()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ play: action }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (body.play) setPlay(body.play);
+    return { ok: response.ok, error: body.error };
+  }
+
+  // Elke seconde de klok bij, zolang er een timer loopt; daarna één keer ophalen
+  // (het servertje maakt er dan een punt van en stuurt de melding).
+  function startPlayTicker() {
+    clearInterval(playTicker);
+    playTicker = play.timer ? setInterval(tickPlay, 1000) : null;
+    tickPlay();
+  }
+
+  let playEndAsked = 0;
+  function tickPlay() {
+    const timer = play.timer;
+    if (timer && Date.now() >= timer.endsAt) {
+      clearInterval(playTicker);
+      playTicker = null;
+      // Niet elke seconde vragen als het servertje even niet antwoordt.
+      if (Date.now() - playEndAsked > 30 * 1000) {
+        playEndAsked = Date.now();
+        pullSettings({ push: false }).then(() => {
+          if (play.timer) setTimeout(startPlayTicker, 30 * 1000);
+        });
+      }
+    }
+    const live = activeTimer();
+    document.querySelectorAll("[data-play-left]").forEach((el) => { el.textContent = live ? playLeft(live) : "0:00"; });
+    document.querySelectorAll("[data-play-ring]").forEach((el) => {
+      const c = Number(el.dataset.playRing);
+      el.setAttribute("stroke-dasharray", `${((live ? playPart(live) : 0) * c).toFixed(2)} ${c}`);
+    });
+    renderPlayPill();
+  }
+
+  // Knop bovenin naast Scores zolang er gespeeld wordt.
+  function renderPlayPill() {
+    const timer = activeTimer();
+    els.playPill.hidden = !timer;
+    if (timer) els.playPill.innerHTML = `${ICONS.ball}<span>${escapeHtml(timer.by)} speelt · nog ${playLeft(timer)}</span>`;
+  }
+
+  // ---- Kiezen: wie, timer of al gespeeld, hoe lang ----
+
+  function askPlay() {
+    const task = playTask();
+    if (!task) return;
+    if (!actionCode()) return showNotLinked();
+    if (activeTimer()) return openPlayPage();
+    const list = people();
+    const last = lastPlayToday();
+    const who = playChoice && list.includes(playChoice.who) ? playChoice.who : last && list.includes(last.by) ? last.by : list[0];
+    playChoice = { who, minutes: (playChoice && playChoice.minutes) || 30, noTimer: false, busy: false, error: "" };
+    renderPlaySheet();
+  }
+
+  function playAvatar(name, list) {
+    const url = avatarFor(name);
+    if (url) return `<img class="play-avatar" src="${escapeHtml(url)}" alt="">`;
+    return `<span class="play-avatar t${Math.max(0, list.indexOf(name)) % 6}">${escapeHtml(name.charAt(0).toUpperCase())}</span>`;
+  }
+
+  function renderPlaySheet() {
+    const task = playTask();
+    const c = playChoice;
+    const list = people();
+    const peopleHtml = list.map((name) => `
+      <button class="play-opt" data-action="play-who" data-person="${escapeHtml(name)}" aria-pressed="${name === c.who}">
+        ${playAvatar(name, list)}<span>${escapeHtml(name)}</span>
+      </button>`).join("");
+    const label = c.noTimer ? `Opslaan · +1 punt voor ${c.who}` : `Start timer · ${c.minutes} min`;
+    openSheet(task, `
+      <h3>${escapeHtml(task.title)}</h3>
+      <div class="play-form">
+        ${list.length > 1 ? `<p class="play-label">Wie speelt er?</p>
+        <div class="play-people${list.length > 3 ? " many" : ""}" style="--n:${list.length}">${peopleHtml}</div>` : ""}
+        <p class="play-label">Timer of al gespeeld?</p>
+        <div class="play-modes">
+          <button class="play-opt" data-action="play-mode" data-mode="timer" aria-pressed="${!c.noTimer}">
+            <span class="play-ico">${ICONS.timer}</span><span><strong>Timer</strong><small>Melding als de tijd om is</small></span>
+          </button>
+          <button class="play-opt" data-action="play-mode" data-mode="log" aria-pressed="${c.noTimer}">
+            <span class="play-ico">${ICONS.check}</span><span><strong>Al gespeeld</strong><small>Het punt telt meteen</small></span>
+          </button>
+        </div>
+        <p class="play-label">${c.noTimer ? "Hoe lang gespeeld?" : "Hoe lang?"}</p>
+        <div class="play-lengths">${PLAY_MINUTES.map((m) => `<button data-action="play-min" data-min="${m}" aria-pressed="${m === c.minutes}">${m} min</button>`).join("")}</div>
+        ${c.error ? `<p class="play-error">${escapeHtml(c.error)}</p>` : ""}
+      </div>
+      <div class="play-actions">
+        <button class="choice secondary" data-action="close">Annuleren</button>
+        <button class="choice" data-action="play-go"${c.busy ? " disabled" : ""}>${escapeHtml(c.busy ? "Even geduld…" : label)}</button>
+      </div>`);
+  }
+
+  async function playGo() {
+    const task = playTask();
+    const c = playChoice;
+    if (!task || !c || c.busy) return;
+    c.busy = true;
+    c.error = "";
+    renderPlaySheet();
+    const action = c.noTimer ? { log: { by: c.who, minutes: c.minutes } } : { start: { by: c.who, minutes: c.minutes } };
+    try {
+      const result = await sendPlay(action);
+      c.busy = false;
+      if (result.error === "BUSY") {
+        c.error = `Er loopt al een timer${play.timer ? ` van ${play.timer.by}` : ""}.`;
+      } else if (!result.ok) {
+        c.error = "Dat lukte niet. Probeer het nog eens.";
+      } else if (c.noTimer) {
+        const session = play.sessions.slice().reverse().find((s) => s.by === c.who);
+        if (session) {
+          noteTick(task, session);
+          showPlayDone(session, false);
+        } else {
+          closeSheet();
+        }
+        render();
+        return;
+      } else {
+        closeSheet();
+        render();
+        openPlayPage();
+        return;
+      }
+    } catch (error) {
+      c.busy = false;
+      c.error = "Geen verbinding met het servertje. Probeer het zo nog eens.";
+    }
+    renderPlaySheet();
+  }
+
+  // Klaar met spelen: hier, of de tijd is om (timeUp).
+  function showPlayDone(session, timeUp) {
+    const task = playTask();
+    if (!task) return;
+    closePlayPage();
+    if (!els.rest.hidden) hideRest();
+    if (timeUp) noteTick(task, session);
+    openSheet(task, `
+      <div class="play-done-icon">${ICONS.check}</div>
+      <h3>${timeUp ? "Tijd om! " : ""}Goed gespeeld</h3>
+      <p class="play-done-points">+1 punt voor ${escapeHtml(session.by)}</p>
+      <p>${session.minutes} ${session.minutes === 1 ? "minuut" : "minuten"} met Pip gespeeld · ${escapeHtml(playTodayText())}</p>
+      <div class="choices">
+        <button class="choice" data-action="close">Klaar</button>
+        <button class="choice secondary" data-action="play">Nog een keer spelen</button>
+      </div>`);
+    celebrate();
+    render();
+    renderRest();
+  }
+
+  // ---- De timer, groot in beeld ----
+
+  function openPlayPage() {
+    if (!activeTimer()) return;
+    closeSheet();
+    playPageOpen = true;
+    els.play.hidden = false;
+    renderPlayPage();
+  }
+
+  function closePlayPage() {
+    playPageOpen = false;
+    els.play.hidden = true;
+  }
+
+  function renderPlayPage() {
+    if (!playPageOpen) return;
+    const timer = activeTimer();
+    if (!timer) return closePlayPage();
+    const list = people();
+    els.playView.innerHTML = `
+      <div class="play-clock">
+        ${playRing(timer, 360, 22)}
+        <div class="play-clock-text">
+          <span class="play-kicker">Nog</span>
+          <strong data-play-left>${playLeft(timer)}</strong>
+          <span>van ${timer.minutes} minuten</span>
+        </div>
+      </div>
+      <div class="play-info">
+        <div class="play-who">${playAvatar(timer.by, list)}<span class="play-kicker accent">Spelen met Pip</span></div>
+        <h2>${escapeHtml(timer.by)} speelt met Pip</h2>
+        <p>Gestart om ${formatTime(new Date(timer.startedAt))} · klaar om ${formatTime(new Date(timer.endsAt))}. Daarna krijgt ${escapeHtml(timer.by)} 1 punt.</p>
+        <div class="play-buttons">
+          <button class="choice" data-action="play-finish">Klaar</button>
+          <button class="choice secondary" data-action="play-stop">Stoppen</button>
+        </div>
+      </div>`;
+  }
+
+  async function playFinish() {
+    const timer = activeTimer();
+    if (!timer) return;
+    try {
+      const result = await sendPlay({ finish: true, startedAt: timer.startedAt });
+      const session = play.sessions.slice().reverse().find((s) => s.by === timer.by && s.at >= timer.startedAt);
+      if (result.ok && session) {
+        noteTick(playTask(), session);
+        showPlayDone(session, false);
+      }
+    } catch (error) {
+      // Geen verbinding: de timer loopt door en wordt vanzelf een punt.
+    }
+    render();
+  }
+
+  // Stoppen kost het punt: eerst vragen.
+  function askPlayStop() {
+    const timer = activeTimer();
+    if (!timer) return;
+    openSheet(playTask(), `
+      <h3>Timer stoppen?</h3>
+      <p>Dan krijgt ${escapeHtml(timer.by)} geen punt. Klaar met spelen? Tik dan op Klaar.</p>
+      <div class="choices">
+        <button class="choice warn" data-action="play-stop-yes">Stoppen, geen punt</button>
+        <button class="choice secondary" data-action="close">Doorgaan</button>
+      </div>`);
+  }
+
+  async function playStop() {
+    const timer = play.timer;
+    closeSheet();
+    if (!timer) return;
+    try {
+      await sendPlay({ stop: true, startedAt: timer.startedAt });
+    } catch (error) {
+      // Geen verbinding: dan blijft de timer staan.
+    }
+    closePlayPage();
+    render();
+    renderRest();
+  }
+
   // ---- Keuzevenster ----
 
   // wide: groot venster (bewerken); dat sluit niet vanzelf, want je bent aan het typen.
@@ -2406,6 +2789,29 @@
       moveEditing(Number(target.dataset.delta));
     } else if (action === "kb-delete" && editor) {
       deleteEditing();
+    } else if (action === "play") {
+      askPlay();
+    } else if (action === "play-open") {
+      openPlayPage();
+    } else if (action === "play-close") {
+      closePlayPage();
+    } else if (action === "play-who" && playChoice) {
+      playChoice.who = target.dataset.person;
+      renderPlaySheet();
+    } else if (action === "play-mode" && playChoice) {
+      playChoice.noTimer = target.dataset.mode === "log";
+      renderPlaySheet();
+    } else if (action === "play-min" && playChoice) {
+      playChoice.minutes = Number(target.dataset.min);
+      renderPlaySheet();
+    } else if (action === "play-go") {
+      playGo();
+    } else if (action === "play-finish") {
+      playFinish();
+    } else if (action === "play-stop") {
+      askPlayStop();
+    } else if (action === "play-stop-yes") {
+      playStop();
     } else if (action === "task") {
       const task = tasks().find((t) => t.id === id);
       if (!task) return;

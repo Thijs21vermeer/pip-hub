@@ -96,6 +96,33 @@ function seed(before, byId, year) {
     });
 }
 
+// ---- Spelen met Pip ----
+
+// Elke keer spelen is een vinkje van 1 punt, met de minuten erbij (voor Pip
+// Wrapped). play: true houdt ze apart van gewone taken waar dat nodig is.
+export async function recordPlay(task, sessions, now = Date.now()) {
+  const ticks = sessions.map((session) => ({
+    id: task.id,
+    title: task.title,
+    icon: task.icon || "ball",
+    repeat: "daily",
+    by: session.by,
+    at: session.at,
+    pts: 1,
+    min: session.minutes,
+    play: true,
+  }));
+  for (const year of new Set(ticks.map((tick) => yearOf(tick.at)))) {
+    const part = (await readPart(year, "ticks")) || { startedAt: now, list: [] };
+    const list = part.list.slice();
+    for (const tick of ticks.filter((item) => yearOf(item.at) === year)) {
+      if (!list.some((t) => t.id === tick.id && t.at === tick.at)) list.push(tick);
+    }
+    list.sort((a, b) => a.at - b.at);
+    await writePart(year, "ticks", { startedAt: part.startedAt, list });
+  }
+}
+
 // ---- Herinneringen ----
 
 // Een baasje heet voortaan anders: in het jaarlog (vinkjes) van dit en vorig jaar

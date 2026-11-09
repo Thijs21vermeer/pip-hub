@@ -23,6 +23,8 @@ window.PIP_CONFIG = {
     { id: "avondeten", title: "Avondeten", icon: "moon", stock: { id: "natvoer", amount: 1 } },
     { id: "water", title: "Water verversen", icon: "drop" },
     { id: "brokjes", title: "Brokjes bijvullen", icon: "bowl" },
+    // Spelen met Pip: zo vaak als je wilt, elke keer een punt (met of zonder timer).
+    { id: "spelen", title: "Spelen met Pip", icon: "ball", play: true },
   ],
 
   // Acties: knoppen voor de kattenbak en de voerbak, via het servertje op

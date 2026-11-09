@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-43">
+  <link rel="stylesheet" href="stijl.css?v=20261109-45">
   <!-- Scores op de telefoon: dezelfde cijfers als het scoreboard op de Hub
        (stats.js), per week, maand of jaar, met badges en hoe de punten werken. -->
 </head>
@@ -38,7 +38,6 @@
       <p class="period" id="period"></p>
 
       <section class="card ranking" id="ranking" aria-label="Stand"></section>
-      <p class="note" id="footnote"></p>
 
       <section class="section" aria-labelledby="badges-title">
         <h2 class="section-title" id="badges-title">Badges</h2>
@@ -64,9 +63,9 @@
     <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
   </main>
 
-  <script src="config.js?v=20261109-43"></script>
-  <script src="telefoon.js?v=20261109-43"></script>
-  <script src="stats.js?v=20261109-43"></script>
+  <script src="config.js?v=20261109-45"></script>
+  <script src="telefoon.js?v=20261109-45"></script>
+  <script src="stats.js?v=20261109-45"></script>
   <script>
     (function () {
       "use strict";
@@ -74,11 +73,6 @@
       const P = window.PipPhone;
       const { config, $, serverUrl, getJson } = P;
       const CROWN = '<svg viewBox="0 0 24 24" fill="none" stroke="#d99a3e" stroke-width="2" stroke-linejoin="round" aria-label="eerste"><path d="M3 18h18l-1.5-10-5 4L12 5l-2.5 7-5-4z"/></svg>';
-      const FOOTNOTES = {
-        week: "Zondag om 20:00 wordt de held van de week bekend.",
-        month: "Alle punten van deze maand bij elkaar.",
-        year: "Hier komt ook Pip Wrapped vandaan.",
-      };
       let period = "week";
       let jaarlog = null;
       let people = [];
@@ -90,7 +84,6 @@
         if (!jaarlog) return;
         const result = window.PipStats.scores(jaarlog, period, Date.now(), people, config.resetHour);
         $("period").textContent = result.label.charAt(0).toUpperCase() + result.label.slice(1);
-        $("footnote").textContent = FOOTNOTES[period];
 
         const max = Math.max(1, ...result.ranking.map((row) => row.points));
         const ranking = $("ranking");

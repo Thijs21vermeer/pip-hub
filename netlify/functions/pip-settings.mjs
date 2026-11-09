@@ -9,6 +9,8 @@
 //                                 overal mee (huisgenoten, vinkjes, jaarlog, profielfoto)
 //   PUT { tick: { id, by } }      één taak afvinken vanaf de telefoon (alleen die taak;
 //                                 de rest van de vinkjes blijft zoals hij is)
+//   PUT { play: { start | log | finish | stop } }  Spelen met Pip (zie lib/play.mjs);
+//                                 GET en PUT geven altijd play: { timer?, sessions } mee
 //
 // Een taak met notify: true geeft een melding op de telefoon (ntfy) zodra iemand
 // hem afvinkt; remind: "22:00" geeft een seintje als hij dan nog open staat
@@ -18,6 +20,7 @@ import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
 import { recordTicks, renameInHistory } from "../lib/history.mjs";
 import { localTime, notify } from "../lib/notify.mjs";
+import { actPlay, readPlay } from "../lib/play.mjs";
 
 const ICONS = new Set(["sun", "moon", "drop", "bowl", "box", "heart", "paw", "pill", "scissors", "ball"]);
 const REPEATS = new Set(["daily", "weekly", "biweekly", "monthly", "quarterly"]);
@@ -43,6 +46,13 @@ function cleanTasks(list) {
       icon: ICONS.has(item.icon) ? item.icon : "paw",
       repeat: REPEATS.has(item.repeat) ? item.repeat : "daily",
     };
+    // Spelen met Pip: zo vaak als je wilt, elke keer een punt (lib/play.mjs).
+    if (item.play === true) {
+      task.play = true;
+      task.repeat = "daily";
+      tasks.push(task);
+      continue;
+    }
     // Melding als hij gedaan is, en een seintje op een vaste tijd (alleen dagtaken).
     if (item.notify === true) task.notify = true;
     if (task.repeat === "daily" && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.remind || "")) task.remind = item.remind;
@@ -151,11 +161,24 @@ export default async (request) => {
     // strong: een wijziging moet bij de volgende GET meteen terugkomen.
     const store = getStore({ name: "pip", consistency: "strong" });
     const current = (await store.get("settings", { type: "json" })) || {};
-    if (request.method === "GET") return json(200, current, headers);
+    // Spelen staat in een eigen blob; een fout daar mag de rest niet tegenhouden.
+    const withPlay = async (settings) => ({
+      ...settings,
+      play: await readPlay(settings.tasks).catch((error) => {
+        console.error(JSON.stringify({ event: "play.read.error", code: error.code || error.name || "UNKNOWN" }));
+        return null;
+      }),
+    });
+    if (request.method === "GET") return json(200, await withPlay(current), headers);
     if (request.method !== "PUT") return json(405, { error: "METHOD_NOT_ALLOWED" }, headers);
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") return json(400, { error: "BAD_REQUEST" }, headers);
+    if ("play" in body) {
+      const result = await actPlay(current.tasks, body.play);
+      if (result.error) return json(result.status, { error: result.error, play: result.play || null }, headers);
+      return json(200, { ...current, play: result.play }, headers);
+    }
     const next = { ...current };
     if ("tasks" in body) {
       const tasks = cleanTasks(body.tasks);
@@ -237,7 +260,7 @@ export default async (request) => {
       await recordTicks(current, next).catch((error) =>
         console.error(JSON.stringify({ event: "jaarlog.ticks.error", code: error.code || error.name || "UNKNOWN" })));
     }
-    return json(200, next, headers);
+    return json(200, await withPlay(next), headers);
   } catch (error) {
     console.error(JSON.stringify({ event: "pip-settings.error", code: error.code || error.name || "UNKNOWN" }));
     return json(502, { error: error.code === "CONFIG" ? "NOT_CONFIGURED" : "STORAGE_ERROR" }, headers);

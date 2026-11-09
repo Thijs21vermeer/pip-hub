@@ -927,6 +927,343 @@ main {
   from { opacity: 0; transform: scale(0.94); }
 }
 
+/* ---- Spelen met Pip ---- */
+
+/* Tegel: loopt er een timer, dan een ring in de kleur van Pip; na het spelen
+   groen, hoe vaker hoe groener (kleur uit app.js, playLook). */
+.task.play.running {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent), var(--shadow);
+}
+
+.task.play.running .icon {
+  background: none;
+}
+
+.task.play.running .icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.task.play.running .status {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.task.play.played {
+  box-shadow: none;
+}
+
+.task.play.played .icon {
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.task.play.played .status {
+  color: var(--done);
+  font-weight: 600;
+}
+
+.play-track {
+  stroke: var(--accent-soft);
+}
+
+.play-fill {
+  stroke: var(--accent);
+}
+
+.play-pill {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.play-pill[hidden] {
+  display: none;
+}
+
+.play-pill svg {
+  color: #fff;
+}
+
+/* Keuzevenster: drie groepen met elk een kopje, één knop onderaan. */
+.play-form {
+  text-align: left;
+}
+
+.sheet p.play-label {
+  margin: 1.35rem 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.play-people,
+.play-modes {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.play-people:not(.many) {
+  --n: 3;
+}
+
+.play-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4.4rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.play-opt[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.play-people.many .play-opt {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 5.6rem;
+  padding: 0.5rem;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.play-modes .play-opt {
+  min-height: 4.8rem;
+  gap: 0.9rem;
+}
+
+.play-opt strong {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.play-opt small {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.play-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.play-ico svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.play-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 50%;
+  background: #b3562a;
+  color: #fff8f0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  object-fit: cover;
+}
+
+.play-avatar.t1 { background: #7d8c5a; }
+.play-avatar.t2 { background: #c08a3e; }
+.play-avatar.t3 { background: #4f6b7d; }
+.play-avatar.t4 { background: #8a5a3c; }
+.play-avatar.t5 { background: #6f8f5c; }
+
+.play-lengths {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--bg);
+}
+
+.play-lengths button {
+  min-height: 3rem;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.play-lengths button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sheet p.play-error {
+  margin-top: 0.9rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.play-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.4rem;
+}
+
+.play-actions .choice {
+  min-width: 0;
+  min-height: 4rem;
+  font-size: 1.3rem;
+}
+
+.play-actions .choice:not(.secondary) {
+  flex: 1;
+}
+
+.play-actions .choice[disabled] {
+  opacity: 0.6;
+}
+
+/* Klaar met spelen. */
+.play-done-icon {
+  display: grid;
+  place-items: center;
+  width: 4.6rem;
+  height: 4.6rem;
+  margin: 0 auto 0.8rem;
+  border-radius: 50%;
+  background: var(--done);
+  color: #fff;
+}
+
+.play-done-icon svg {
+  width: 2.3rem;
+  height: 2.3rem;
+  stroke-width: 2.6;
+}
+
+.sheet p.play-done-points {
+  margin-top: 0.2rem;
+  color: var(--done);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* De timer groot in beeld, van een afstand te lezen. */
+.play-page .page-head {
+  margin-bottom: 0;
+}
+
+.play-view {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 3rem;
+  padding: 0 2rem 1rem 1.5rem;
+}
+
+.play-clock {
+  position: relative;
+  width: 21rem;
+  height: 21rem;
+}
+
+.play-clock svg {
+  width: 100%;
+  height: 100%;
+}
+
+.play-clock-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.play-clock-text strong {
+  color: var(--text);
+  font-size: 5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.play-kicker {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.play-kicker.accent {
+  color: var(--accent);
+}
+
+.play-who {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.play-info h2 {
+  margin-top: 1rem;
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.play-info p {
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.play-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.8rem;
+}
+
+.play-buttons .choice {
+  min-width: 9rem;
+  min-height: 4rem;
+}
+
 /* Pagina "Alle taken" */
 
 .page {

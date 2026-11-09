@@ -1,6 +1,7 @@
 // Rekenwerk voor het scoreboard en Pip Wrapped, los van het scherm. Alles komt
 // uit het jaarlog van het servertje (netlify/functions/jaarlog-lezen.mjs):
-//   ticks      elk vinkje { id, title, icon, repeat, by, at, pts }
+//   ticks      elk vinkje { id, title, icon, repeat, by, at, pts } (Spelen met Pip:
+//              ook min en play: true, elke keer spelen is een vinkje)
 //   days       per dag { v, ws, wn, h[24], f, p, fo, c } (kattenbak en voeren)
 //   reminders  { id, at, kind? } wanneer een herinnering ging (kind "late": een half uur te laat)
 // Werkt in de browser (window.PipStats) en in Node (voor de tests).
@@ -338,9 +339,10 @@
       }
     }
 
-    // Eten: de dagtaak met een herinnering (natvoer), anders de vaakst gedane dagtaak.
+    // Eten: de dagtaak met een herinnering (natvoer), anders de vaakst gedane dagtaak
+    // (niet Spelen met Pip: dat kan vaker per dag en is geen verzorging).
     const daily = new Map();
-    ticks.filter((tick) => tick.repeat === "daily").forEach((tick) => count(daily, tick.id));
+    ticks.filter((tick) => tick.repeat === "daily" && !tick.play).forEach((tick) => count(daily, tick.id));
     const reminded = tasks.find((task) => task.remind && daily.has(task.id));
     const careId = reminded ? reminded.id : (topOf(daily) || [null])[0];
     const portions = sum(days, (d) => d.p);
