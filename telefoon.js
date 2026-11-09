@@ -465,6 +465,36 @@
     return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
 
+  // ---- Nieuwe versie direct ----
+  // GitHub Pages laat een pagina 10 minuten in de cache van de telefoon staan.
+  // Na een update zag je dan nog even de oude (zoals de oude statusbalk). Bij
+  // het openen, en als Pip weer naar voren komt, daarom de pagina zelf opnieuw
+  // ophalen ("reload" ververst ook die cache). Is het versienummer anders, dan
+  // één keer herladen. Niet midden in Pip Wrapped.
+  function myVersion() {
+    const script = document.querySelector('script[src*="telefoon.js?v="]');
+    return script ? script.getAttribute("src").split("v=")[1] : null;
+  }
+  async function checkForUpdate() {
+    const mine = myVersion();
+    if (!mine || (window.PipWrapped && window.PipWrapped.isOpen())) return;
+    try {
+      const response = await fetch(location.pathname, { cache: "reload" });
+      const found = (await response.text()).match(/telefoon\.js\?v=([\w-]+)/);
+      if (!found || found[1] === mine) return;
+      // Nooit in een rondje herladen als de oude toch terugkomt.
+      if (sessionStorage.getItem("pip-updated-from") === mine) return;
+      sessionStorage.setItem("pip-updated-from", mine);
+      location.reload();
+    } catch (error) {
+      // Geen netwerk: dan de versie die er is.
+    }
+  }
+  checkForUpdate();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+
   window.PipPhone = {
     config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp, isIos,
     pushSupported, pushState, enablePush, disablePush, activity, activityItem, pipDayKey,
