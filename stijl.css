@@ -546,6 +546,11 @@ button.piece:active .tick {
   background: var(--card);
   border: 2px solid var(--muted);
 }
+/* Wat een baasje deed (afgevinkt, gespeeld): een gevuld bolletje. */
+.timeline li.care .dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
 .timeline strong {
   display: block;
   font-size: 16px;
