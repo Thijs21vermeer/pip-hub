@@ -469,7 +469,7 @@
         perDay,
         // Leeg = kosten vanaf begin januari: dan "dit jaar", niet de start van het jaarlog.
         since: typeof costs.since === "string" ? costs.since : since,
-        rows: costs.rows.slice(0, 5),
+        rows: costs.rows.slice(0, 7),
         priciest: costs.priciest || null,
       });
     }

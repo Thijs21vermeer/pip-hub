@@ -1696,24 +1696,50 @@
     return slides.filter((slide) => slide !== DEFAULT_SLIDE).map((slide) => slide.url);
   }
 
-  // Kosten van Pip uit Voerraad (alleen-lezen), voor het kostenscherm in Wrapped.
-  function wrappedCosts(year) {
-    if (!voerraad || !voerraad.costs || !voerraad.pets) return null;
-    const pet = voerraad.pets.find((p) => p.name.toLowerCase() === String(config.petName || "").toLowerCase()) || voerraad.pets[0];
-    const costs = pet && voerraad.costs.find((c) => c.petId === pet.id && c.year === year);
-    if (!costs || !(costs.total > 0)) return null;
+  // Kosten van Pip voor het kostenscherm in Wrapped: uit Voerraad (alleen-lezen),
+  // plus de eenmalige startkosten uit het jaarlog (krabpaal, kattenbak, …), die
+  // Voerraad niet kent omdat het geen voorraad is.
+  function wrappedCosts(year, log) {
+    let costs = null;
+    if (voerraad && voerraad.costs && voerraad.pets) {
+      const pet = voerraad.pets.find((p) => p.name.toLowerCase() === String(config.petName || "").toLowerCase()) || voerraad.pets[0];
+      costs = (pet && voerraad.costs.find((c) => c.petId === pet.id && c.year === year)) || null;
+    }
+    const start = ((log && log.extraCosts) || []).filter((c) =>
+      c && typeof c.date === "string" && c.date.startsWith(`${year}-`) && Number(c.amount) > 0);
+    const startTotal = start.reduce((sum, c) => sum + Number(c.amount), 0);
+    const base = costs && costs.total > 0 ? costs : null;
+    if (!base && !(startTotal > 0)) return null;
+
     // Verzekering en dierenarts zijn geen voorraad, dus die staan niet in CATEGORIES.
     const extra = { insurance: "Verzekering", vet: "Dierenarts" };
     const label = (category) => extra[category] || (CATEGORIES[category] || CATEGORIES.other).label;
-    const priciest = costs.months.indexOf(Math.max(...costs.months));
-    const since = costs.since && costs.since > `${year}-01-07`
-      ? `sinds ${Number(costs.since.slice(8))} ${MONTHS[Number(costs.since.slice(5, 7)) - 1]}` : "";
+    const cents = (n) => Math.round(n * 100) / 100;
+    const rows = base ? base.categories.map((c) => ({ name: label(c.category), amount: c.amount })) : [];
+    if (startTotal > 0) rows.push({ name: "Startkosten", amount: cents(startTotal) });
+    rows.sort((a, b) => b.amount - a.amount);
+
+    const months = base ? base.months.slice() : [];
+    start.forEach((c) => {
+      const month = Number(c.date.slice(5, 7)) - 1;
+      while (months.length <= month) months.push(0);
+      months[month] += Number(c.amount);
+    });
+    const priciest = months.indexOf(Math.max(...months));
+
+    // Vanaf de eerste kosten van het jaar tot vandaag (of 31 december).
+    const first = [base && base.since, ...start.map((c) => c.date)].filter(Boolean).sort()[0] || null;
+    const today = window.PipStats.calendarKey(Date.now());
+    const end = today < `${year}-12-31` ? today : `${year}-12-31`;
+    const days = first ? Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${first}T12:00:00Z`)) / 86400000) + 1 : 0;
+    const since = first && first > `${year}-01-07`
+      ? `sinds ${Number(first.slice(8))} ${MONTHS[Number(first.slice(5, 7)) - 1]}` : "";
     return {
-      total: costs.total,
-      days: costs.days,
+      total: cents((base ? base.total : 0) + startTotal),
+      days: days > 0 ? days : (base ? base.days : 0),
       since,
-      rows: costs.categories.map((c) => ({ name: label(c.category), amount: c.amount })),
-      priciest: costs.months.length >= 3 ? MONTHS[priciest] : null,
+      rows,
+      priciest: months.length >= 3 ? MONTHS[priciest] : null,
     };
   }
 
@@ -1727,7 +1753,7 @@
       people: people(),
       tasks: tasks(),
       photos: photoList(),
-      costs: wrappedCosts(year),
+      costs: wrappedCosts(year, log),
     }, Date.now(), config.resetHour);
     clearTimeout(restTimer);
     hideRestQr();

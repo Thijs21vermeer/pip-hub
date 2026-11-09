@@ -314,33 +314,52 @@
     },
 
     costs(s) {
-      const max = Math.max(...s.rows.map((row) => row.amount), 1);
-      const rows = s.rows.map((row, i) => `
-        <div class="wr-up" style="${delay(0.35 + i * 0.12)}">
+      // Speelgoed is een grapje: dat bedrag is oneindig (zie toyRow hieronder).
+      const real = s.rows.filter((row) => row.name !== "Speelgoed").slice(0, 6);
+      const max = Math.max(...real.map((row) => row.amount), 1);
+      // Speelgoed staat bovenaan, de echte bedragen komen daarna.
+      const rows = real.map((row, i) => `
+        <div class="wr-up" style="${delay(0.47 + i * 0.12)}">
           <div class="wr-row" style="justify-content:space-between;align-items:baseline;gap:12px">
             <span style="font-size:20px;font-weight:700">${esc(row.name)}</span>
             <span style="font-size:20px;font-weight:700;color:#c9c2ff">€ ${num(row.amount)}</span>
           </div>
           <div style="margin-top:8px;height:10px;border-radius:99px;background:rgba(255,255,255,.1)">
-            <div class="wr-growx" style="height:100%;border-radius:99px;width:${Math.round((row.amount / max) * 100)}%;background:${i === 0 ? "#c9c2ff" : "rgba(201,194,255,.5)"};${delay(0.55 + i * 0.12)}"></div>
+            <div class="wr-growx" style="height:100%;border-radius:99px;width:${Math.round((row.amount / max) * 100)}%;background:${i === 0 ? "#c9c2ff" : "rgba(201,194,255,.5)"};${delay(0.67 + i * 0.12)}"></div>
           </div>
         </div>`).join("");
+      const toyRow = `
+        <div class="wr-up" style="${delay(0.35)}">
+          <div class="wr-row" style="justify-content:space-between;align-items:center;gap:12px">
+            <span style="font-size:20px;font-weight:700">Speelgoed</span>
+            <span class="wr-row" role="img" aria-label="oneindig veel euro" style="gap:6px;font-size:20px;font-weight:700;color:#c9c2ff">€
+              <svg class="wr-inf" width="40" height="20" viewBox="0 0 40 20" aria-hidden="true">
+                <path d="M20 10C16.5 5.3 13.6 3 10 3a7 7 0 0 0 0 14c3.6 0 6.5-2.3 10-7s6.4-7 10-7a7 7 0 0 1 0 14c-3.6 0-6.5-2.3-10-7Z" fill="none" stroke="rgba(201,194,255,.35)" stroke-width="3.2" stroke-linecap="round"/>
+                <path class="wr-inf-run" pathLength="100" d="M20 10C16.5 5.3 13.6 3 10 3a7 7 0 0 0 0 14c3.6 0 6.5-2.3 10-7s6.4-7 10-7a7 7 0 0 1 0 14c-3.6 0-6.5-2.3-10-7Z" fill="none" stroke="#c9c2ff" stroke-width="3.2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </div>
+          <div style="margin-top:8px;height:10px;border-radius:99px;background:rgba(255,255,255,.1)">
+            <div class="wr-growx" style="height:100%;border-radius:99px;width:100%;background:linear-gradient(90deg,rgba(201,194,255,.5),#c9c2ff);${delay(0.55)}"></div>
+          </div>
+        </div>`;
       const total = `€ ${num(s.total)}`;
       return `<div class="wr-slide" style="background:#262046">
         <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="left:380px;top:470px;width:220px;height:220px;background:#2f2858"></div>
-        <div class="wr-abs" style="left:64px;top:96px;width:450px">
+        <div class="wr-abs" style="left:64px;top:96px;width:470px">
           <p class="wr-up wr-eyebrow" style="color:#c9c2ff">Wat Pip kostte</p>
-          <p class="wr-up d1" style="margin-top:16px;font-size:30px;font-weight:600">Jullie gaven ${s.since ? esc(s.since) : "dit jaar"}</p>
-          <p class="wr-pop d2 wr-num" style="margin-top:8px;font-size:${fit(total, 124, 450)}px;line-height:.88">${total}</p>
-          <p class="wr-up d3 wr-serif" style="margin-top:10px;font-size:40px;color:#c9c2ff">uit aan Pip. Elke cent waard.</p>
-          <p class="wr-up d4" style="margin-top:24px;font-size:19px;line-height:1.45;color:rgba(255,255,255,.82)">Dat is ${euro(s.perDay)} per dag.${s.priciest ? ` Duurste maand: ${esc(s.priciest)}.` : ""}</p>
+          <div data-center-between style="position:relative;margin-top:20px">
+          <p class="wr-up d1" style="font-size:28px;font-weight:600">Jullie gaven ${s.since ? esc(s.since) : "dit jaar"}…</p>
+          <p class="wr-pop d2 wr-num" style="margin-top:6px;font-size:${fit(total, 112, 440)}px;line-height:.92;letter-spacing:-0.02em;color:#c9c2ff">${total}</p>
+          <p class="wr-up d3" style="margin-top:6px;font-size:28px;font-weight:600;line-height:1.3;white-space:nowrap">…uit aan Pip. Dat is elke cent waard!</p>
+          </div>
+        </div>
+        <div class="wr-abs" data-align-last style="left:64px;top:404px;width:470px">
+          <p class="wr-up d4" style="font-size:20px;line-height:1.35;color:rgba(255,255,255,.88)"><span class="wr-line">Gemiddeld ${euro(s.perDay)} per dag.</span>${s.priciest ? `<span class="wr-line">Duurste maand: ${esc(s.priciest)}.</span>` : ""}</p>
         </div>
         <div class="wr-abs wr-stack" style="left:560px;top:112px;width:400px;gap:14px">
+          ${toyRow}
           ${rows}
-          <div class="wr-up d7 wr-row" style="justify-content:space-between;gap:12px;margin-top:4px;padding:12px 16px;border-radius:16px;background:#332b5e">
-            <span style="font-size:17px;font-weight:600">Apps en servers</span>
-            <span style="font-size:17px;font-weight:700;color:#c9c2ff">€ 0, gratis</span>
-          </div>
         </div>
       </div>`;
     },
@@ -574,6 +593,42 @@
     return top;
   }
 
+  // Kosten: "Duurste maand …" (de laatste regel) op één hoogte met het woord
+  // van de laatste rij rechts ("Snacks"), en het middenstuk ("Jullie gaven …" tot en met
+  // "…elke cent waard!") precies midden tussen de kop en "Gemiddeld".
+  function alignToLast(slide) {
+    if (!slide) return;
+    const el = slide.querySelector("[data-align-last]");
+    const list = slide.querySelector(".wr-stack");
+    const last = list && list.lastElementChild;
+    if (!el || !last) return;
+    // Meten zonder de inloop-animaties (die schuiven alles nog 28px op).
+    slide.classList.add("wr-measuring");
+    const box = slide.getBoundingClientRect();
+    const scale = box.height / slide.offsetHeight || 1;
+    const y = (value) => (value - box.top) / scale;
+    const text = (node) => { const range = document.createRange(); range.selectNodeContents(node); return range.getBoundingClientRect(); };
+
+    const lines = el.querySelectorAll(".wr-line");
+    const lastLine = lines[lines.length - 1] || el;
+    const label = last.querySelector(".wr-row span") || last;
+    const middleOf = (rect) => (rect.top + rect.bottom) / 2;
+    el.style.top = `${el.offsetTop + Math.round(y(middleOf(text(label))) - y(middleOf(text(lastLine))))}px`;
+
+    const middle = slide.querySelector("[data-center-between]");
+    const heading = slide.querySelector(".wr-eyebrow");
+    if (middle && heading) {
+      const parts = middle.querySelectorAll("p");
+      const above = y(text(heading).bottom);
+      const below = y(text(lines[0] || el).top);
+      const top = y(text(parts[0]).top);
+      const bottom = y(text(parts[parts.length - 1]).bottom);
+      const want = above + Math.max(12, (below - above - (bottom - top)) / 2);
+      middle.style.top = `${Math.round(want - top)}px`;
+    }
+    slide.classList.remove("wr-measuring");
+  }
+
   function balance(slide) {
     if (!slide) return;
     const movable = [...slide.children].filter((el) => !el.hasAttribute("data-fixed"));
@@ -598,6 +653,7 @@
     const slide = state.slides[index];
     root.querySelector(".wr-host").innerHTML = slide.html;
     balance(root.querySelector(".wr-host .wr-slide"));
+    alignToLast(root.querySelector(".wr-host .wr-slide"));
     root.classList.toggle("light", slide.light);
     root.querySelector(".wr-progress").innerHTML = state.slides.map((_, i) =>
       `<span class="wr-seg"><i class="${i < index ? "full" : i === index ? "run" : ""}"></i></span>`).join("");

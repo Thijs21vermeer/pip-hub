@@ -2541,7 +2541,12 @@ img.score-avatar {
 @keyframes wr-wipe { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @keyframes wr-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes wr-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.wr-line { display: block; }
+.wr-measuring, .wr-measuring * { animation: none !important; }
+/* Speelgoed op het kostenscherm: een lichtje dat eindeloos rondjes draait. */
+.wr-inf-run { stroke-dasharray: 26 74; animation: wr-inf 2.6s linear infinite; }
+@keyframes wr-inf { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .wr-up, .wr-pop, .wr-grow, .wr-growx, .wr-wipe, .wr-cell { animation: none; }
+  .wr-up, .wr-pop, .wr-grow, .wr-growx, .wr-wipe, .wr-cell, .wr-inf-run { animation: none; }
 }
