@@ -2,7 +2,7 @@
 // uit het jaarlog van het servertje (netlify/functions/jaarlog-lezen.mjs):
 //   ticks      elk vinkje { id, title, icon, repeat, by, at, pts }
 //   days       per dag { v, ws, wn, h[24], f, p, fo, c } (kattenbak en voeren)
-//   reminders  { id, at } wanneer een herinnering ging
+//   reminders  { id, at, kind? } wanneer een herinnering ging (kind "late": een half uur te laat)
 // Werkt in de browser (window.PipStats) en in Node (voor de tests).
 (function (root) {
   "use strict";
@@ -52,6 +52,21 @@
   }
 
   // "9 november"
+  // "Natvoer geven" → "natvoer gegeven", voor zinnen als "12 dagen natvoer gegeven".
+  // Alleen bekende werkwoorden; anders blijft de taaknaam zoals hij is.
+  const DONE_FORMS = {
+    geven: "gegeven", draaien: "gedraaid", verversen: "ververst", schoonmaken: "schoongemaakt",
+    legen: "geleegd", borstelen: "geborsteld", bijvullen: "bijgevuld", voeren: "gevoerd",
+    verschonen: "verschoond", kammen: "gekamd", knippen: "geknipt", wegen: "gewogen",
+    poetsen: "gepoetst", zuigen: "gezogen", opruimen: "opgeruimd", vullen: "gevuld",
+  };
+  function doneForm(title) {
+    const words = String(title).toLowerCase().split(" ");
+    const last = words[words.length - 1];
+    if (DONE_FORMS[last]) words[words.length - 1] = DONE_FORMS[last];
+    return words.join(" ");
+  }
+
   function shortDate(key) {
     const [, m, d] = key.split("-").map(Number);
     return `${d} ${MONTHS[m - 1]}`;
@@ -335,25 +350,38 @@
         const careTicks = ticks.filter((tick) => tick.id === careId);
         careTitle = careTicks[careTicks.length - 1].title;
         const doneDays = new Set(careTicks.map((tick) => dayKey(tick.at, resetHour)));
-        stats.push({ value: String(doneDays.size), label: `${doneDays.size === 1 ? "dag" : "dagen"} ${careTitle.toLowerCase()}` });
+        stats.push({ value: String(doneDays.size), label: `${doneDays.size === 1 ? "dag" : "dagen"} ${doneForm(careTitle)}` });
         // Vinkjes worden pas sinds het jaarlog bewaard (daarvoor alleen het laatste
         // per taak): een dag daarvoor zonder vinkje is onbekend, niet vergeten.
         const tickStartKey = log.ticksSince ? dayKey(log.ticksSince, resetHour) : dayKey(careTicks[0].at, resetHour);
-        const startHeat = [[dayKey(careTicks[0].at, resetHour), tickStartKey].sort()[0], `${year}-01-01`].sort()[1];
+        // Altijd het hele jaar tot nu (zoals een jaaroverzicht): dagen van voor het
+        // bijhouden staan er licht in.
+        const startHeat = `${year}-01-01`;
+        const trackedFrom = [dayKey(careTicks[0].at, resetHour), tickStartKey].sort()[0];
         const start = keyNumber(startHeat);
         const end = keyNumber(lastKey);
-        heat = { offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7, cells: [], days: [], first: shortDate(startHeat), last: shortDate(lastKey) };
+        heat = {
+          offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7,
+          cells: [],
+          days: [],
+          first: MONTHS[0],
+          last: MONTHS[Number(lastKey.slice(5, 7)) - 1],
+          since: trackedFrom > startHeat ? shortDate(trackedFrom) : null,
+        };
         streak = longestRun([...doneDays]);
         for (let n = start; n <= end; n++) {
           const key = numberKey(n);
           const done = doneDays.has(key);
           const inStreak = streak.length >= 3 && key >= streak.from && key <= streak.to;
-          heat.cells.push(done ? (inStreak ? "streak" : "done") : key === today ? "today" : key < tickStartKey ? "unknown" : "missed");
+          heat.cells.push(done ? (inStreak ? "streak" : "done") : key === today ? "today" : key < trackedFrom ? "unknown" : "missed");
           heat.days.push({ day: Number(key.slice(8)), wd: DAYS[weekdayOf(key)].slice(0, 2) });
         }
         heat.hasUnknown = heat.cells.includes("unknown");
-        const remindedTimes = reminders.filter((r) => r.id === careId).length;
-        if (remindedTimes > 0) stats.push({ value: String(remindedTimes), label: `keer was de herinnering nodig` });
+        // Hoe vaak het seintje "een half uur te laat" nodig was (alleen bij een taak met een tijd).
+        if (reminded) {
+          const late = reminders.filter((r) => r.id === careId && r.kind === "late").length;
+          stats.push({ value: String(late), label: `keer een half uur te laat` });
+        }
         const dayWord = doneDays.size === 1 ? "dag" : "dagen";
         summary.push({ label: careTitle, value: num(doneDays.size), sub: streak.length >= 2 ? `${dayWord}, ${streak.length} op rij` : dayWord });
       }
@@ -361,6 +389,7 @@
       slides.push({
         type: "food",
         title: careTitle,
+        doneTitle: careTitle ? doneForm(careTitle) : null,
         stats: stats.slice(0, 3),
         heat,
         streak: streak && streak.length >= 3 ? { length: streak.length, from: shortDate(streak.from), to: shortDate(streak.to) } : null,

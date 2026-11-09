@@ -98,10 +98,11 @@ function seed(before, byId, year) {
 
 // ---- Herinneringen ----
 
-export async function recordReminder(taskId, at) {
+// kind: leeg voor het gewone seintje, "late" voor "een half uur te laat".
+export async function recordReminder(taskId, at, kind) {
   const year = yearOf(at);
   const reminders = (await readPart(year, "reminders")) || { list: [] };
-  reminders.list.push({ id: taskId, at });
+  reminders.list.push(kind ? { id: taskId, at, kind } : { id: taskId, at });
   await writePart(year, "reminders", reminders);
 }
 

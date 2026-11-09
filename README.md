@@ -154,7 +154,7 @@ Hoe het werkt:
 - **Geen apparaat thuis nodig.** Netlify kijkt elke 5 minuten (`netlify/functions/herinnering.mjs`), en de opslag (`pip-settings.mjs`) meldt een nieuw vinkje meteen.
 - **Instellen per taak** gebeurt op het servertje, niet op de Google Hub:
   - `notify: true` geeft een melding als de taak gedaan is.
-  - `remind: "22:00"` geeft een seintje als hij dan nog open staat (alleen dagtaken, één keer per dag, tot 2 uur na die tijd).
+  - `remind: "22:00"` geeft een seintje als hij dan nog open staat (alleen dagtaken, één keer per dag, tot 2 uur na die tijd), en een tweede ("Half uur te laat") als hij een half uur later nog steeds open staat. Pip Wrapped telt hoe vaak dat tweede seintje nodig was.
   - In **Alle taken → Bewerken** zie je het als "seintje 22:00".
 - **De meldingen gaan via ntfy.sh** naar een geheim onderwerp: `NTFY_TOPIC` in Netlify, en op de Mac in `~/.config/pip/ntfy-topic.txt`. Wie dat onderwerp kent, kan meelezen; zet het dus niet in GitHub.
 

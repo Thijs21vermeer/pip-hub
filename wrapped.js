@@ -137,7 +137,7 @@
     food(s, ctx) {
       const stats = s.stats.map((stat, i) => `
         <div class="wr-up" style="${delay(0.15 + i * 0.12)}">
-          <p class="wr-num" style="font-size:76px;line-height:.95">${num(stat.value)}</p>
+          <p class="wr-num" style="font-size:84px;line-height:.95">${num(stat.value)}</p>
           <p style="margin-top:6px;font-size:19px;line-height:1.3;color:#ffe9d2">${esc(stat.label)}</p>
         </div>`).join("");
       let card = "";
@@ -149,48 +149,37 @@
           unknown: "background:rgba(255,244,230,.12)",
           today: "border:2px dashed rgba(255,244,230,.6)",
         };
-        let calendar;
-        if (s.heat.cells.length <= 21 && s.heat.days) {
-          // Korte periode: een rij ronde dagen met weekdag en datum.
-          const n = s.heat.cells.length;
-          const size = Math.max(28, Math.min(52, Math.floor(862 / n) - 10));
-          calendar = `<div class="wr-row" style="margin-top:22px;gap:10px;align-items:flex-start">${s.heat.cells.map((kind, i) => {
-            const day = s.heat.days[i];
-            return `<div class="wr-stack wr-cell" style="align-items:center;gap:7px;${delay(0.35 + i * 0.05)}">
-              <span style="font-size:13px;color:#ffe9d2">${esc(day.wd)}</span>
-              <span style="display:grid;place-items:center;box-sizing:border-box;width:${size}px;height:${size}px;border-radius:50%;${looks[kind]};font-size:${size > 36 ? 16 : 12}px;font-weight:700;color:${kind === "streak" ? "#5a2f12" : "#fff4e6"}">${day.day}</span>
-            </div>`;
-          }).join("")}</div>`;
-        } else {
-          // Langere periode: het jaaroverzicht, een kolom per week.
-          const total = s.heat.offset + s.heat.cells.length;
-          const columns = Math.ceil(total / 7);
-          const size = Math.max(8, Math.min(26, Math.floor(856 / columns) - 4));
-          const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
-            .concat(s.heat.cells.map((kind, i) => `<i class="wr-cell" style="${looks[kind]};${delay(0.35 + Math.floor((i + s.heat.offset) / 7) * 0.02)}"></i>`));
-          const width = Math.max(columns * (size + 4) - 4, 300);
-          calendar = `<div class="wr-heat" style="margin-top:16px;grid-template-rows:repeat(7,${size}px);grid-auto-columns:${size}px">${cells.join("")}</div>
-            <div class="wr-row" style="justify-content:space-between;gap:24px;width:${width}px;margin-top:8px;font-size:13px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>`;
-        }
+        // Het jaaroverzicht: een kolom per week, van januari tot nu.
+        const total = s.heat.offset + s.heat.cells.length;
+        const columns = Math.ceil(total / 7);
+        const size = Math.max(8, Math.min(13, Math.floor(856 / columns) - 4));
+        const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
+          .concat(s.heat.cells.map((kind, i) => `<i class="wr-cell" style="${looks[kind]};${delay(0.35 + Math.floor((i + s.heat.offset) / 7) * 0.02)}"></i>`));
+        const width = Math.max(columns * (size + 4) - 4, 300);
+        const calendar = `<div class="wr-heat" style="margin-top:16px;grid-template-rows:repeat(7,${size}px);grid-auto-columns:${size}px">${cells.join("")}</div>
+          <div class="wr-row" style="justify-content:space-between;gap:24px;width:${width}px;margin-top:8px;font-size:13px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>`;
+        const line = s.streak
+          ? `<strong style="color:#ffe7b0">${s.streak.length} dagen op rij</strong> ${esc(s.doneTitle || s.title.toLowerCase())}, van ${esc(s.streak.from)} t/m ${esc(s.streak.to)}.`
+          : s.heat.since ? `Bijgehouden sinds <strong style="color:#ffe7b0">${esc(s.heat.since)}</strong>; daarvoor staat het nog niet in het jaarlog.` : "";
         card = `
-          <div class="wr-abs wr-up d3 wr-card" style="left:64px;right:64px;top:280px;background:#8d5124">
-            <div class="wr-row" style="justify-content:space-between">
+          <div class="wr-abs wr-up d3 wr-card" style="left:64px;right:64px;top:288px;background:#8d5124">
+            <div class="wr-row" style="justify-content:space-between;gap:16px">
               <p style="font-size:19px;font-weight:700">${esc(s.title)} in ${ctx.year}</p>
               <div class="wr-row" style="gap:16px;font-size:14px;color:#ffe9d2">
-                <span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#d18c4f"></i>Gedaan</span>
+                <span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#d18c4f"></i>Gegeven</span>
                 ${s.streak ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#ffe7b0"></i>Langste reeks</span>' : ""}
-                <span class="wr-row" style="gap:6px"><i class="wr-key" style="border:2px solid rgba(255,244,230,.6)"></i>Niet gedaan</span>
+                <span class="wr-row" style="gap:6px"><i class="wr-key" style="border:2px solid rgba(255,244,230,.6)"></i>Vergeten</span>
                 ${s.heat.hasUnknown ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:rgba(255,244,230,.12)"></i>Nog niet bijgehouden</span>' : ""}
               </div>
             </div>
             ${calendar}
-            ${s.streak ? `<p style="margin-top:14px;font-size:18px"><strong style="color:#ffe7b0">${s.streak.length} dagen op rij</strong> ${esc(s.title.toLowerCase())}, van ${esc(s.streak.from)} t/m ${esc(s.streak.to)}.</p>` : ""}
+            ${line ? `<p style="margin-top:12px;font-size:18px">${line}</p>` : ""}
           </div>`;
       }
       return `<div class="wr-slide" style="background:#a9642f;color:#fff4e6">
         <div class="wr-abs" style="left:64px;top:96px;right:64px">
           <p class="wr-up wr-eyebrow" style="color:#ffe2bf">Eten</p>
-          <div style="display:grid;grid-template-columns:repeat(${Math.max(1, s.stats.length)},minmax(0,1fr));gap:24px;margin-top:14px">${stats}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:14px">${stats}</div>
         </div>
         ${card}
       </div>`;
@@ -594,13 +583,14 @@
   }
 
   // Kosten: "Duurste maand …" (de laatste regel) op één hoogte met het woord
-  // van de laatste rij rechts ("Snacks"), en het middenstuk ("Jullie gaven …" tot en met
+  // van de één-na-laatste rij rechts (bijvoorbeeld "Bakvulling"), en het middenstuk ("Jullie gaven …" tot en met
   // "…elke cent waard!") precies midden tussen de kop en "Gemiddeld".
   function alignToLast(slide) {
     if (!slide) return;
     const el = slide.querySelector("[data-align-last]");
     const list = slide.querySelector(".wr-stack");
-    const last = list && list.lastElementChild;
+    const rows = list ? [...list.children] : [];
+    const last = rows[Math.max(0, rows.length - 2)];
     if (!el || !last) return;
     // Meten zonder de inloop-animaties (die schuiven alles nog 28px op).
     slide.classList.add("wr-measuring");
