@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-56">
+  <link rel="stylesheet" href="stijl.css?v=20261109-57">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -155,6 +155,18 @@
     </div>
   </div>
 
+  <!-- Toch niet gedaan: een afgevinkte taak weer open, en de punten eraf. -->
+  <div class="sheet" id="undo-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="undo-title">
+      <h2 id="undo-title"></h2>
+      <p id="undo-text"></p>
+      <div class="sheet-actions">
+        <button type="button" class="sheet-action danger" id="undo-go"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></i><span id="undo-label">Toch niet gedaan<small id="undo-sub"></small></span></button>
+      </div>
+      <button class="sheet-cancel" id="undo-close" type="button">Sluiten</button>
+    </div>
+  </div>
+
   <!-- Acties: kattenbak draaien (of: Pip zit erin) en voeren. -->
   <div class="sheet" id="clean-sheet" hidden>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="clean-title">
@@ -187,10 +199,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-56"></script>
-  <script src="telefoon.js?v=20261109-56"></script>
-  <script src="taken.js?v=20261109-56"></script>
-  <script src="stats.js?v=20261109-56"></script>
+  <script src="config.js?v=20261109-57"></script>
+  <script src="telefoon.js?v=20261109-57"></script>
+  <script src="taken.js?v=20261109-57"></script>
+  <script src="stats.js?v=20261109-57"></script>
   <script>
     (function () {
       "use strict";
@@ -369,8 +381,9 @@
         const piece = (item, size, index) => {
           if (item.task && item.task.play) return playPiece(item, size, index);
           const isOpen = !item.all && !item.done;
-          const el = document.createElement(isOpen ? "button" : "div");
-          if (isOpen) el.type = "button";
+          // Open: tik = wie heeft het gedaan? Gedaan: tik = Toch niet gedaan.
+          const el = document.createElement(item.all ? "div" : "button");
+          if (!item.all) el.type = "button";
           const color = item.all ? "all" : `t${tone.get(item.task.id) || 0}`;
           const photo = item.all ? null : pictureFor(item.task.title);
           const inside = (photo ? `<img src="${photo}" alt="">` : art(item.all ? "heart" : item.task.icon))
@@ -394,6 +407,8 @@
             title.textContent = item.task.title;
             const at = item.done.at >= today ? P.clock(item.done.at) : P.longDate(new Date(item.done.at)).replace(/^\w+ /, "");
             sub.append(P.avatarElement(item.done.by, people, avatars), `${item.done.by} · ${at}`);
+            el.setAttribute("aria-label", `${item.task.title}, gedaan door ${item.done.by}. Tik om ongedaan te maken.`);
+            el.addEventListener("click", () => openUndo(item));
           }
           return el;
         };
@@ -868,6 +883,60 @@
         }
         button.disabled = false;
         paintFeedSheet();
+      });
+
+      // ---- Toch niet gedaan ----
+      // Tik op een afgevinkt schilderijtje: het vinkje eraf (ook op de Hub, binnen
+      // 5 minuten) en de punten weer uit de stand (pip-settings.mjs, untick).
+      const POINTS = { daily: 1, weekly: 3, biweekly: 3, monthly: 5, quarterly: 5 };
+      let undoItem = null;
+
+      function whenLong(at) {
+        const day = P.pipDayKey(at);
+        if (day === P.pipDayKey(Date.now())) return `vandaag om ${P.clock(at)}`;
+        if (day === P.pipDayKey(Date.now() - 24 * 3600 * 1000)) return `gisteren om ${P.clock(at)}`;
+        return `op ${P.longDate(new Date(at)).toLowerCase()}`;
+      }
+
+      function openUndo(item) {
+        undoItem = item;
+        const pts = POINTS[window.PipTasks.repeatOf(item.task)] || 1;
+        $("undo-title").textContent = item.task.title;
+        $("undo-text").textContent = `Gedaan door ${item.done.by} ${whenLong(item.done.at)}.`;
+        $("undo-sub").textContent = `${pts === 1 ? "Het punt" : `De ${pts} punten`} van ${item.done.by} gaan er weer af`;
+        $("undo-go").disabled = false;
+        $("undo-sheet").hidden = false;
+      }
+      $("undo-close").addEventListener("click", () => { $("undo-sheet").hidden = true; });
+      $("undo-sheet").addEventListener("click", (event) => { if (event.target === $("undo-sheet")) $("undo-sheet").hidden = true; });
+      $("undo-go").addEventListener("click", async () => {
+        const item = undoItem;
+        if (!item || $("undo-go").disabled) return;
+        $("undo-go").disabled = true;
+        try {
+          const response = await fetch(urls.settings, {
+            method: "PUT",
+            headers: auth({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ untick: { id: item.task.id, at: item.done.at } }),
+          });
+          $("undo-sheet").hidden = true;
+          if (response.status === 409) {
+            status("Die taak is intussen opnieuw afgevinkt. Bekijk hem nog eens.", "error");
+          } else if (!response.ok) {
+            throw new Error(String(response.status));
+          } else {
+            // Meteen tonen; load() haalt daarna de echte stand op.
+            const { [item.task.id]: removed, ...rest } = data.settings.done || {};
+            data.settings = { ...data.settings, done: rest };
+            if (data.jaarlog) data.jaarlog = { ...data.jaarlog, ticks: (data.jaarlog.ticks || []).filter((t) => !(t.id === item.task.id && t.at === item.done.at)) };
+            renderAll();
+            status(`${item.task.title} staat weer open. De Google Hub neemt het binnen 5 minuten over.`, "ok");
+          }
+          load();
+        } catch (error) {
+          $("undo-sheet").hidden = true;
+          status("Ongedaan maken lukte niet. Probeer het nog eens.", "error");
+        }
       });
 
       // ---- Afvinken vanaf de telefoon ----

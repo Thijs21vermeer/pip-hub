@@ -9,6 +9,10 @@
 //                                 overal mee (huisgenoten, vinkjes, jaarlog, profielfoto)
 //   PUT { tick: { id, by } }      één taak afvinken vanaf de telefoon (alleen die taak;
 //                                 de rest van de vinkjes blijft zoals hij is)
+//   PUT { untick: { id, at } }    Toch niet gedaan (vanaf de telefoon): dat vinkje weg,
+//                                 en uit het jaarlog, zodat de punten er weer af gaan.
+//                                 In undone onthouden, zodat de Hub het ook weghaalt
+//                                 en het niet terugstuurt.
 //   PUT { play: { start | log | finish | stop } }  Spelen met Pip (zie lib/play.mjs);
 //                                 GET en PUT geven altijd play: { timer?, sessions } mee
 //
@@ -18,7 +22,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
-import { recordTicks, renameInHistory } from "../lib/history.mjs";
+import { recordTicks, removeTick, renameInHistory } from "../lib/history.mjs";
 import { localTime, notify } from "../lib/notify.mjs";
 import { actPlay, readPlay } from "../lib/play.mjs";
 
@@ -129,6 +133,16 @@ function cleanAway(value) {
 // Net afgevinkt (nieuwer dan wat er stond) bij een taak met notify: melden wie het
 // deed. Alleen verse vinkjes: een herstart van Pip stuurt oude vinkjes opnieuw mee.
 const FRESH_MS = 6 * 60 * 60 * 1000;
+// Zo lang onthouden we een ongedaan gemaakt vinkje (de Hub haalt elke 5 minuten op).
+const UNDONE_KEEP_MS = 3 * 24 * 60 * 60 * 1000;
+
+function keepUndone(undone, now = Date.now()) {
+  const kept = {};
+  for (const [id, at] of Object.entries(undone || {})) {
+    if (Number.isFinite(at) && at > now - UNDONE_KEEP_MS) kept[id] = at;
+  }
+  return kept;
+}
 
 // De profielfoto (baasjes.mjs) hoort bij de naam: die naam ook omzetten.
 async function renameAvatar(from, to) {
@@ -210,7 +224,25 @@ export default async (request) => {
     if ("done" in body) {
       const done = cleanDone(body.done);
       if (!done) return json(400, { error: "BAD_DONE" }, headers);
+      // Een vinkje dat op de telefoon ongedaan is gemaakt, stuurt een Hub die dat
+      // nog niet weet niet terug.
+      for (const [id, at] of Object.entries(keepUndone(next.undone))) {
+        if (done[id] && done[id].at === at) delete done[id];
+      }
       next.done = done;
+    }
+    let untick = null;
+    if ("untick" in body) {
+      const id = text(body.untick && body.untick.id, 40);
+      const at = body.untick && body.untick.at;
+      const entry = (next.done || {})[id];
+      if (!/^[a-z0-9_-]{1,40}$/i.test(id) || !Number.isFinite(at)) return json(400, { error: "BAD_UNTICK" }, headers);
+      // Alleen het vinkje dat de telefoon zag; is er sindsdien opnieuw afgevinkt, dan niets.
+      if (!entry || entry.at !== at) return json(409, { error: "CHANGED", ...current }, headers);
+      const { [id]: removed, ...rest } = next.done;
+      next.done = rest;
+      next.undone = { ...keepUndone(next.undone), [id]: at };
+      untick = { id, at };
     }
     if ("tick" in body) {
       const id = text(body.tick && body.tick.id, 40);
@@ -259,6 +291,10 @@ export default async (request) => {
     if ("done" in body || "tick" in body) {
       await recordTicks(current, next).catch((error) =>
         console.error(JSON.stringify({ event: "jaarlog.ticks.error", code: error.code || error.name || "UNKNOWN" })));
+    }
+    if (untick) {
+      await removeTick(untick.id, untick.at).catch((error) =>
+        console.error(JSON.stringify({ event: "jaarlog.untick.error", code: error.code || error.name || "UNKNOWN" })));
     }
     return json(200, await withPlay(next), headers);
   } catch (error) {

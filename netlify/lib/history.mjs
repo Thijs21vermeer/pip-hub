@@ -96,6 +96,18 @@ function seed(before, byId, year) {
     });
 }
 
+// Een vinkje dat bewust ongedaan is gemaakt (Toch niet gedaan, ook vanaf de
+// telefoon): eruit, hoe oud ook, zodat de punten er weer af gaan.
+export async function removeTick(id, at) {
+  const year = yearOf(at);
+  const part = await readPart(year, "ticks");
+  if (!part || !Array.isArray(part.list)) return false;
+  const list = part.list.filter((tick) => !(tick.id === id && tick.at === at));
+  if (list.length === part.list.length) return false;
+  await writePart(year, "ticks", { ...part, list });
+  return true;
+}
+
 // ---- Spelen met Pip ----
 
 // Elke keer spelen is een vinkje van 1 punt, met de minuten erbij (voor Pip

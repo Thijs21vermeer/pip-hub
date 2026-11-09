@@ -595,13 +595,34 @@
     return changed;
   }
 
+  // Op de telefoon ongedaan gemaakt (Toch niet gedaan): hier ook weg, met de
+  // voorraad terug, en dan sturen we het ook niet meer terug naar het servertje.
+  function applyRemoteUndone(remote) {
+    let changed = false;
+    Object.entries((remote && remote.undone) || {}).forEach(([id, at]) => {
+      const entry = state.done[id];
+      if (!entry || entry.at !== at) return;
+      const task = tasks().find((t) => t.id === id);
+      const stock = task && stockFor(task);
+      if (stock && entry.took && stock.id in state.stock) state.stock[stock.id] += entry.took;
+      state.undone[id] = at;
+      delete state.done[id];
+      if (jaarlog) jaarlog.ticks = jaarlog.ticks.filter((tick) => !(tick.id === id && tick.at === at));
+      changed = true;
+    });
+    return changed;
+  }
+
   async function pushSettings() {
     // Pas na het eerste ophalen: anders overschrijft een verse start de vinkjes.
     if (!synced || !actionCode() || !settingsUrl()) return;
     // Eerst kijken of er ergens anders iets is afgevinkt, anders gaat dat verloren.
     try {
       const fresh = await fetch(settingsUrl(), { headers: { Authorization: `Bearer ${actionCode()}` }, cache: "no-store" });
-      if (fresh.ok && mergeRemoteDone(await fresh.json())) {
+      const remote = fresh.ok ? await fresh.json() : null;
+      const merged = remote ? mergeRemoteDone(remote) : false;
+      const undone = remote ? applyRemoteUndone(remote) : false;
+      if (merged || undone) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (error) {
@@ -655,6 +676,7 @@
       }
       // Vinkjes terug: per taak de laatste keer (vroegere versies stuurden "today").
       mergeRemoteDone(remote);
+      applyRemoteUndone(remote);
       if (remote.play) setPlay(remote.play);
       if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
