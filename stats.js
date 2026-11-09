@@ -467,7 +467,8 @@
         type: "costs",
         total: costs.total,
         perDay,
-        since: costs.since || since,
+        // Leeg = kosten vanaf begin januari: dan "dit jaar", niet de start van het jaarlog.
+        since: typeof costs.since === "string" ? costs.since : since,
         rows: costs.rows.slice(0, 5),
         priciest: costs.priciest || null,
       });

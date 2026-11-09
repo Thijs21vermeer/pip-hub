@@ -1702,7 +1702,9 @@
     const pet = voerraad.pets.find((p) => p.name.toLowerCase() === String(config.petName || "").toLowerCase()) || voerraad.pets[0];
     const costs = pet && voerraad.costs.find((c) => c.petId === pet.id && c.year === year);
     if (!costs || !(costs.total > 0)) return null;
-    const label = (category) => (category === "insurance" ? "Verzekering" : (CATEGORIES[category] || CATEGORIES.other).label);
+    // Verzekering en dierenarts zijn geen voorraad, dus die staan niet in CATEGORIES.
+    const extra = { insurance: "Verzekering", vet: "Dierenarts" };
+    const label = (category) => extra[category] || (CATEGORIES[category] || CATEGORIES.other).label;
     const priciest = costs.months.indexOf(Math.max(...costs.months));
     const since = costs.since && costs.since > `${year}-01-07`
       ? `sinds ${Number(costs.since.slice(8))} ${MONTHS[Number(costs.since.slice(5, 7)) - 1]}` : "";
