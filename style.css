@@ -2465,6 +2465,16 @@ img.score-avatar {
   z-index: 8;
   overflow: hidden;
   background: #000;
+  /* Snel doortikken op een iPhone: geen inzoomen (dubbeltik), geen tekst
+     selecteren en geen menuutje bij lang drukken. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.wrapped * {
+  touch-action: manipulation;
 }
 
 .wrapped[hidden] {

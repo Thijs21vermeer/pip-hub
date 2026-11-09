@@ -905,6 +905,18 @@
   // 30 seconden van Apple Music, zacht in en uit. Lukt ophalen niet, dan stil.
   const VOLUME = 0.6;
   const music = { songs: [], urls: new Map(), current: null, audio: null };
+  // Een iPhone negeert het volume (leest altijd 1): daar kan niets uitfaden, dus
+  // stopt het oude nummer meteen. Anders klinken bij snel doortikken twee
+  // nummers door elkaar.
+  const CAN_FADE = (() => {
+    try {
+      const probe = new Audio();
+      probe.volume = 0.5;
+      return probe.volume === 0.5;
+    } catch (error) {
+      return false;
+    }
+  })();
 
   // Een nieuwe fade op hetzelfde fragment stopt de vorige (snel heen en weer tikken).
   function fade(audio, to, ms, done) {
@@ -1001,7 +1013,8 @@
     const song = songFor(slide);
     if (song === music.current) return;
     const old = music.audio;
-    if (old) fade(old, 0, 500, () => { if (music.audio !== old) old.pause(); });
+    if (old && CAN_FADE) fade(old, 0, 500, () => { if (music.audio !== old) old.pause(); });
+    else if (old) old.pause();
     music.current = song;
     renderSong();
     const audio = audioFor(song);
@@ -1010,7 +1023,12 @@
     seek(audio, song.start || 0);
     audio.volume = 0;
     if (state && state.playing) {
-      audio.play().then(() => fade(audio, VOLUME, 800)).catch(() => {});
+      // Was het laden trager dan het doortikken, dan is dit nummer al niet meer
+      // aan de beurt: niet alsnog laten klinken.
+      audio.play().then(() => {
+        if (music.audio !== audio) audio.pause();
+        else fade(audio, VOLUME, 800);
+      }).catch(() => {});
     }
   }
 
@@ -1021,7 +1039,8 @@
 
   function stopMusic() {
     const old = music.audio;
-    if (old) fade(old, 0, 600, () => old.pause());
+    if (old && CAN_FADE) fade(old, 0, 600, () => old.pause());
+    else if (old) old.pause();
     music.audio = null;
     music.current = null;
     // Na het uitfaden de klaargezette fragmenten loslaten.
@@ -1238,7 +1257,8 @@
     state.playing = playing;
     root.classList.toggle("paused", !playing);
     if (music.audio) {
-      if (playing) music.audio.play().then(() => fade(music.audio, VOLUME, 600)).catch(() => {});
+      const audio = music.audio;
+      if (playing) audio.play().then(() => { if (music.audio === audio) fade(audio, VOLUME, 600); else audio.pause(); }).catch(() => {});
       else music.audio.pause();
     }
     const button = root.querySelector(".wr-pause");
