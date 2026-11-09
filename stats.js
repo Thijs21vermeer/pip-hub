@@ -342,13 +342,14 @@
         const startHeat = [dayKey(careTicks[0].at, resetHour), tickStartKey].sort()[0];
         const start = keyNumber(startHeat);
         const end = keyNumber(lastKey);
-        heat = { offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7, cells: [], first: shortDate(startHeat), last: shortDate(lastKey) };
+        heat = { offset: (new Date(start * DAY_MS).getUTCDay() + 6) % 7, cells: [], days: [], first: shortDate(startHeat), last: shortDate(lastKey) };
         streak = longestRun([...doneDays]);
         for (let n = start; n <= end; n++) {
           const key = numberKey(n);
           const done = doneDays.has(key);
           const inStreak = streak.length >= 3 && key >= streak.from && key <= streak.to;
           heat.cells.push(done ? (inStreak ? "streak" : "done") : key === today ? "today" : key < tickStartKey ? "unknown" : "missed");
+          heat.days.push({ day: Number(key.slice(8)), wd: DAYS[weekdayOf(key)].slice(0, 2) });
         }
         heat.hasUnknown = heat.cells.includes("unknown");
         const remindedTimes = reminders.filter((r) => r.id === careId).length;
@@ -404,7 +405,7 @@
       slides.push({ type: "top", tasks: top });
     }
 
-    // Favoriete mens
+    // Favoriete baasje
     const year_ = scores({ ...log, ticks }, "year", new Date(`${lastKey}T12:00:00`).getTime(), people, resetHour);
     const ranked = year_.ranking.filter((p) => p.points > 0);
     if (ranked.length) {
@@ -420,7 +421,7 @@
         line: top ? `${top[1]} keer ${names.get(top[0]).title.toLowerCase()}. Pip weet het wel.` : "Pip weet het wel.",
         podium: ranked.slice(0, 3).map((p) => ({ name: p.name, points: p.points })),
       });
-      summary.splice(1, 0, { label: "Favoriete mens", value: first.name, sub: `${first.points} punten` });
+      summary.splice(1, 0, { label: "Favoriete baasje", value: first.name, sub: `${first.points} punten` });
     }
 
     // Records

@@ -62,8 +62,8 @@ window.PIP_CONFIG = {
     { id: 285337761, start: 2, artist: "Guus Meeuwis", title: "Het is een nacht", slides: ["type"], when: "De Nachtkat" },
     { id: 693610779, start: 6, artist: "Duran Duran", title: "Hungry Like the Wolf", slides: ["food"] }, // eten
     { id: 697417501, start: 8.5, artist: "The Hollies", title: "He Ain't Heavy, He's My Brother", slides: ["weight"] }, // gewicht
-    { id: 693486745, start: 10, artist: "Sheena Easton", title: "Morning Train (Nine to Five)", slides: ["top"] }, // de klusjes
-    { id: 1576849672, start: 4, artist: "André Hazes", title: "Zij gelooft in mij", slides: ["human"] }, // favoriete mens
+    { id: 283305973, start: 0, artist: "Dolly Parton", title: "9 to 5", slides: ["top"] }, // de klusjes (het fragment begint met "…nine to five")
+    { id: 1576849672, start: 4, artist: "André Hazes", title: "Zij gelooft in mij", slides: ["human"] }, // favoriete baasje
     { id: 6781080602, start: 2, artist: "Queen", title: "We Are the Champions", slides: ["records"] }, // records
     { id: 1440816971, start: 0.5, artist: "ABBA", title: "Money, Money, Money", slides: ["costs"] }, // kosten
     { id: 1747957549, start: 10.5, artist: "Ed Sheeran", title: "Photograph", slides: ["photos"] }, // fotolijst

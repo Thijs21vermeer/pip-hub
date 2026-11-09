@@ -61,15 +61,15 @@
         </div>`).join("");
       return `<div class="wr-slide" style="background:#f3c77a;color:#24170f">
         <div class="wr-abs" style="left:812px;top:392px;transform:rotate(18deg);color:#e5ac54"><div class="wr-pop d4 wr-paw" style="width:260px;height:260px">${PAW}</div></div>
-        <div class="wr-abs wr-pop d5 wr-round" style="left:528px;top:506px;width:64px;height:64px;background:#ff8c66"></div>
-        <div class="wr-abs" style="left:64px;top:96px;width:540px">
+        <div class="wr-abs wr-pop d5 wr-round" style="left:528px;top:524px;width:64px;height:64px;background:#ff8c66"></div>
+        <div class="wr-abs" style="left:64px;top:130px;width:540px">
           <p class="wr-up wr-eyebrow" style="color:#7d4820">Samen voor Pip</p>
           <p class="wr-up d1" style="margin-top:18px;font-size:34px;font-weight:600">Jullie zorgden</p>
           <p class="wr-pop d2 wr-num" style="margin-top:6px;font-size:${fit(num(s.total), 190, 540)}px">${num(s.total)}</p>
           <p class="wr-up d3 wr-serif" style="margin-top:8px;font-size:52px">keer voor Pip.</p>
           <p class="wr-up d4" style="margin-top:28px;font-size:20px;color:#4a3424">${esc(s.perDay)}</p>
         </div>
-        <div class="wr-abs wr-stack" style="left:640px;top:112px;width:320px;gap:12px">${rows}</div>
+        <div class="wr-abs wr-stack" style="left:640px;top:143px;width:320px;gap:12px">${rows}</div>
       </div>`;
     },
 
@@ -142,9 +142,6 @@
         </div>`).join("");
       let card = "";
       if (s.heat) {
-        const total = s.heat.offset + s.heat.cells.length;
-        const columns = Math.ceil(total / 7);
-        const size = Math.max(8, Math.min(26, Math.floor(856 / columns) - 4));
         const looks = {
           done: "background:#d18c4f",
           streak: "background:#ffe7b0",
@@ -152,9 +149,29 @@
           unknown: "background:rgba(255,244,230,.12)",
           today: "border:2px dashed rgba(255,244,230,.6)",
         };
-        const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
-          .concat(s.heat.cells.map((kind, i) => `<i class="wr-cell" style="${looks[kind]};${delay(0.35 + Math.floor((i + s.heat.offset) / 7) * 0.02)}"></i>`));
-        const width = columns * (size + 4) - 4;
+        let calendar;
+        if (s.heat.cells.length <= 21 && s.heat.days) {
+          // Korte periode: een rij ronde dagen met weekdag en datum.
+          const n = s.heat.cells.length;
+          const size = Math.max(28, Math.min(52, Math.floor(862 / n) - 10));
+          calendar = `<div class="wr-row" style="margin-top:22px;gap:10px;align-items:flex-start">${s.heat.cells.map((kind, i) => {
+            const day = s.heat.days[i];
+            return `<div class="wr-stack wr-cell" style="align-items:center;gap:7px;${delay(0.35 + i * 0.05)}">
+              <span style="font-size:13px;color:#ffe9d2">${esc(day.wd)}</span>
+              <span style="display:grid;place-items:center;box-sizing:border-box;width:${size}px;height:${size}px;border-radius:50%;${looks[kind]};font-size:${size > 36 ? 16 : 12}px;font-weight:700;color:${kind === "streak" ? "#5a2f12" : "#fff4e6"}">${day.day}</span>
+            </div>`;
+          }).join("")}</div>`;
+        } else {
+          // Langere periode: het jaaroverzicht, een kolom per week.
+          const total = s.heat.offset + s.heat.cells.length;
+          const columns = Math.ceil(total / 7);
+          const size = Math.max(8, Math.min(26, Math.floor(856 / columns) - 4));
+          const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
+            .concat(s.heat.cells.map((kind, i) => `<i class="wr-cell" style="${looks[kind]};${delay(0.35 + Math.floor((i + s.heat.offset) / 7) * 0.02)}"></i>`));
+          const width = Math.max(columns * (size + 4) - 4, 300);
+          calendar = `<div class="wr-heat" style="margin-top:16px;grid-template-rows:repeat(7,${size}px);grid-auto-columns:${size}px">${cells.join("")}</div>
+            <div class="wr-row" style="justify-content:space-between;gap:24px;width:${width}px;margin-top:8px;font-size:13px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>`;
+        }
         card = `
           <div class="wr-abs wr-up d3 wr-card" style="left:64px;right:64px;top:300px;background:#8d5124">
             <div class="wr-row" style="justify-content:space-between">
@@ -166,9 +183,8 @@
                 ${s.heat.hasUnknown ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:rgba(255,244,230,.12)"></i>Nog niet bijgehouden</span>' : ""}
               </div>
             </div>
-            <div class="wr-heat" style="margin-top:16px;grid-template-rows:repeat(7,${size}px);grid-auto-columns:${size}px">${cells.join("")}</div>
-            <div class="wr-row" style="justify-content:space-between;width:${width}px;margin-top:8px;font-size:13px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>
-            ${s.streak ? `<p style="margin-top:12px;font-size:18px"><strong style="color:#ffe7b0">${s.streak.length} dagen op rij</strong> ${esc(s.title.toLowerCase())}, van ${esc(s.streak.from)} t/m ${esc(s.streak.to)}.</p>` : ""}
+            ${calendar}
+            ${s.streak ? `<p style="margin-top:14px;font-size:18px"><strong style="color:#ffe7b0">${s.streak.length} dagen op rij</strong> ${esc(s.title.toLowerCase())}, van ${esc(s.streak.from)} t/m ${esc(s.streak.to)}.</p>` : ""}
           </div>`;
       }
       return `<div class="wr-slide" style="background:#a9642f;color:#fff4e6">
@@ -267,7 +283,7 @@
       }).join("");
       return `<div class="wr-slide" style="background:#fbf7f2;color:#24170f">
         <div class="wr-abs" style="left:64px;top:96px;width:430px">
-          <p class="wr-up wr-eyebrow" style="color:#a9642f">Pips favoriete mens</p>
+          <p class="wr-up wr-eyebrow" style="color:#a9642f">Pips favoriete baasje</p>
           <p class="wr-pop d1 wr-num" style="margin-top:12px;font-size:${fit(s.name, 150, 430)}px;line-height:.85">${esc(s.name)}</p>
           <p class="wr-up d2" style="margin-top:18px;font-size:24px;font-weight:600">${num(s.points)} punten · ${num(s.count)} ${s.count === 1 ? "taak" : "taken"}</p>
           <p class="wr-up d3 wr-serif" style="margin-top:14px;font-size:34px;color:#a9642f">${esc(s.line)}</p>
