@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pip Wrapped</title>
+  <link rel="icon" href="pip.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Pip">
+  <meta name="theme-color" content="#1b140f">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css?v=20261109-32">
+  <!-- Pip Wrapped op de telefoon: dezelfde schermen als op de Hub (wrapped.js),
+       met de cijfers van het servertje. Eerst een tik op Afspelen, want een
+       telefoon speelt pas geluid af na een tik. Delen opent meteen de deelkaart. -->
+  <style>
+    body { padding: 0; background: #1b140f; }
+    [hidden] { display: none !important; }
+    .start {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 24px;
+      background: linear-gradient(140deg, #2b2152 0%, #3a2a5e 55%, #6b3f4f 100%);
+      color: #f4f0ff;
+      text-align: center;
+    }
+    .start small { color: #c9c2ff; font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+    .start h1 { margin: 0; font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-size: 48px; line-height: 1; }
+    .start p { margin: 0; max-width: 320px; color: rgba(244, 240, 255, 0.82); font-size: 16px; line-height: 1.45; }
+    .start button {
+      display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 26px;
+      border: 0; border-radius: 99px; background: #f4f0ff; color: #2b2152; font: inherit; font-size: 18px; font-weight: 700;
+    }
+    .start button:disabled { opacity: 0.5; }
+    .start a { color: #c9c2ff; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="start" id="start">
+    <small id="kicker">Het jaar tot nu toe</small>
+    <h1 id="heading">Pip Wrapped</h1>
+    <p id="hint">Het jaar van Pip in schermen die vanzelf doorlopen, met muziek. Tik rechts voor verder, links voor terug.</p>
+    <button type="button" id="play" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+      <span id="play-label">Laden…</span>
+    </button>
+    <a href="instellingen.html">Terug naar Thuis</a>
+  </div>
+  <section class="wrapped" id="wrapped" hidden aria-label="Pip Wrapped"></section>
+
+  <script src="config.js?v=20261109-32"></script>
+  <script src="telefoon.js?v=20261109-32"></script>
+  <script src="stats.js?v=20261109-32"></script>
+  <script src="wrapped.js?v=20261109-32"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const P = window.PipPhone;
+      const { config, $, serverUrl, auth, getJson } = P;
+      const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+      const CATEGORIES = { food: "Voer", litter: "Bakvulling", medication: "Medicatie", care: "Verzorging", treats: "Snacks", toys: "Speelgoed", other: "Overig", insurance: "Verzekering", vet: "Dierenarts" };
+      let data = null;
+      let options = null;
+
+      // Zelfde berekening als op de Hub (app.js, wrappedCosts): Voerraad plus de
+      // eenmalige startkosten uit het jaarlog.
+      function wrappedCosts(year, log, voerraad, settings) {
+        let costs = null;
+        if (voerraad && voerraad.costs && voerraad.pets) {
+          const pet = voerraad.pets.find((p) => p.name.toLowerCase() === String(config.petName || "").toLowerCase()) || voerraad.pets[0];
+          costs = (pet && voerraad.costs.find((c) => c.petId === pet.id && c.year === year)) || null;
+        }
+        const start = ((log && log.extraCosts) || []).filter((c) =>
+          c && typeof c.date === "string" && c.date.startsWith(`${year}-`) && Number(c.amount) > 0);
+        const startTotal = start.reduce((sum, c) => sum + Number(c.amount), 0);
+        const base = costs && costs.total > 0 ? costs : null;
+        if (!base && !(startTotal > 0)) return null;
+        const cents = (n) => Math.round(n * 100) / 100;
+        const rows = base ? base.categories.map((c) => ({ name: CATEGORIES[c.category] || CATEGORIES.other, amount: c.amount })) : [];
+        if (startTotal > 0) rows.push({ name: "Startkosten", amount: cents(startTotal) });
+        rows.sort((a, b) => b.amount - a.amount);
+        const months = base ? base.months.slice() : [];
+        start.forEach((c) => {
+          const month = Number(c.date.slice(5, 7)) - 1;
+          while (months.length <= month) months.push(0);
+          months[month] += Number(c.amount);
+        });
+        const priciest = months.indexOf(Math.max(...months));
+        const first = [base && base.since, ...start.map((c) => c.date)].filter(Boolean).sort()[0] || null;
+        const today = window.PipStats.calendarKey(Date.now());
+        const end = today < `${year}-12-31` ? today : `${year}-12-31`;
+        const days = first ? Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${first}T12:00:00Z`)) / 86400000) + 1 : 0;
+        const since = first && first > `${year}-01-07` ? `sinds ${Number(first.slice(8))} ${MONTHS[Number(first.slice(5, 7)) - 1]}` : "";
+        return {
+          total: cents((base ? base.total : 0) + startTotal),
+          days: days > 0 ? days : (base ? base.days : 0),
+          since,
+          rows,
+          priciest: months.length >= 3 ? MONTHS[priciest] : null,
+        };
+      }
+
+      async function photoUrls(max) {
+        const url = serverUrl("fotos", config.photos.url);
+        try {
+          const list = await getJson(url);
+          const urls = await Promise.all(list.slice(0, max).map(async (photo) => {
+            const response = await fetch(`${url}/${photo.id}`, { headers: auth() });
+            return response.ok ? URL.createObjectURL(await response.blob()) : null;
+          }));
+          return urls.filter(Boolean);
+        } catch (error) {
+          return [];
+        }
+      }
+
+      async function prepare() {
+        const now = new Date();
+        const year = P.wrappedSeason(now) || now.getFullYear();
+        $("kicker").textContent = year === now.getFullYear() && !P.wrappedSeason(now) ? "Het jaar tot nu toe" : "Staat klaar";
+        $("heading").textContent = `Pip Wrapped ${year}`;
+        const jaarlogUrl = serverUrl("jaarlog", config.jaarlog.url);
+        const [settings, log, photos, avatars] = await Promise.all([
+          getJson(serverUrl("settings", config.settings.url)).catch(() => ({})),
+          getJson(`${jaarlogUrl}${jaarlogUrl.includes("?") ? "&" : "?"}year=${year}`).catch(() => null),
+          photoUrls(8),
+          P.loadAvatars(),
+        ]);
+        let voerraad = null;
+        if (settings.voerraadCode && config.voerraad && config.voerraad.url) {
+          try {
+            const response = await fetch(`${serverUrl("voerraad", config.voerraad.url)}/api/hub`, {
+              headers: { Authorization: `Bearer ${settings.voerraadCode}` },
+              cache: "no-store",
+            });
+            if (response.ok) voerraad = await response.json();
+          } catch (error) {
+            voerraad = null;
+          }
+        }
+        const jaarlog = log || { year, startedAt: null, ticks: [], days: {}, reminders: [] };
+        const tasks = Array.isArray(settings.tasks) && settings.tasks.length ? settings.tasks : config.tasks;
+        data = window.PipStats.wrapped(jaarlog, {
+          people: P.people(settings),
+          tasks,
+          photos,
+          costs: wrappedCosts(year, jaarlog, voerraad, settings),
+        }, Date.now(), config.resetHour);
+        options = {
+          photo: photos[0] || "pip-foto.jpg",
+          portrait: "pip-icoon.jpg",
+          music: config.wrappedMusic || [],
+          avatar: (name) => avatars.get(String(name).toLowerCase()) || null,
+          share: (url) => { location.href = url; },
+          onClose: () => {
+            if (history.length > 1) history.back();
+            else location.href = "instellingen.html";
+          },
+        };
+        $("play-label").textContent = "Afspelen";
+        $("play").disabled = false;
+      }
+
+      $("play").addEventListener("click", () => {
+        if (!data) return;
+        $("start").hidden = true;
+        window.PipWrapped.open(data, options);
+      });
+
+      (async function start() {
+        const { linked } = await P.showLinked();
+        if (!linked) {
+          $("hint").textContent = "Deze telefoon is nog niet gekoppeld. Scan eerst de QR-code in de ruststand van de Google Hub.";
+          $("play").hidden = true;
+          return;
+        }
+        try {
+          await prepare();
+        } catch (error) {
+          $("hint").textContent = "Pip Wrapped laden lukte niet. Probeer het later nog eens.";
+          $("play").hidden = true;
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>

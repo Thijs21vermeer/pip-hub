@@ -2542,6 +2542,60 @@ img.score-avatar {
 @keyframes wr-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes wr-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .wr-line { display: block; }
+/* Staand (telefoon): 400 px breed, zo hoog als het scherm. De inhoud loopt
+   van boven naar beneden; de balk, het nummer en de knoppen zitten bovenin. */
+.wr-tall {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 100px 28px 36px;
+}
+.wr-tall [data-fit] {
+  white-space: nowrap;
+}
+/* Lege ruimte (wrapped.js: SPACE, GAP, END): tussen blokken 20 tot 56 px, de
+   rest boven en onder het geheel. */
+.wr-space,
+.wr-gap {
+  display: block;
+  flex: 1 1 0;
+}
+.wr-space.end {
+  flex-grow: 1.25;
+}
+.wr-gap {
+  min-height: 20px;
+  max-height: 56px;
+}
+.wrapped.tall .wr-progress {
+  left: 14px;
+  right: 14px;
+  top: 12px;
+  gap: 4px;
+}
+.wrapped.tall .wr-seg {
+  height: 4px;
+}
+.wrapped.tall .wr-song {
+  left: 14px;
+  top: 32px;
+  max-width: 260px;
+  padding: 6px 12px 6px 10px;
+  font-size: 12px;
+}
+.wrapped.tall .wr-controls {
+  top: 28px;
+  right: 14px;
+  gap: 6px;
+}
+.wrapped.tall .wr-ctrl {
+  width: 38px;
+  height: 38px;
+}
+.wrapped.tall .wr-ctrl svg {
+  width: 16px;
+  height: 16px;
+}
 .wr-measuring, .wr-measuring * { animation: none !important; }
 /* Speelgoed op het kostenscherm: een lichtje dat eindeloos rondjes draait. */
 .wr-inf-run { stroke-dasharray: 26 74; animation: wr-inf 2.6s linear infinite; }

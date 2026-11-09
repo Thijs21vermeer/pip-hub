@@ -7,6 +7,8 @@
 //   PUT /api/pip-settings   werkt bij wat meegestuurd wordt
 //   PUT { rename: { from, to } }  een baasje heet voortaan anders: de naam gaat
 //                                 overal mee (huisgenoten, vinkjes, jaarlog, profielfoto)
+//   PUT { tick: { id, by } }      één taak afvinken vanaf de telefoon (alleen die taak;
+//                                 de rest van de vinkjes blijft zoals hij is)
 //
 // Een taak met notify: true geeft een melding op de telefoon (ntfy) zodra iemand
 // hem afvinkt; remind: "22:00" geeft een seintje als hij dan nog open staat
@@ -187,6 +189,14 @@ export default async (request) => {
       if (!done) return json(400, { error: "BAD_DONE" }, headers);
       next.done = done;
     }
+    if ("tick" in body) {
+      const id = text(body.tick && body.tick.id, 40);
+      const by = text(body.tick && body.tick.by, 20);
+      // Zonder eigen takenlijst op het servertje (nog de standaardtaken) mag elk id.
+      const known = !Array.isArray(next.tasks) || next.tasks.some((task) => task.id === id);
+      if (!/^[a-z0-9_-]{1,40}$/i.test(id) || !known || !by) return json(400, { error: "BAD_TICK" }, headers);
+      next.done = { ...(next.done || {}), [id]: { by, at: Date.now(), took: 0 } };
+    }
     if ("today" in body) {
       const today = cleanToday(body.today);
       if (!today) return json(400, { error: "BAD_TODAY" }, headers);
@@ -223,7 +233,7 @@ export default async (request) => {
     }
     await announceDone(current, next).catch(() => {}); // een melding mag het opslaan nooit tegenhouden
     // Elk vinkje in het jaarlog (scoreboard en Pip Wrapped); mag ook nooit tegenhouden.
-    if ("done" in body) {
+    if ("done" in body || "tick" in body) {
       await recordTicks(current, next).catch((error) =>
         console.error(JSON.stringify({ event: "jaarlog.ticks.error", code: error.code || error.name || "UNKNOWN" })));
     }

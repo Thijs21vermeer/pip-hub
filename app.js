@@ -289,6 +289,9 @@
     const loaded = saved && typeof saved === "object" ? saved : {};
     loaded.day = loaded.day || logicalDay(new Date());
     loaded.done = loaded.done || {};
+    // Net ongedaan gemaakt (taak → tijd van dat vinkje): dat vinkje niet van het
+    // servertje terughalen.
+    loaded.undone = loaded.undone || {};
     loaded.stock = loaded.stock || {};
     config.stock.forEach((item) => {
       if (typeof loaded.stock[item.id] !== "number") loaded.stock[item.id] = item.amount;
@@ -330,6 +333,7 @@
     }
     const wasAllDone = allDueDone();
     state.done[task.id] = entry;
+    delete state.undone[task.id];
     noteTick(task, entry);
     saveState();
     render();
@@ -346,6 +350,7 @@
     if (!entry) return;
     const stock = stockFor(task);
     if (stock && entry.took) state.stock[stock.id] += entry.took;
+    state.undone[task.id] = entry.at;
     delete state.done[task.id];
     if (jaarlog) jaarlog.ticks = jaarlog.ticks.filter((tick) => !(tick.id === task.id && tick.at === entry.at));
     saveState();
@@ -569,9 +574,39 @@
     pushTimer = setTimeout(pushSettings, 800);
   }
 
+  // Vinkjes van het servertje erbij (bijvoorbeeld afgevinkt op de telefoon): per
+  // taak wint het nieuwste, behalve een vinkje dat hier net ongedaan is gemaakt.
+  function mergeRemoteDone(remote) {
+    let changed = false;
+    const remoteDone = { ...((remote.today && remote.today.done) || {}), ...(remote.done || {}) };
+    Object.entries(remoteDone).forEach(([id, entry]) => {
+      if (!entry || state.undone[id] === entry.at) return;
+      // <= : zelfde tijd maar een andere naam (een baasje is hernoemd) neemt ook over.
+      if (!state.done[id] || state.done[id].at < entry.at || (state.done[id].at === entry.at && state.done[id].by !== entry.by)) {
+        state.done[id] = entry;
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   async function pushSettings() {
     // Pas na het eerste ophalen: anders overschrijft een verse start de vinkjes.
     if (!synced || !actionCode() || !settingsUrl()) return;
+    // Eerst kijken of er ergens anders iets is afgevinkt, anders gaat dat verloren.
+    try {
+      const fresh = await fetch(settingsUrl(), { headers: { Authorization: `Bearer ${actionCode()}` }, cache: "no-store" });
+      if (fresh.ok && mergeRemoteDone(await fresh.json())) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+          // Geen opslag: het servertje heeft het.
+        }
+        render();
+      }
+    } catch (error) {
+      // Niet bereikbaar: dan alleen wat de Hub zelf weet.
+    }
     const body = {
       done: state.done,
       stock: state.stock,
@@ -614,11 +649,7 @@
         writeStorage(SETTINGS_KEY, JSON.stringify(settings));
       }
       // Vinkjes terug: per taak de laatste keer (vroegere versies stuurden "today").
-      const remoteDone = { ...((remote.today && remote.today.done) || {}), ...(remote.done || {}) };
-      Object.entries(remoteDone).forEach(([id, entry]) => {
-        // <= : zelfde tijd maar een andere naam (een baasje is hernoemd) neemt ook over.
-        if (!state.done[id] || state.done[id].at <= entry.at) state.done[id] = entry;
-      });
+      mergeRemoteDone(remote);
       if (remote.stock) state.stock = { ...state.stock, ...remote.stock };
       if (remote.voerraadCode && !voerraadCode()) setVoerraadCode(remote.voerraadCode);
       // Pip is terug (vanzelf of via de startknop): de pauze is voorbij.

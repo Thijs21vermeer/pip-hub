@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Pip instellen</title>
+  <title>Pip</title>
   <link rel="icon" href="pip.png">
   <!-- Op het beginscherm van je telefoon: een foto van Pip als icoon, met de naam "Pip".
        Bewust geen losse app (display: browser): die krijgt op een iPhone eigen opslag
@@ -11,76 +11,372 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="telefoon.webmanifest">
   <meta name="apple-mobile-web-app-title" content="Pip">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="telefoon.css?v=20261109-31">
-  <!-- Het beginpunt op de telefoon: een menu met de pagina's om Pip op de Google
-       Hub in te stellen. De lijst staat in telefoon.js (PAGES); een nieuwe pagina
-       erbij zetten is daar één regel. -->
+  <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="stijl.css?v=20261109-32">
+  <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
+       op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
+       half januari), de scores van deze week en de instellingen. -->
 </head>
 <body>
-  <main>
-    <header>
-      <img src="pip.png" alt="">
-      <div>
-        <h1>Pip instellen</h1>
-        <p class="sub" id="summary">Even laden…</p>
-      </div>
-    </header>
+  <div class="hero">
+    <div class="hero-slides" id="slides"><img class="on" src="pip-foto.jpg" alt="Pip"></div>
+    <div class="hero-fade"></div>
+    <a class="hero-camera" href="fotos.html" aria-label="Foto van Pip toevoegen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    </a>
+  </div>
+
+  <main class="page" style="padding-top: 0">
+    <h1 class="date" id="date"></h1>
 
     <div id="linked" hidden>
-      <nav class="card menu" id="menu" aria-label="Instellingen"></nav>
+      <section class="card tasks" aria-labelledby="tasks-title">
+        <div class="tasks-head"><h2 id="tasks-title">Taken</h2><span id="progress"></span></div>
+        <div class="bars" id="bars" aria-hidden="true"></div>
+        <div id="todo"></div>
+        <ol class="timeline" id="timeline" aria-label="Vandaag"></ol>
+      </section>
+      <p class="status" id="status" role="status"></p>
 
-      <h2>Koppeling</h2>
-      <div class="card">
-        <p style="margin:14px 0 4px">Deze telefoon is gekoppeld met de Google Hub. Daardoor kun je hier foto's en baasjes aanpassen.</p>
-        <button class="unlink" id="unlink" type="button">Ontkoppelen</button>
-        <p class="status" id="status"></p>
-      </div>
+      <section class="wrapped" id="wrapped" hidden aria-labelledby="wrapped-title">
+        <small>Nieuw · tot half januari</small>
+        <h2 id="wrapped-title"></h2>
+        <p>Het jaar van Pip in 12 schermen, met muziek.</p>
+        <a class="play" href="wrapped.html"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Afspelen</a>
+      </section>
+
+      <section class="card mini-scores" aria-labelledby="scores-title">
+        <div class="tasks-head"><h2 id="scores-title">Scores</h2><span>Deze week</span></div>
+        <div id="scores" style="margin-top: 14px"></div>
+        <div class="card-foot"><span>Zondag 20:00: held van de week</span><a href="scores.html">Meer ›</a></div>
+      </section>
+
+      <section class="section" style="margin-top: 56px" aria-labelledby="settings-title">
+        <h2 class="section-title" id="settings-title">Instellen</h2>
+        <div class="tiles">
+          <a class="tile photo" href="fotos.html">
+            <img id="photos-tile-image" src="pip-foto.jpg" alt="">
+            <span><strong>Foto's van Pip</strong><small id="photos-count">De fotolijst</small></span>
+          </a>
+          <a class="tile" href="baasjes.html">
+            <span class="stack" id="people-stack" aria-hidden="true"></span>
+            <span><strong>Baasjes</strong><small id="people-names"></small></span>
+          </a>
+        </div>
+        <div id="more-pages"></div>
+        <button class="link-row" id="unlink" type="button"><i class="led" aria-hidden="true"></i><span>Gekoppeld met de Google Hub</span><b aria-hidden="true">›</b></button>
+      </section>
     </div>
 
     <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
   </main>
 
-  <script src="config.js?v=20261109-31"></script>
-  <script src="telefoon.js?v=20261109-31"></script>
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <h2 id="sheet-title">Wie heeft het gedaan?</h2>
+      <p id="sheet-task"></p>
+      <div class="who" id="who"></div>
+      <button class="sheet-cancel" id="sheet-cancel" type="button">Annuleren</button>
+    </div>
+  </div>
+
+  <script src="config.js?v=20261109-32"></script>
+  <script src="telefoon.js?v=20261109-32"></script>
+  <script src="taken.js?v=20261109-32"></script>
+  <script src="stats.js?v=20261109-32"></script>
   <script>
     (function () {
       "use strict";
 
-      const { PAGES, $, unlink, statusLine } = window.PipPhone;
-      const status = statusLine("status");
+      const P = window.PipPhone;
+      const { config, $, serverUrl, auth, getJson } = P;
+      const status = P.statusLine("status");
+      const urls = {
+        settings: serverUrl("settings", config.settings.url),
+        jaarlog: serverUrl("jaarlog", config.jaarlog.url),
+        kattenbak: serverUrl("kattenbak", config.kattenbak.url),
+        photos: serverUrl("fotos", config.photos.url),
+      };
+      const SLIDE_MS = 6000;
+      let data = { settings: {}, jaarlog: null, log: null };
+      let avatars = new Map();
 
-      function renderMenu() {
-        $("menu").innerHTML = "";
-        for (const page of PAGES) {
-          const link = document.createElement("a");
-          link.href = page.href;
-          link.innerHTML = `<span class="icon" aria-hidden="true">${page.icon}</span>
-            <span class="text"><strong></strong><span></span></span>
-            <span class="chevron" aria-hidden="true">›</span>`;
-          link.querySelector("strong").textContent = page.title;
-          const sub = link.querySelector(".text span");
-          sub.textContent = page.sub;
-          // Telt er iets (foto's, baasjes)? Dan dat erachter.
-          if (page.count) {
-            page.count().then((count) => { sub.textContent = `${page.sub} · ${count}`; }).catch(() => {});
+      // ---- Pip: de foto's wisselen, net als in de ruststand van de Hub ----
+
+      let photoIds = [];
+      const photoUrls = new Map();
+      let slide = 0;
+
+      async function photoUrl(id) {
+        if (!photoUrls.has(id)) {
+          const response = await fetch(`${urls.photos}/${id}`, { headers: auth() });
+          if (!response.ok) throw new Error(String(response.status));
+          photoUrls.set(id, URL.createObjectURL(await response.blob()));
+        }
+        return photoUrls.get(id);
+      }
+
+      async function showSlide(index) {
+        if (!photoIds.length) return;
+        let url;
+        try {
+          url = await photoUrl(photoIds[index % photoIds.length]);
+        } catch (error) {
+          return;
+        }
+        const image = new Image();
+        image.alt = "Pip";
+        image.src = url;
+        await image.decode().catch(() => {});
+        const slides = $("slides");
+        const old = [...slides.children];
+        slides.appendChild(image);
+        requestAnimationFrame(() => {
+          image.classList.add("on");
+          old.forEach((el) => el.classList.remove("on"));
+        });
+        setTimeout(() => old.forEach((el) => el.remove()), 1300);
+        // Alvast de volgende ophalen.
+        photoUrl(photoIds[(index + 1) % photoIds.length]).catch(() => {});
+      }
+
+      async function startSlides() {
+        try {
+          const list = await getJson(urls.photos);
+          photoIds = list.map((photo) => photo.id);
+        } catch (error) {
+          photoIds = [];
+        }
+        $("photos-count").textContent = photoIds.length === 1 ? "1 foto in de lijst" : `${photoIds.length} foto's in de lijst`;
+        if (!photoIds.length) return;
+        await showSlide(0);
+        photoUrl(photoIds[0]).then((url) => { $("photos-tile-image").src = url; }).catch(() => {});
+        if (photoIds.length > 1) setInterval(() => showSlide(++slide), SLIDE_MS);
+      }
+
+      // ---- Taken ----
+
+      function todayStart(now) {
+        const start = new Date(now);
+        if (start.getHours() < config.resetHour) start.setDate(start.getDate() - 1);
+        start.setHours(config.resetHour, 0, 0, 0);
+        return start.getTime();
+      }
+
+      // Belangrijkste eerst: dagtaken met een seintje, dan dagtaken, dan de rest.
+      function urgency(item) {
+        const repeat = window.PipTasks.repeatOf(item.task);
+        const order = ["daily", "weekly", "biweekly", "monthly", "quarterly"].indexOf(repeat);
+        return order * 10 + (item.task.remind ? 0 : 1);
+      }
+
+      function renderTasks() {
+        const settings = data.settings;
+        const tasks = Array.isArray(settings.tasks) && settings.tasks.length ? settings.tasks : config.tasks;
+        const list = window.PipTasks.status(tasks, settings.done || {}, new Date(), config.resetHour);
+        const done = list.filter((item) => item.done);
+        const open = list.filter((item) => !item.done).sort((a, b) => urgency(a) - urgency(b));
+        $("progress").textContent = `${done.length} van ${list.length} gedaan`;
+        $("bars").innerHTML = list.map((_, i) => `<i class="${i < done.length ? "on" : ""}"></i>`).join("");
+
+        const todo = $("todo");
+        todo.innerHTML = "";
+        if (!open.length && list.length) {
+          const last = done.slice().sort((a, b) => b.done.at - a.done.at)[0];
+          todo.innerHTML = '<div class="all-done"><small>Alles gedaan</small><strong></strong></div>';
+          todo.querySelector("strong").textContent = `${last.task.title}: ${last.done.by}, om ${P.clock(last.done.at)}`;
+        } else if (open.length) {
+          const first = open[0];
+          const callout = document.createElement("div");
+          callout.className = "callout";
+          callout.innerHTML = '<div class="callout-text"><small></small><strong></strong></div><button type="button">Gedaan</button>';
+          callout.querySelector("small").textContent = `Nog doen · ${first.task.remind || first.when}`;
+          callout.querySelector("strong").textContent = first.task.title;
+          callout.querySelector("button").addEventListener("click", () => askWho(first.task));
+          todo.appendChild(callout);
+          if (open.length > 1) {
+            const also = document.createElement("ul");
+            also.className = "also";
+            for (const item of open.slice(1)) {
+              const li = document.createElement("li");
+              li.innerHTML = '<span><strong></strong><small></small></span><button type="button">Gedaan</button>';
+              li.querySelector("strong").textContent = item.task.title;
+              li.querySelector("small").textContent = item.task.remind ? `Seintje om ${item.task.remind}` : `Nog doen ${item.when}`;
+              li.querySelector("button").addEventListener("click", () => askWho(item.task));
+              also.appendChild(li);
+            }
+            todo.appendChild(also);
           }
-          $("menu").appendChild(link);
+        }
+        renderTimeline();
+      }
+
+      // Wat er vandaag gebeurde: vinkjes, voeren, de bak draaien en Pip op de bak.
+      function renderTimeline() {
+        const start = todayStart(new Date());
+        const people = P.people(data.settings);
+        const events = [];
+        for (const tick of (data.jaarlog && data.jaarlog.ticks) || []) {
+          if (tick.at >= start) events.push({ at: tick.at, text: tick.title, sub: `door ${tick.by}`, who: tick.by });
+        }
+        const log = data.log || {};
+        for (const feed of log.feeds || []) {
+          if (feed.at >= start) events.push({ at: feed.at, text: "Gevoerd uit de voerbak", sub: `${feed.portions} ${feed.portions === 1 ? "portie" : "porties"}${feed.source === "overzicht" ? " · via de Hub" : ""}` });
+        }
+        for (const clean of log.cleans || []) {
+          if (clean.at >= start) events.push({ at: clean.at, text: "Bak gedraaid", sub: "via de Hub" });
+        }
+        const visits = (log.visits || []).filter((visit) => visit.at >= start).sort((a, b) => a.at - b.at);
+        visits.forEach((visit, i) => events.push({ at: visit.at, text: "Pip op de kattenbak", sub: `${i + 1}e keer vandaag${visit.weightKg ? ` · ${String(visit.weightKg).replace(".", ",")} kg` : ""}` }));
+        events.sort((a, b) => a.at - b.at);
+        const shown = events.slice(-6);
+        const list = $("timeline");
+        list.innerHTML = "";
+        if (!shown.length) {
+          list.innerHTML = '<li class="timeline-empty" style="display:block">Nog niets gebeurd vandaag.</li>';
+          list.style.background = "none";
+          return;
+        }
+        list.style.background = "";
+        for (const event of shown) {
+          const li = document.createElement("li");
+          li.innerHTML = `<time></time><i class="dot${event.who ? " by-someone" : ""}" aria-hidden="true"></i><span><strong></strong><small></small></span><span></span>`;
+          li.querySelector("time").textContent = P.clock(event.at);
+          li.querySelector("strong").textContent = event.text;
+          li.querySelector("small").textContent = event.sub;
+          if (event.who) li.lastElementChild.appendChild(P.avatarElement(event.who, people, avatars));
+          list.appendChild(li);
+        }
+      }
+
+      // ---- Afvinken vanaf de telefoon ----
+
+      function askWho(task) {
+        const people = P.people(data.settings);
+        if (people.length === 1) return tick(task, people[0]);
+        $("sheet-task").textContent = task.title;
+        const who = $("who");
+        who.innerHTML = "";
+        for (const name of people) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.appendChild(P.avatarElement(name, people, avatars));
+          button.append(name);
+          button.addEventListener("click", () => tick(task, name));
+          who.appendChild(button);
+        }
+        $("sheet").hidden = false;
+      }
+
+      function closeSheet() {
+        $("sheet").hidden = true;
+      }
+      $("sheet-cancel").addEventListener("click", closeSheet);
+      $("sheet").addEventListener("click", (event) => { if (event.target === $("sheet")) closeSheet(); });
+
+      async function tick(task, by) {
+        closeSheet();
+        status(`${task.title} afvinken…`);
+        try {
+          const response = await fetch(urls.settings, {
+            method: "PUT",
+            headers: auth({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ tick: { id: task.id, by } }),
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          status(`${task.title}: gedaan door ${by}. De Google Hub neemt het binnen 5 minuten over.`, "ok");
+          await load();
+        } catch (error) {
+          status("Afvinken lukte niet. Probeer het nog eens.", "error");
+        }
+      }
+
+      // ---- Wrapped, scores en instellen ----
+
+      function renderWrapped() {
+        const year = P.wrappedSeason();
+        $("wrapped").hidden = !year;
+        if (year) $("wrapped-title").textContent = `Pip Wrapped ${year}`;
+      }
+
+      function renderScores() {
+        const box = $("scores");
+        box.innerHTML = "";
+        if (!data.jaarlog || !window.PipStats) return;
+        const people = P.people(data.settings);
+        const result = window.PipStats.scores(data.jaarlog, "week", Date.now(), people, config.resetHour);
+        const max = Math.max(1, ...result.ranking.map((row) => row.points));
+        result.ranking.slice(0, 6).forEach((row, i) => {
+          const el = document.createElement("div");
+          el.className = `score-row${i === 0 && row.points > 0 ? " first" : ""}`;
+          el.innerHTML = `<span class="rank">${i + 1}</span><span></span><span><span class="name"></span><span class="bar"><i></i></span></span><span class="points">${row.points}<small>pt</small></span>`;
+          el.children[1].replaceWith(P.avatarElement(row.name, people, avatars));
+          el.querySelector(".name").textContent = row.name;
+          el.querySelector(".bar i").style.width = `${Math.round((row.points / max) * 100)}%`;
+          box.appendChild(el);
+        });
+      }
+
+      function renderSettings() {
+        const people = P.people(data.settings);
+        const stack = $("people-stack");
+        stack.innerHTML = "";
+        people.slice(0, 4).forEach((name) => stack.appendChild(P.avatarElement(name, people, avatars)));
+        $("people-names").textContent = people.length <= 1 ? people.join("")
+          : `${people.slice(0, -1).join(", ")} en ${people[people.length - 1]}`;
+        // Pagina's die er later bij komen (telefoon.js, PAGES), als gewone regel.
+        const more = $("more-pages");
+        more.innerHTML = "";
+        for (const page of P.PAGES.filter((item) => !["fotos.html", "baasjes.html"].includes(item.href))) {
+          const a = document.createElement("a");
+          a.className = "link-row";
+          a.href = page.href;
+          a.innerHTML = '<span></span><b aria-hidden="true">›</b>';
+          a.querySelector("span").textContent = page.title;
+          more.appendChild(a);
         }
       }
 
       $("unlink").addEventListener("click", () => {
-        if (!confirm("Deze telefoon ontkoppelen? Daarna moet je de QR-code op de Google Hub opnieuw scannen.")) return;
-        unlink();
+        if (!confirm("Deze telefoon ontkoppelen van de Google Hub? Daarna moet je de QR-code op de Hub opnieuw scannen.")) return;
+        P.unlink();
         location.reload();
       });
 
+      // ---- Laden ----
+
+      async function load() {
+        const [settings, jaarlog, log] = await Promise.all([
+          getJson(urls.settings).catch(() => data.settings),
+          getJson(urls.jaarlog).catch(() => data.jaarlog),
+          getJson(`${urls.kattenbak}${urls.kattenbak.includes("?") ? "&" : "?"}log=1`).catch(() => data.log),
+        ]);
+        data = { settings: settings || {}, jaarlog, log };
+        renderTasks();
+        renderWrapped();
+        renderScores();
+        renderSettings();
+      }
+
       (async function start() {
-        const { linked, fresh } = await window.PipPhone.showLinked();
-        $("summary").textContent = linked ? "Foto's, baasjes en meer" : "";
+        $("date").textContent = P.longDate(new Date());
+        const { linked, fresh } = await P.showLinked();
         if (fresh === false && !linked) $("not-linked").textContent = "Deze QR-code werkt niet (meer). Tik op de Google Hub opnieuw op het QR-knopje en scan de nieuwe code.";
-        else if (fresh === false) status("Deze QR-code werkt niet (meer). Scan hem opnieuw op de Google Hub.", "error");
-        if (linked) renderMenu();
+        if (!linked) return;
+        avatars = await P.loadAvatars();
+        await load();
+        startSlides();
+        setInterval(load, 60 * 1000);
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            $("date").textContent = P.longDate(new Date());
+            load();
+          }
+        });
       })();
     })();
   </script>

@@ -398,6 +398,425 @@
     },
   };
 
+  // ---- Staand (telefoon) ----
+
+  // Op een staand scherm dezelfde schermen, maar onder elkaar in plaats van
+  // naast elkaar: 400 px breed en zo hoog als het scherm (minstens 720), net als
+  // een verhaal op Instagram. De tekst staat boven, het plaatje of de grafiek
+  // eronder. Regels met data-fit krimpen tot ze op één regel passen (fitText).
+  const TALL_WIDTH = 400;
+  const TALL_MIN_HEIGHT = 720;
+  const SHARE_ICON = '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M12 3v12M7 8l5-5 5 5"/>';
+  // Ruimte verdelen: tussen twee blokken hooguit 56 px (GAP), wat overblijft
+  // komt boven en onder het geheel (SPACE, END), onder iets meer: zo staat de
+  // inhoud in het optische midden in plaats van tegen de boven- en onderkant.
+  const SPACE = '<i class="wr-space" aria-hidden="true"></i>';
+  const GAP = '<i class="wr-gap" aria-hidden="true"></i>';
+  const END = '<i class="wr-space end" aria-hidden="true"></i>';
+  const tall = (bg, color, inner) =>
+    `<div class="wr-slide wr-tall" style="background:${bg}${color ? `;color:${color}` : ""}">${inner}</div>`;
+
+  // De klok van het kattentype, zoals op het brede scherm maar met grotere letters.
+  function clockSvg(s, size) {
+    const max = Math.max(...s.hours, 1);
+    let base = "";
+    let hot = "";
+    const peakHour = Number(s.peak.slice(0, 2));
+    s.hours.forEach((value, hour) => {
+      const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+      const outer = 80 + (value / max) * 96;
+      const part = `M${(200 + Math.cos(angle) * 74).toFixed(1)} ${(200 + Math.sin(angle) * 74).toFixed(1)} L${(200 + Math.cos(angle) * outer).toFixed(1)} ${(200 + Math.sin(angle) * outer).toFixed(1)} `;
+      if (Math.abs(hour - peakHour) <= 1 || Math.abs(hour - peakHour) === 23) hot += part;
+      else base += part;
+    });
+    const label = (x, y, anchor, text) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="17" font-weight="600" fill="#2a1508">${text}</text>`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 400 400" font-family="Outfit, sans-serif" role="img" aria-label="Bezoeken aan de kattenbak per uur van de dag">
+      <path d="${base}" fill="none" stroke="#2a1508" stroke-opacity=".3" stroke-width="10" stroke-linecap="round"/>
+      <path d="${hot}" fill="none" stroke="#2a1508" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="200" cy="200" r="60" fill="#fbf7f2"/>
+      <text x="200" y="202" text-anchor="middle" font-size="32" font-weight="700" fill="#2a1508">${esc(s.peak)}</text>
+      <text x="200" y="228" text-anchor="middle" font-size="16" fill="#5a2f1a">piekuur</text>
+      ${label(200, 18, "middle", "0:00")}${label(396, 206, "end", "6:00")}${label(200, 396, "middle", "12:00")}${label(4, 206, "start", "18:00")}
+    </svg>`;
+  }
+
+  const TALL = {
+    intro(s, ctx) {
+      // Pootjes lopen in de lege hoek linksboven naast de foto, niet bij de tekst.
+      const paws = [[0, 46, 40], [34, 8, 40]].map(([x, y, r], i) =>
+        `<div aria-hidden="true" class="wr-abs" style="left:${x}px;top:${y}px;transform:rotate(${r}deg);color:rgba(243,199,122,.4)"><div class="wr-pop wr-paw" style="width:24px;height:24px;${delay(0.6 + i * 0.15)}">${PAW}</div></div>`).join("");
+      return tall("#24170f", "", `
+        ${SPACE}
+        <div style="position:relative;flex:none;align-self:center;width:280px;height:280px">
+          <div aria-hidden="true" class="wr-abs wr-pop wr-round" style="inset:0;background:#f3c77a"></div>
+          <div class="wr-abs wr-pop d2 wr-round wr-photo" style="inset:24px;box-shadow:0 0 0 7px #24170f"><img src="${esc(ctx.photo)}" alt="Pip"></div>
+          <div aria-hidden="true" class="wr-abs wr-pop d4 wr-round" style="left:-18px;bottom:0;width:74px;height:74px;background:#ff8c66"></div>
+          <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="right:-6px;bottom:18px;width:46px;height:46px;border:7px solid #9cc7e0"></div>
+          ${paws}
+        </div>
+        ${GAP}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#f3c77a">Pip Wrapped</p>
+          <h1 class="wr-up d1 wr-num" style="margin-top:10px;font-size:112px;color:#fbf7f2">${s.year}</h1>
+          <p class="wr-up d2 wr-serif" style="margin-top:14px;font-size:40px;color:#f3c77a">Wat een jaar, Pip.</p>
+          ${s.since ? `<p class="wr-up d3" style="margin-top:10px;font-size:17px;color:rgba(255,255,255,.75)">Bijgehouden ${esc(s.since)}.</p>` : ""}
+          <span class="wr-up d3 wr-pill" style="margin-top:26px;font-size:16px">Tik om te beginnen</span>
+        </div>
+        ${END}`);
+    },
+
+    total(s) {
+      const rows = s.rows.map((row, i) => `
+        <div class="wr-up" style="padding:14px 16px;border-radius:18px;background:#fff3dc;${s.rows.length % 2 && i === s.rows.length - 1 ? "grid-column:span 2;" : ""}${delay(0.5 + i * 0.12)}">
+          <p class="wr-num" style="font-size:36px">${num(row.value)}</p>
+          <p style="margin-top:6px;font-size:15px;line-height:1.3;color:#4a3424">${esc(row.label)}</p>
+        </div>`).join("");
+      return tall("#f3c77a", "#24170f", `
+        <div aria-hidden="true" class="wr-abs" style="right:-56px;top:190px;transform:rotate(18deg);color:#e5ac54"><div class="wr-pop d4 wr-paw" style="width:210px;height:210px">${PAW}</div></div>
+        ${SPACE}
+        <div style="position:relative">
+          <p class="wr-up wr-eyebrow" style="color:#7d4820">Samen voor Pip</p>
+          <p class="wr-up d1" style="margin-top:18px;font-size:28px;font-weight:600">Jullie zorgden</p>
+          <p class="wr-pop d2 wr-num" data-fit="total" style="margin-top:8px;font-size:${fit(num(s.total), 150, 344)}px">${num(s.total)}</p>
+          <p class="wr-up d3 wr-serif" style="margin-top:8px;font-size:44px">keer voor Pip.</p>
+          <p class="wr-up d4" style="margin-top:18px;font-size:17px;line-height:1.4;color:#4a3424">${esc(s.perDay)}</p>
+        </div>
+        ${GAP}
+        <div style="position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${rows}</div>
+        ${END}`);
+    },
+
+    box(s) {
+      const peak = Math.max(...s.bars.map((bar) => bar.value), 1);
+      // Bij veel staafjes niet onder elk staafje een datum, anders lopen ze door elkaar.
+      const every = s.bars.length > 9 ? Math.ceil(s.bars.length / 7) : 1;
+      const bars = s.bars.map((bar, i) => `
+        <div class="wr-bar-col" style="gap:6px">
+          ${bar.value === peak ? `<span class="wr-up d7" style="font-size:16px;font-weight:700;color:#f3c77a">${num(bar.value)}</span>` : ""}
+          <div class="wr-grow" style="width:100%;height:${Math.max(4, Math.round((bar.value / peak) * 188))}px;border-radius:${s.bars.length > 12 ? "5px 5px 2px 2px" : "8px 8px 3px 3px"};background:${bar.value === peak ? "#f3c77a" : "#3d6d91"};${delay(0.3 + i * 0.04)}"></div>
+          <span style="height:16px;font-size:12px;color:rgba(255,255,255,.72);white-space:nowrap">${i % every === 0 ? esc(bar.label) : ""}</span>
+        </div>`).join("");
+      const facts = s.facts.map((fact, i) => `
+        <div class="wr-up wr-fact" style="font-size:17px;line-height:1.35;${delay(0.4 + i * 0.12)}"><span class="wr-dot" style="background:#f3c77a"></span><span>${esc(fact)}</span></div>`).join("");
+      return tall("#16324a", "", `
+        <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="right:-90px;top:110px;width:240px;height:240px;background:#1d4060"></div>
+        ${SPACE}
+        <div style="position:relative">
+          <p class="wr-up wr-eyebrow" style="color:#9cc7e0">Kattenbak</p>
+          <p class="wr-pop d1 wr-num" data-fit="visits" style="margin-top:14px;font-size:${fit(num(s.visits), 130, 344)}px;color:#fbf7f2">${num(s.visits)}</p>
+          <p class="wr-up d2" style="margin-top:12px;font-size:24px;font-weight:600">bezoeken aan de kattenbak</p>
+          <div class="wr-stack" style="margin-top:20px;gap:10px">${facts}</div>
+        </div>
+        ${GAP}
+        <div style="position:relative">
+          <div class="wr-bars" style="height:236px;gap:${s.bars.length > 12 ? 4 : 8}px">${bars}</div>
+          <p style="margin-top:10px;font-size:14px;color:rgba(255,255,255,.72)">Bezoeken per ${{ month: "maand", week: "week", day: "dag" }[s.bucket]}.</p>
+        </div>
+        ${END}`);
+    },
+
+    type(s) {
+      const chips = s.chips.map((chip, i) => `<span class="wr-up wr-chip" style="font-size:15px;padding:9px 14px;background:#2a1508;color:#ffe1d4;${delay(0.5 + i * 0.12)}">${esc(chip)}</span>`).join("");
+      return tall("#ff8c66", "#2a1508", `
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips kattentype</p>
+          <h2 class="wr-pop d1 wr-num" style="margin-top:16px;font-size:64px;line-height:.92">${esc(s.name)}</h2>
+          <p class="wr-up d2 wr-serif" style="margin-top:16px;font-size:32px">${esc(s.line)}</p>
+          <div class="wr-wrap" style="margin-top:22px">${chips}</div>
+        </div>
+        <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-top:16px">
+          <div class="wr-pop d1 wr-round" style="height:100%;max-height:316px;aspect-ratio:1/1;padding:10px;background:#ffa585">
+            <div class="wr-pop d2" style="width:100%;height:100%">${clockSvg(s, "100%")}</div>
+          </div>
+        </div>`);
+    },
+
+    food(s, ctx) {
+      const stats = s.stats.map((stat, i) => `
+        <div class="wr-up" style="${delay(0.15 + i * 0.12)}">
+          <p class="wr-num" style="font-size:${fit(num(stat.value), 52, 100)}px;line-height:.95">${num(stat.value)}</p>
+          <p style="margin-top:8px;font-size:14px;line-height:1.3;color:#ffe9d2">${esc(stat.label)}</p>
+        </div>`).join("");
+      let card = "";
+      if (s.heat) {
+        const looks = {
+          done: "background:#d18c4f",
+          streak: "background:#ffe7b0",
+          missed: "border:2px solid rgba(255,244,230,.6)",
+          unknown: "background:rgba(255,244,230,.12)",
+          today: "border:2px dashed rgba(255,244,230,.6)",
+        };
+        // Staand: drie weken per rij (21 vakjes), van januari tot nu.
+        const perRow = 21;
+        const size = 11;
+        const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
+          .concat(s.heat.cells.map((kind, i) => `<i class="wr-cell" style="${looks[kind]};${delay(0.35 + Math.floor((i + s.heat.offset) / perRow) * 0.04)}"></i>`));
+        const width = perRow * (size + 3) - 3;
+        const line = s.streak
+          ? `<strong style="color:#ffe7b0">${s.streak.length} dagen op rij</strong> ${esc(s.doneTitle || s.title.toLowerCase())}, van ${esc(s.streak.from)} t/m ${esc(s.streak.to)}.`
+          : s.heat.since ? `Bijgehouden sinds <strong style="color:#ffe7b0">${esc(s.heat.since)}</strong>; daarvoor staat het nog niet in het jaarlog.` : "";
+        card = `
+          <div class="wr-up d3 wr-card" style="padding:18px;border-radius:22px;background:#8d5124">
+            <p style="font-size:17px;font-weight:700">${esc(s.title)} in ${ctx.year}</p>
+            <div class="wr-row" style="flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:13px;color:#ffe9d2">
+              <span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#d18c4f"></i>Gegeven</span>
+              ${s.streak ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:#ffe7b0"></i>Langste reeks</span>' : ""}
+              <span class="wr-row" style="gap:6px"><i class="wr-key" style="border:2px solid rgba(255,244,230,.6)"></i>Vergeten</span>
+              ${s.heat.hasUnknown ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:rgba(255,244,230,.12)"></i>Nog niet bijgehouden</span>' : ""}
+            </div>
+            <div class="wr-heat" style="margin-top:14px;grid-auto-flow:row;gap:3px;grid-template-columns:repeat(${perRow},${size}px);grid-auto-rows:${size}px">${cells.join("")}</div>
+            <div class="wr-row" style="justify-content:space-between;gap:16px;width:${width}px;margin-top:8px;font-size:12px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>
+            ${line ? `<p style="margin-top:10px;font-size:15px;line-height:1.4">${line}</p>` : ""}
+          </div>`;
+      }
+      return tall("#a9642f", "#fff4e6", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#ffe2bf">Eten</p>
+          <div style="display:grid;grid-template-columns:repeat(${Math.max(1, s.stats.length)},minmax(0,1fr));gap:16px;margin-top:16px">${stats}</div>
+        </div>
+        ${card ? GAP + card : ""}
+        ${END}`);
+    },
+
+    weight(s) {
+      let chart = "";
+      if (s.points.length >= 2) {
+        const values = s.points.map((p) => p.kg);
+        const low = Math.min(...values) - 0.15;
+        const high = Math.max(...values) + 0.15;
+        const step = 296 / (s.points.length - 1);
+        const x = (i) => Math.round(30 + i * step);
+        const y = (kg) => Math.round(196 - ((kg - low) / (high - low)) * 166);
+        const line = s.points.map((p, i) => `${i ? "L" : "M"}${x(i)} ${y(p.kg)}`).join(" ");
+        const area = `${line} L${x(s.points.length - 1)} 212 L${x(0)} 212 Z`;
+        const dots = s.points.map((p, i) => `M${x(i)} ${y(p.kg)} l0 .01`).join(" ");
+        const last = s.points[s.points.length - 1];
+        const lastY = y(last.kg);
+        const every = Math.ceil(s.points.length / 6);
+        const lastIndex = s.points.length - 1;
+        // Elke zoveelste maand, en de laatste; niet een die daar vlak tegenaan staat.
+        const labels = s.points.map((p, i) => ((i % every === 0 && lastIndex - i >= every) || i === lastIndex
+          ? `<text x="${x(i)}" y="238" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.7)">${esc(p.label)}</text>` : "")).join("");
+        chart = `
+          <div class="wr-up d2" style="position:relative;flex:none;width:344px;height:250px">
+            <svg width="344" height="250" viewBox="0 0 344 250" font-family="Outfit, sans-serif" role="img" aria-label="Gewicht door het jaar">
+              <line x1="16" y1="212" x2="340" y2="212" stroke="rgba(255,255,255,.3)"/>
+              <path d="${area}" fill="#cfe8b8" fill-opacity=".16"/>
+              <path d="${line}" fill="none" stroke="#cfe8b8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="${dots}" fill="none" stroke="#2f4a2c" stroke-width="13" stroke-linecap="round"/>
+              <path d="${dots}" fill="none" stroke="#cfe8b8" stroke-width="7" stroke-linecap="round"/>
+              <circle cx="${x(s.points.length - 1)}" cy="${lastY}" r="9" fill="#f3c77a"/>
+              <text x="${x(s.points.length - 1)}" y="${lastY - 18}" text-anchor="end" font-size="16" font-weight="700" fill="#f3c77a">${String(Math.round(last.kg * 10) / 10).replace(".", ",")} kg</text>
+              ${labels}
+            </svg>
+            <div class="wr-wipe" style="position:absolute;left:14px;top:0;width:330px;height:222px;background:#2f4a2c"></div>
+          </div>`;
+      }
+      return tall("#2f4a2c", "", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#cfe8b8">Gewicht</p>
+          <p class="wr-pop d1 wr-num" data-fit="weight" style="margin-top:14px;font-size:${fit(s.average, 104, 344)}px;line-height:.9">${esc(s.average)}</p>
+          <p class="wr-up d2" style="margin-top:14px;font-size:22px;font-weight:600;line-height:1.3">gemiddeld, gewogen door de kattenbak</p>
+          <p class="wr-up d3 wr-serif" style="margin-top:18px;font-size:30px;color:#cfe8b8">${esc(s.line)}</p>
+        </div>
+        ${chart ? GAP + chart : ""}
+        ${END}`);
+    },
+
+    top(s, ctx) {
+      const max = Math.max(...s.tasks.map((t) => t.count), 1);
+      const rows = s.tasks.map((task, i) => `
+        <div class="wr-up wr-row" style="gap:14px;${delay(0.3 + i * 0.12)}">
+          <span class="wr-num" style="width:28px;font-size:32px;color:#f2a6a0">${i + 1}</span>
+          <div style="flex:1;min-width:0">
+            <div class="wr-row" style="justify-content:space-between;align-items:baseline;gap:10px">
+              <span style="font-size:18px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(task.name)}</span>
+              <span style="font-size:17px;font-weight:600;color:#f2a6a0">${num(task.count)}×</span>
+            </div>
+            <div style="margin-top:6px;height:7px;border-radius:99px;background:rgba(255,255,255,.1)">
+              <div class="wr-growx" style="height:100%;border-radius:99px;width:${Math.round((task.count / max) * 100)}%;background:${i === 0 ? "#f2a6a0" : "rgba(242,166,160,.5)"};${delay(0.5 + i * 0.12)}"></div>
+            </div>
+          </div>
+        </div>`).join("");
+      return tall("#3a1f3d", "#fff3f1", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#f2a6a0">Top ${s.tasks.length} van ${ctx.year}</p>
+          <h2 class="wr-up d1 wr-num" style="margin-top:12px;font-size:38px;line-height:1">Meest afgevinkte taken</h2>
+          <div class="wr-stack" style="margin-top:22px;gap:14px">${rows}</div>
+        </div>
+        ${GAP}
+        <div class="wr-row" style="gap:26px">
+          <div style="position:relative;flex:none;width:150px;height:184px">
+            <div aria-hidden="true" class="wr-abs" style="inset:0;transform:rotate(-6deg)"><div class="wr-pop d1" style="width:100%;height:100%;border-radius:22px;background:#f2a6a0"></div></div>
+            <div class="wr-abs" style="inset:0;transform:rotate(4deg)"><div class="wr-pop d2 wr-photo" style="width:100%;height:100%;border-radius:22px"><img src="${esc(ctx.portrait)}" alt="Pip"></div></div>
+          </div>
+          <p class="wr-up d5 wr-serif" style="font-size:32px;color:#f2a6a0">Pip keurt het goed.</p>
+        </div>
+        ${END}`);
+    },
+
+    human(s, ctx) {
+      const order = s.podium.length >= 3 ? [1, 0, 2] : s.podium.length === 2 ? [1, 0] : [0];
+      const heights = [236, 166, 106];
+      const colors = [["#a9642f", "#ffffff"], ["#e2c9a8", "#7d4820"], ["#efe2d1", "#7d4820"]];
+      const columns = order.map((place, i) => {
+        const person = s.podium[place];
+        const [bg, fg] = colors[place];
+        const photo = ctx.avatar(person.name);
+        return `
+          <div class="wr-stack" style="flex:1;min-width:0;align-items:center;gap:8px">
+            ${place === 0 ? `<span class="wr-pop d6" style="color:#c98a1c">${stroke('<path d="M3 18h18l-1.6-10-5 4.5L12 5l-2.4 7.5-5-4.5z"/>', 28)}</span>` : ""}
+            ${photo
+              ? `<div class="wr-pop wr-round wr-photo" style="width:60px;height:60px;box-shadow:0 0 0 3px ${place === 0 ? "#a9642f" : "#e2c9a8"};${delay(0.36 + i * 0.12)}"><img src="${esc(photo)}" alt=""></div>`
+              : `<div class="wr-pop wr-round" style="width:60px;height:60px;display:grid;place-items:center;font-size:26px;font-weight:800;background:${place === 0 ? bg : "#e9dccb"};color:${place === 0 ? "#fff" : "#24170f"};${delay(0.36 + i * 0.12)}">${esc(person.name.charAt(0).toUpperCase())}</div>`}
+            <div class="wr-up" style="max-width:100%;text-align:center;${delay(0.36 + i * 0.12)}"><p style="font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(person.name)}</p><p style="font-size:13px;color:#6b5f54">${num(person.points)} punten</p></div>
+            <div class="wr-grow" style="width:100%;height:${heights[place]}px;padding-top:12px;box-sizing:border-box;border-radius:16px 16px 0 0;background:${bg};display:flex;justify-content:center;font-size:${place === 0 ? 46 : 38}px;font-weight:800;color:${fg};${delay(0.1 + i * 0.12)}">${place + 1}</div>
+          </div>`;
+      }).join("");
+      return tall("#fbf7f2", "#24170f", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#a9642f">Pips favoriete baasje</p>
+          <p class="wr-pop d1 wr-num" data-fit="human" style="margin-top:12px;font-size:${fit(s.name, 120, 344)}px;line-height:.85;white-space:nowrap">${esc(s.name)}</p>
+          <p class="wr-up d2" style="margin-top:16px;font-size:20px;font-weight:600">${num(s.points)} punten · ${num(s.count)} ${s.count === 1 ? "taak" : "taken"}</p>
+          <p class="wr-up d3 wr-serif" style="margin-top:12px;font-size:30px;color:#a9642f">${esc(s.line)}</p>
+        </div>
+        ${GAP}
+        <div class="wr-row" style="margin-bottom:-36px;align-items:flex-end;gap:12px">${columns}</div>`);
+    },
+
+    records(s) {
+      const cards = s.records.map((record, i) => `
+        <div class="wr-up wr-row" style="align-items:flex-start;gap:14px;padding:14px 16px;border-radius:20px;background:#2a211a;${delay(0.24 + i * 0.12)}">
+          <div class="wr-round" style="width:42px;height:42px;flex:none;display:grid;place-items:center;background:#f3c77a;color:#17120e">${stroke(RECORD_ICONS[record.icon] || RECORD_ICONS.sun, 22)}</div>
+          <div style="min-width:0">
+            <p style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7)">${esc(record.label)}</p>
+            <p class="wr-num" style="margin-top:4px;font-size:30px;line-height:1.05;color:#f3c77a">${esc(record.value)}</p>
+            <p style="margin-top:5px;font-size:14px;line-height:1.35;color:rgba(255,255,255,.82)">${esc(record.text)}</p>
+          </div>
+        </div>`).join("");
+      return tall("#17120e", "", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#f3c77a">Records</p>
+          <h2 class="wr-up d1 wr-num" style="margin-top:12px;font-size:38px;line-height:1">Het jaar in records</h2>
+        </div>
+        <div class="wr-stack" style="margin-top:20px;gap:10px">${cards}</div>
+        ${END}`);
+    },
+
+    costs(s) {
+      const real = s.rows.filter((row) => row.name !== "Speelgoed").slice(0, 6);
+      const max = Math.max(...real.map((row) => row.amount), 1);
+      const rows = real.map((row, i) => `
+        <div class="wr-up" style="${delay(0.47 + i * 0.12)}">
+          <div class="wr-row" style="justify-content:space-between;align-items:baseline;gap:12px">
+            <span style="font-size:17px;font-weight:700">${esc(row.name)}</span>
+            <span style="font-size:17px;font-weight:700;color:#c9c2ff">€ ${num(row.amount)}</span>
+          </div>
+          <div style="margin-top:6px;height:8px;border-radius:99px;background:rgba(255,255,255,.1)">
+            <div class="wr-growx" style="height:100%;border-radius:99px;width:${Math.round((row.amount / max) * 100)}%;background:${i === 0 ? "#c9c2ff" : "rgba(201,194,255,.5)"};${delay(0.67 + i * 0.12)}"></div>
+          </div>
+        </div>`).join("");
+      const toyRow = `
+        <div class="wr-up" style="${delay(0.35)}">
+          <div class="wr-row" style="justify-content:space-between;align-items:center;gap:12px">
+            <span style="font-size:17px;font-weight:700">Speelgoed</span>
+            <span class="wr-row" role="img" aria-label="oneindig veel euro" style="gap:6px;font-size:17px;font-weight:700;color:#c9c2ff">€
+              <svg class="wr-inf" width="34" height="17" viewBox="0 0 40 20" aria-hidden="true">
+                <path d="M20 10C16.5 5.3 13.6 3 10 3a7 7 0 0 0 0 14c3.6 0 6.5-2.3 10-7s6.4-7 10-7a7 7 0 0 1 0 14c-3.6 0-6.5-2.3-10-7Z" fill="none" stroke="rgba(201,194,255,.35)" stroke-width="3.2" stroke-linecap="round"/>
+                <path class="wr-inf-run" pathLength="100" d="M20 10C16.5 5.3 13.6 3 10 3a7 7 0 0 0 0 14c3.6 0 6.5-2.3 10-7s6.4-7 10-7a7 7 0 0 1 0 14c-3.6 0-6.5-2.3-10-7Z" fill="none" stroke="#c9c2ff" stroke-width="3.2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </div>
+          <div style="margin-top:6px;height:8px;border-radius:99px;background:rgba(255,255,255,.1)">
+            <div class="wr-growx" style="height:100%;border-radius:99px;width:100%;background:linear-gradient(90deg,rgba(201,194,255,.5),#c9c2ff);${delay(0.55)}"></div>
+          </div>
+        </div>`;
+      const total = `€ ${num(s.total)}`;
+      return tall("#262046", "", `
+        <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="right:-70px;top:150px;width:200px;height:200px;background:#2f2858"></div>
+        ${SPACE}
+        <div style="position:relative">
+          <p class="wr-up wr-eyebrow" style="color:#c9c2ff">Wat Pip kostte</p>
+          <p class="wr-up d1" data-fit="cost-line" style="margin-top:18px;font-size:22px;font-weight:600;white-space:nowrap">Jullie gaven ${s.since ? esc(s.since) : "dit jaar"}…</p>
+          <p class="wr-pop d2 wr-num" data-fit="cost-total" style="margin-top:8px;font-size:${fit(total, 100, 344)}px;line-height:.92;letter-spacing:-0.02em;color:#c9c2ff">${total}</p>
+          <p class="wr-up d3" data-fit="cost-line" style="margin-top:8px;font-size:22px;font-weight:600;line-height:1.3;white-space:nowrap">…uit aan Pip. Dat is elke cent waard!</p>
+          <p class="wr-up d4" style="margin-top:14px;font-size:16px;line-height:1.45;color:rgba(255,255,255,.88)"><span class="wr-line">Gemiddeld ${euro(s.perDay)} per dag.</span>${s.priciest ? `<span class="wr-line">Duurste maand: ${esc(s.priciest)}.</span>` : ""}</p>
+        </div>
+        ${GAP}
+        <div class="wr-stack" style="position:relative;gap:11px">${toyRow}${rows}</div>
+        ${END}`);
+    },
+
+    photos(s) {
+      const spots = [
+        { left: 64, top: 34, rotate: -3, w: 196, h: 168, cls: "d2", label: "nieuwste" },
+        { left: 214, top: 0, rotate: 8, w: 118, h: 118, cls: "d4", label: "" },
+        { left: 0, top: 150, rotate: -9, w: 136, h: 104, cls: "d3", label: "" },
+      ];
+      const order = [2, 1, 0].filter((i) => i < s.urls.length);
+      const polaroids = order.map((i) => {
+        const spot = spots[i];
+        return `<div class="wr-abs" style="left:${spot.left}px;top:${spot.top}px;transform:rotate(${spot.rotate}deg)">
+          <div class="wr-pop ${spot.cls} wr-polaroid" style="padding:10px 10px 0"><div class="wr-photo" style="width:${spot.w}px;height:${spot.h}px"><img src="${esc(s.urls[i])}" alt="Foto van Pip"></div>
+          <p class="wr-serif" style="height:36px;display:flex;align-items:center;justify-content:center;font-size:19px">${esc(spot.label)}</p></div></div>`;
+      }).join("");
+      return tall("#f4e3d3", "#24170f", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:#8d5124">Fotolijst</p>
+          <p class="wr-pop d1 wr-num" style="margin-top:12px;font-size:140px;line-height:.85">${num(s.count)}</p>
+          <p class="wr-up d2" style="margin-top:14px;font-size:24px;font-weight:600">${s.count === 1 ? "foto" : "foto's"} van Pip op de Google Hub</p>
+          <p class="wr-up d3" style="margin-top:12px;font-size:16px;line-height:1.45;color:#5a4636">Elke paar seconden een andere, in de ruststand. Nieuwe foto's stuur je met de QR-code linksonder.</p>
+        </div>
+        ${polaroids ? `${GAP}<div style="position:relative;flex:none;height:284px">${polaroids}</div>` : ""}
+        ${END}`);
+    },
+
+    outro(s, ctx) {
+      const cells = s.summary.map((cell, i) => `
+        <div class="wr-up" style="min-width:0;padding:14px 16px;border-radius:18px;background:#33251b;${delay(0.2 + i * 0.1)}">
+          <p style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#f3c77a">${esc(cell.label)}</p>
+          <p class="wr-num" data-fit="outro" style="margin-top:7px;font-size:28px;line-height:1">${esc(cell.value)}</p>
+          <p style="margin-top:5px;font-size:13px;line-height:1.3;color:rgba(251,247,242,.72)">${esc(cell.sub)}</p>
+        </div>`).join("");
+      return tall("#24170f", "#fbf7f2", `
+        ${SPACE}
+        <div class="wr-row" style="gap:20px">
+          <div class="wr-pop wr-round wr-photo" style="flex:none;width:100px;height:100px;box-shadow:0 0 0 5px #f3c77a"><img src="${esc(ctx.portrait)}" alt="Pip"></div>
+          <div>
+            <p class="wr-up d1 wr-eyebrow" style="color:#f3c77a">Pip Wrapped</p>
+            <p class="wr-up d1 wr-num" style="margin-top:6px;font-size:76px;line-height:.9">${s.year}</p>
+          </div>
+        </div>
+        <p class="wr-up d2 wr-serif" style="margin-top:18px;font-size:32px;color:#f3c77a">Dat was het jaar van Pip.</p>
+        <div style="margin-top:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${cells}</div>
+        ${GAP}
+        <button type="button" class="wr-up d3 wr-share" data-share style="position:relative;align-self:flex-start">${stroke(SHARE_ICON, 20)}Delen</button>
+        ${END}`);
+    },
+  };
+
+  // Staand: regels met data-fit krimpen tot ze op één regel passen; regels met
+  // dezelfde naam (bv. de twee zinnen rond het bedrag) krijgen dezelfde maat.
+  function fitText(slide) {
+    if (!slide) return;
+    const els = [...slide.querySelectorAll("[data-fit]")];
+    const ratio = new Map();
+    els.forEach((el) => {
+      const r = el.scrollWidth > el.clientWidth ? el.clientWidth / el.scrollWidth : 1;
+      ratio.set(el.dataset.fit, Math.min(ratio.has(el.dataset.fit) ? ratio.get(el.dataset.fit) : 1, r));
+    });
+    els.forEach((el) => {
+      const r = ratio.get(el.dataset.fit);
+      if (r < 1) el.style.fontSize = `${Math.floor(parseFloat(getComputedStyle(el).fontSize) * r * 0.98 * 10) / 10}px`;
+    });
+  }
+
   // ---- Muziek ----
 
   // Per hoofdstuk een bekend nummer (config.js, wrappedMusic): een fragment van
@@ -525,6 +944,11 @@
   }
 
   async function openShare() {
+    if (state && state.share) {
+      setPlaying(false);
+      state.share(shareUrl());
+      return;
+    }
     if (!state || !state.qr) return;
     setPlaying(false);
     const panel = root.querySelector(".wr-share-panel");
@@ -560,12 +984,26 @@
   let root = null;
   let state = null;
 
+  // Staand (telefoon) of breed (de Hub, of een telefoon die gedraaid is).
+  const isTall = () => window.innerHeight > window.innerWidth;
+
   function scale() {
     // Na het sluiten is er geen scherm meer om te schalen.
     const stage = root && root.querySelector(".wr-stage");
-    if (!stage) return;
-    const s = Math.min(window.innerWidth / 1024, window.innerHeight / 600);
+    if (!stage || !state) return;
+    const tallNow = isTall();
+    const width = tallNow ? TALL_WIDTH : 1024;
+    const height = tallNow ? Math.max(TALL_MIN_HEIGHT, Math.round(TALL_WIDTH * (window.innerHeight / window.innerWidth))) : 600;
+    stage.style.width = `${width}px`;
+    stage.style.height = `${height}px`;
+    const s = Math.min(window.innerWidth / width, window.innerHeight / height);
     stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+    root.classList.toggle("tall", tallNow);
+    // Telefoon gedraaid: hetzelfde scherm opnieuw, in de andere opbouw.
+    if (tallNow !== state.tall) {
+      state.tall = tallNow;
+      if (state.shown) show(state.index);
+    }
   }
 
   // Elke pagina begint op dezelfde hoogte: de kop (bv. "SAMEN VOOR PIP") staat
@@ -640,10 +1078,17 @@
 
   function show(index) {
     state.index = index;
+    state.shown = true;
     const slide = state.slides[index];
-    root.querySelector(".wr-host").innerHTML = slide.html;
-    balance(root.querySelector(".wr-host .wr-slide"));
-    alignToLast(root.querySelector(".wr-host .wr-slide"));
+    const look = state.tall && TALL[slide.type] ? TALL : SLIDES;
+    root.querySelector(".wr-host").innerHTML = look[slide.type](slide.data, state.ctx);
+    const el = root.querySelector(".wr-host .wr-slide");
+    if (look === TALL) {
+      fitText(el);
+    } else {
+      balance(el);
+      alignToLast(el);
+    }
     root.classList.toggle("light", slide.light);
     root.querySelector(".wr-progress").innerHTML = state.slides.map((_, i) =>
       `<span class="wr-seg"><i class="${i < index ? "full" : i === index ? "run" : ""}"></i></span>`).join("");
@@ -686,11 +1131,16 @@
       playing: true,
       data,
       qr: options.qr || null,
+      // Op de telefoon: meteen de deelkaart openen in plaats van een QR-code.
+      share: options.share || null,
       onClose: options.onClose,
+      ctx,
+      tall: isTall(),
+      shown: false,
       slides: data.slides.filter((slide) => SLIDES[slide.type]).map((slide) => ({
         type: slide.type,
         variant: slide.name || "",
-        html: SLIDES[slide.type](slide, ctx),
+        data: slide,
         light: LIGHT.has(slide.type),
       })),
     };

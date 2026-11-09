@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Scores van Pip</title>
+  <link rel="icon" href="pip.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="telefoon.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="Pip">
+  <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="stijl.css?v=20261109-32">
+  <!-- Scores op de telefoon: dezelfde cijfers als het scoreboard op de Hub
+       (stats.js), per week, maand of jaar, met badges en hoe de punten werken. -->
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <a class="back" href="instellingen.html">‹ Thuis</a>
+      <h1 class="title">Scores</h1>
+    </div>
+
+    <div id="linked" hidden>
+      <div class="tabs" role="tablist" aria-label="Periode">
+        <button type="button" role="tab" data-period="week" aria-selected="true">Week</button>
+        <button type="button" role="tab" data-period="month" aria-selected="false">Maand</button>
+        <button type="button" role="tab" data-period="year" aria-selected="false">Jaar</button>
+      </div>
+      <p class="period" id="period"></p>
+
+      <section class="card ranking" id="ranking" aria-label="Stand"></section>
+      <p class="note" id="footnote"></p>
+
+      <section class="section" aria-labelledby="badges-title">
+        <h2 class="section-title" id="badges-title">Badges</h2>
+        <div class="badges" id="badges"></div>
+      </section>
+
+      <section class="section" aria-labelledby="points-title">
+        <h2 class="section-title" id="points-title">Punten</h2>
+        <div class="points-card">
+          <div><span>Dagtaak afgevinkt</span><b>1 pt</b></div>
+          <div><span>Weektaak</span><b>3 pt</b></div>
+          <div><span>Maand- of kwartaaltaak</span><b>5 pt</b></div>
+        </div>
+        <p class="note">De week begint maandag om 04:00 weer op nul. Voeren en de bak draaien via de knoppen tellen niet mee: die weten niet wie er tikt.</p>
+      </section>
+
+      <a class="wrapped-bar" href="wrapped.html">
+        <span><strong>Pip Wrapped</strong><small id="wrapped-sub">Het jaar tot nu toe</small></span>
+        <i aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></i>
+      </a>
+    </div>
+
+    <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
+  </main>
+
+  <script src="config.js?v=20261109-32"></script>
+  <script src="telefoon.js?v=20261109-32"></script>
+  <script src="stats.js?v=20261109-32"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const P = window.PipPhone;
+      const { config, $, serverUrl, getJson } = P;
+      const CROWN = '<svg viewBox="0 0 24 24" fill="none" stroke="#d99a3e" stroke-width="2" stroke-linejoin="round" aria-label="eerste"><path d="M3 18h18l-1.5-10-5 4L12 5l-2.5 7-5-4z"/></svg>';
+      const FOOTNOTES = {
+        week: "Zondag om 20:00 wordt de held van de week bekend.",
+        month: "Alle punten van deze maand bij elkaar.",
+        year: "Hier komt ook Pip Wrapped vandaan.",
+      };
+      let period = "week";
+      let jaarlog = null;
+      let people = [];
+      let avatars = new Map();
+
+      function render() {
+        document.querySelectorAll(".tabs button").forEach((button) =>
+          button.setAttribute("aria-selected", String(button.dataset.period === period)));
+        if (!jaarlog) return;
+        const result = window.PipStats.scores(jaarlog, period, Date.now(), people, config.resetHour);
+        $("period").textContent = result.label.charAt(0).toUpperCase() + result.label.slice(1);
+        $("footnote").textContent = FOOTNOTES[period];
+
+        const max = Math.max(1, ...result.ranking.map((row) => row.points));
+        const ranking = $("ranking");
+        ranking.innerHTML = "";
+        result.ranking.slice(0, 6).forEach((row, i) => {
+          const first = i === 0 && row.points > 0;
+          const el = document.createElement("div");
+          el.className = `rank-row${first ? " first" : ""}`;
+          el.innerHTML = `<span class="rank">${i + 1}</span><span></span>
+            <span><span class="name"></span><span class="bar"><i></i></span><span class="detail"></span></span>
+            <span class="pts"><strong>${row.points}</strong><small>${row.points === 1 ? "punt" : "punten"}</small></span>`;
+          el.children[1].replaceWith(P.avatarElement(row.name, people, avatars));
+          el.querySelector(".name").textContent = row.name;
+          if (first) el.querySelector(".name").insertAdjacentHTML("beforeend", CROWN);
+          el.querySelector(".bar i").style.width = `${Math.round((row.points / max) * 100)}%`;
+          el.querySelector(".detail").textContent = row.detail;
+          ranking.appendChild(el);
+        });
+
+        const badges = $("badges");
+        badges.innerHTML = "";
+        for (const badge of result.badges) {
+          const nobody = badge.text === "Nog niemand";
+          const holder = nobody ? null : badge.text.split(" · ")[0];
+          const el = document.createElement("div");
+          el.className = `badge${nobody ? " none" : ""}`;
+          el.innerHTML = "<span></span><span><strong></strong><small></small></span>";
+          if (holder) el.firstChild.replaceWith(P.avatarElement(holder, people, avatars));
+          else el.firstChild.className = "avatar";
+          el.querySelector("strong").textContent = badge.title;
+          el.querySelector("small").textContent = badge.text;
+          badges.appendChild(el);
+        }
+      }
+
+      document.querySelectorAll(".tabs button").forEach((button) => {
+        button.addEventListener("click", () => {
+          period = button.dataset.period;
+          render();
+        });
+      });
+
+      (async function start() {
+        const { linked } = await P.showLinked();
+        if (!linked) return;
+        const year = P.wrappedSeason();
+        if (year) $("wrapped-sub").textContent = `${year}: staat klaar`;
+        const [settings, log, list] = await Promise.all([
+          getJson(serverUrl("settings", config.settings.url)).catch(() => ({})),
+          getJson(serverUrl("jaarlog", config.jaarlog.url)).catch(() => null),
+          P.loadAvatars(),
+        ]);
+        people = P.people(settings);
+        jaarlog = log;
+        avatars = list;
+        render();
+      })();
+    })();
+  </script>
+</body>
+</html>

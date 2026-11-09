@@ -104,5 +104,76 @@
     return { linked, fresh };
   }
 
-  window.PipPhone = { config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked };
+  // ---- Voor het thuisscherm, scores en baasjes ----
+
+  // Elk baasje een eigen warme kleur (op volgorde van de lijst).
+  const COLORS = ["#b3562a", "#7d8c5a", "#c08a3e", "#8a5a7a", "#4f7a86", "#a7713a"];
+  function colorFor(name, people) {
+    const index = (people || []).findIndex((person) => person.toLowerCase() === String(name).toLowerCase());
+    return COLORS[(index < 0 ? 0 : index) % COLORS.length];
+  }
+
+  // Profielfoto's: naam (kleine letters) → blob-URL.
+  async function loadAvatars() {
+    const result = new Map();
+    const url = serverUrl("baasjes", (config.baasjes && config.baasjes.url) || "");
+    if (!url) return result;
+    try {
+      const list = await getJson(url);
+      await Promise.all(list.map(async (avatar) => {
+        const response = await fetch(`${url}/${avatar.id}`, { headers: auth() });
+        if (response.ok) result.set(avatar.name.toLowerCase(), URL.createObjectURL(await response.blob()));
+      }));
+    } catch (error) {
+      // Zonder foto's: dan de eerste letter.
+    }
+    return result;
+  }
+
+  // Een rondje met foto of eerste letter, als HTML-element.
+  function avatarElement(name, people, avatars, tag = "span") {
+    const photo = avatars && avatars.get(String(name).toLowerCase());
+    const element = document.createElement(photo ? "img" : tag);
+    element.className = "avatar";
+    if (photo) {
+      element.src = photo;
+      element.alt = "";
+    } else {
+      element.textContent = String(name).charAt(0).toUpperCase();
+      element.style.background = colorFor(name, people);
+    }
+    return element;
+  }
+
+  const DAYS = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+  const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+  function longDate(date) {
+    const text = `${DAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  function clock(ms) {
+    const d = new Date(ms);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function people(settings) {
+    return Array.isArray(settings && settings.people) && settings.people.length ? settings.people : config.people;
+  }
+
+  // Pip Wrapped staat klaar van 1 december tot half januari (net als op de Hub).
+  function wrappedSeason(now = new Date()) {
+    const month = now.getMonth();
+    if (month === 11) return now.getFullYear();
+    if (month === 0 && now.getDate() <= 15) return now.getFullYear() - 1;
+    return null;
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+
+  window.PipPhone = {
+    config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked,
+    COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
+  };
 })();
