@@ -886,9 +886,12 @@ button.piece:active .tick {
 }
 
 /* Wie heeft het gedaan? */
+/* Als app met de statusbalk doorzichtig schuift iOS het scherm omhoog; een
+   schermvullende laag loopt daarom even ver door onder de onderrand. */
 .sheet {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * env(safe-area-inset-top));
   z-index: 10;
   display: flex;
   align-items: flex-end;

@@ -507,10 +507,13 @@
     }
 
     // Fotolijst
+    // photoCount: het echte aantal als er maar een paar foto's zijn meegegeven
+    // (de telefoon haalt er alleen de eerste 3 op).
     const photos = (extra && extra.photos) || [];
+    const photoCount = Math.max(photos.length, Number(extra && extra.photoCount) || 0);
     if (photos.length) {
-      slides.push({ type: "photos", count: photos.length, urls: photos.slice(0, 3) });
-      if (summary.length < 6) summary.push({ label: "Fotolijst", value: num(photos.length), sub: photos.length === 1 ? "foto van Pip" : "foto's van Pip" });
+      slides.push({ type: "photos", count: photoCount, urls: photos.slice(0, 3) });
+      if (summary.length < 6) summary.push({ label: "Fotolijst", value: num(photoCount), sub: photoCount === 1 ? "foto van Pip" : "foto's van Pip" });
     }
 
     if (ticks.length && summary.length < 6) summary.push({ label: "Taken", value: num(ticks.length), sub: "keer afgevinkt" });

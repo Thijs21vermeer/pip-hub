@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261109-37">
+  <link rel="stylesheet" href="style.css?v=20261109-38">
   <!-- Pip Wrapped op de telefoon: dezelfde schermen als op de Hub (wrapped.js),
        met de cijfers van het servertje. Eerst een tik op Afspelen, want een
        telefoon speelt pas geluid af na een tik. Delen opent meteen de deelkaart. -->
@@ -25,6 +25,7 @@
     .start {
       position: fixed;
       inset: 0;
+      bottom: calc(-1 * env(safe-area-inset-top));
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -59,10 +60,10 @@
   </div>
   <section class="wrapped" id="wrapped" hidden aria-label="Pip Wrapped"></section>
 
-  <script src="config.js?v=20261109-37"></script>
-  <script src="telefoon.js?v=20261109-37"></script>
-  <script src="stats.js?v=20261109-37"></script>
-  <script src="wrapped.js?v=20261109-37"></script>
+  <script src="config.js?v=20261109-38"></script>
+  <script src="telefoon.js?v=20261109-38"></script>
+  <script src="stats.js?v=20261109-38"></script>
+  <script src="wrapped.js?v=20261109-38"></script>
   <script>
     (function () {
       "use strict";
@@ -112,6 +113,8 @@
         };
       }
 
+      // De eerste paar foto's ophalen (Wrapped laat er hooguit 3 zien), en het
+      // totale aantal in de fotolijst.
       async function photoUrls(max) {
         const url = serverUrl("fotos", config.photos.url);
         try {
@@ -120,9 +123,9 @@
             const response = await fetch(`${url}/${photo.id}`, { headers: auth() });
             return response.ok ? URL.createObjectURL(await response.blob()) : null;
           }));
-          return urls.filter(Boolean);
+          return { urls: urls.filter(Boolean), total: list.length };
         } catch (error) {
-          return [];
+          return { urls: [], total: 0 };
         }
       }
 
@@ -137,7 +140,7 @@
         const [settings, log, photos, avatars] = await Promise.all([
           getJson(serverUrl("settings", config.settings.url)).catch(() => ({})),
           getJson(`${jaarlogUrl}${jaarlogUrl.includes("?") ? "&" : "?"}year=${year}`).catch(() => null),
-          photoUrls(8),
+          photoUrls(3),
           P.loadAvatars(),
           window.PipWrapped.preloadMusic(config.wrappedMusic || []).catch(() => false),
         ]);
@@ -158,11 +161,12 @@
         data = window.PipStats.wrapped(jaarlog, {
           people: P.people(settings),
           tasks,
-          photos,
+          photos: photos.urls,
+          photoCount: photos.total,
           costs: wrappedCosts(year, jaarlog, voerraad, settings),
         }, Date.now(), config.resetHour);
         options = {
-          photo: photos[0] || "pip-foto.jpg",
+          photo: photos.urls[0] || "pip-foto.jpg",
           portrait: "pip-icoon.jpg",
           music: config.wrappedMusic || [],
           unlockMusic: true,

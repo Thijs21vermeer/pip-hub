@@ -1015,7 +1015,8 @@
   let state = null;
 
   // Staand (telefoon) of breed (de Hub, of een telefoon die gedraaid is).
-  const isTall = () => window.innerHeight > window.innerWidth;
+  const area = () => ({ w: (root && root.clientWidth) || window.innerWidth, h: (root && root.clientHeight) || window.innerHeight });
+  const isTall = () => area().h > area().w;
 
   function scale() {
     // Na het sluiten is er geen scherm meer om te schalen.
@@ -1023,10 +1024,11 @@
     if (!stage || !state) return;
     const tallNow = isTall();
     const width = tallNow ? TALL_WIDTH : 1024;
-    const height = tallNow ? Math.max(TALL_MIN_HEIGHT, Math.round(TALL_WIDTH * (window.innerHeight / window.innerWidth))) : 600;
+    const { w, h } = area();
+    const height = tallNow ? Math.max(TALL_MIN_HEIGHT, Math.round(TALL_WIDTH * (h / w))) : 600;
     stage.style.width = `${width}px`;
     stage.style.height = `${height}px`;
-    const s = Math.min(window.innerWidth / width, window.innerHeight / height);
+    const s = Math.min(w / width, h / height);
     stage.style.transform = `translate(-50%, -50%) scale(${s})`;
     root.classList.toggle("tall", tallNow);
     // Korte telefoon (bv. iPhone SE): op een paar schermen alles iets kleiner.

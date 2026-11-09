@@ -2122,9 +2122,12 @@ img.score-avatar {
 
 /* ---- Pip Wrapped (wrapped.js): schermen op 1024×600, geschaald ---- */
 
+/* Als app met de statusbalk doorzichtig schuift iOS het scherm omhoog; een
+   schermvullende laag loopt daarom even ver door onder de onderrand. */
 .wrapped {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * env(safe-area-inset-top));
   z-index: 8;
   overflow: hidden;
   background: #000;
