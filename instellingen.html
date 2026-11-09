@@ -11,12 +11,14 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="manifest" href="telefoon.webmanifest">
   <meta name="apple-mobile-web-app-title" content="Pip">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#efe6db" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#140f0c" media="(prefers-color-scheme: dark)">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-35">
+  <link rel="stylesheet" href="stijl.css?v=20261109-36">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -74,6 +76,7 @@
           </a>
         </div>
         <div id="more-pages"></div>
+        <button class="link-row" id="copy-code" type="button" hidden><i class="row-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></i><span>Kopieer koppelcode<small id="copy-code-sub">Voor Pip op je beginscherm</small></span><b aria-hidden="true">›</b></button>
         <button class="link-row" id="unlink" type="button"><i class="led" aria-hidden="true"></i><span>Gekoppeld met de Google Hub</span><b aria-hidden="true">›</b></button>
       </section>
     </div>
@@ -90,10 +93,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-35"></script>
-  <script src="telefoon.js?v=20261109-35"></script>
-  <script src="taken.js?v=20261109-35"></script>
-  <script src="stats.js?v=20261109-35"></script>
+  <script src="config.js?v=20261109-36"></script>
+  <script src="telefoon.js?v=20261109-36"></script>
+  <script src="taken.js?v=20261109-36"></script>
+  <script src="stats.js?v=20261109-36"></script>
   <script>
     (function () {
       "use strict";
@@ -409,6 +412,17 @@
         }
       }
 
+      // Koppelcode kopiëren voor Pip op het beginscherm (die app heeft eigen
+      // opslag). Alleen in de browser; de app zelf is dan al gekoppeld.
+      $("copy-code").hidden = P.isApp();
+      $("copy-code").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(P.code());
+          $("copy-code-sub").textContent = "Gekopieerd. Open Pip vanaf je beginscherm en tik op Plak koppelcode.";
+        } catch (error) {
+          $("copy-code-sub").textContent = "Kopiëren lukte niet. Probeer het nog eens.";
+        }
+      });
       $("unlink").addEventListener("click", () => {
         if (!confirm("Deze telefoon ontkoppelen van de Google Hub? Daarna moet je de QR-code op de Hub opnieuw scannen.")) return;
         P.unlink();

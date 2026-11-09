@@ -85,13 +85,75 @@
     if (!given) return null;
     history.replaceState(null, "", location.pathname + location.search); // code uit de adresbalk
     try {
-      const response = await fetch(serverUrl("kattenbak", config.kattenbak.url), { headers: { Authorization: `Bearer ${given.trim()}` } });
-      if (!response.ok) throw new Error(String(response.status));
-      localStorage.setItem(CODE_KEY, given.trim());
-      return true;
+      return await useCode(given);
     } catch (error) {
       return false;
     }
+  }
+
+  // Een koppelcode controleren bij het servertje en bewaren. Gooit een fout als
+  // het servertje niet bereikbaar is.
+  async function useCode(given) {
+    const value = String(given || "").trim();
+    if (!value) return false;
+    const response = await fetch(serverUrl("kattenbak", config.kattenbak.url), { headers: { Authorization: `Bearer ${value}` } });
+    if (!response.ok) return false;
+    localStorage.setItem(CODE_KEY, value);
+    return true;
+  }
+
+  // Geopend vanaf het beginscherm (als app, zonder adresbalk)? Zo'n app heeft op
+  // een iPhone eigen opslag en kent de koppelcode van de browser dus niet.
+  function isApp() {
+    return window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  }
+
+  // Nog niet gekoppeld: onder de uitleg een knop om de koppelcode te plakken
+  // (gekopieerd op Thuis in de browser) of hem te typen.
+  function showPairing() {
+    const note = $("not-linked");
+    if (!note || note.dataset.pairing) return;
+    note.dataset.pairing = "1";
+    if (isApp()) {
+      note.textContent = "Pip op je beginscherm is nog niet gekoppeld. Open Pip in je browser, waar hij wel gekoppeld is, en tik op Thuis bij Instellen op Kopieer koppelcode. Kom dan hier terug.";
+    }
+    const box = document.createElement("div");
+    box.className = "pair";
+    box.innerHTML = `<button type="button" class="pair-paste">Plak koppelcode</button>
+      <form class="pair-type"><input type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Of plak of typ de code hier" aria-label="Koppelcode"><button type="submit">Koppel</button></form>
+      <p class="pair-status" role="status"></p>`;
+    note.after(box);
+    const status = box.querySelector(".pair-status");
+    const input = box.querySelector("input");
+    const tryCode = async (value) => {
+      if (!String(value || "").trim()) {
+        status.textContent = "Er staat geen code klaar. Kopieer hem eerst op Thuis in je browser.";
+        return;
+      }
+      status.textContent = "Even controleren…";
+      try {
+        if (await useCode(value)) {
+          status.textContent = "Gekoppeld!";
+          location.reload();
+        } else {
+          status.textContent = "Deze code klopt niet. Kopieer hem opnieuw en probeer het nog eens.";
+        }
+      } catch (error) {
+        status.textContent = "Geen verbinding met het servertje. Probeer het zo nog eens.";
+      }
+    };
+    box.querySelector(".pair-paste").addEventListener("click", async () => {
+      try {
+        await tryCode(await navigator.clipboard.readText());
+      } catch (error) {
+        status.textContent = "Plakken lukte niet. Plak of typ de code in het vak.";
+        input.focus();
+      }
+    });
+    box.querySelector("form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      tryCode(input.value);
+    });
   }
 
   // Zet #linked of #not-linked aan, na een eventuele QR-code. Geeft terug of de
@@ -101,6 +163,7 @@
     const linked = Boolean(code());
     if ($("linked")) $("linked").hidden = !linked;
     if ($("not-linked")) $("not-linked").hidden = linked;
+    if (!linked) showPairing();
     return { linked, fresh };
   }
 
@@ -173,7 +236,7 @@
   }
 
   window.PipPhone = {
-    config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked,
+    config, PAGES, $, serverUrl, code, unlink, auth, getJson, statusLine, linkFromQr, showLinked, useCode, isApp,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
   };
 })();

@@ -810,6 +810,77 @@ button.piece:active .tick {
   font-size: 20px;
   font-weight: 400;
 }
+.link-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.link-row .row-ico {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  color: var(--accent);
+}
+.link-row .row-ico svg {
+  width: 20px;
+  height: 20px;
+}
+.link-row[hidden] {
+  display: none;
+}
+/* Nog niet gekoppeld: de koppelcode plakken of typen (telefoon.js). */
+.pair {
+  margin: -18px 24px 40px;
+}
+.pair-paste {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff8f0;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+}
+.pair-type {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pair-type input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 99px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.pair-type button {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+.pair-status {
+  min-height: 1.4em;
+  margin: 12px 4px 0;
+  color: var(--soft);
+  font-size: 15px;
+  line-height: 1.4;
+}
 
 /* Wie heeft het gedaan? */
 .sheet {
