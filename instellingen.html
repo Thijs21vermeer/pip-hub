@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-54">
+  <link rel="stylesheet" href="stijl.css?v=20261109-55">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -148,10 +148,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-54"></script>
-  <script src="telefoon.js?v=20261109-54"></script>
-  <script src="taken.js?v=20261109-54"></script>
-  <script src="stats.js?v=20261109-54"></script>
+  <script src="config.js?v=20261109-55"></script>
+  <script src="telefoon.js?v=20261109-55"></script>
+  <script src="taken.js?v=20261109-55"></script>
+  <script src="stats.js?v=20261109-55"></script>
   <script>
     (function () {
       "use strict";
@@ -282,7 +282,7 @@
       const TONES = 5;
       // Foto's van de spullen in de lijstjes (map taken/), gekozen op de naam van
       // de taak; een taak zonder foto houdt zijn icoon. Schoonmaaktaken krijgen
-      // er sterretjes bij.
+      // er een schrobborstel bij.
       const PICTURES = [
         [/spel|speel|hengel/i, "taken/hengel.jpg"],
         [/natvoer|blikje|zakje/i, "taken/natvoer.jpg"],
@@ -292,7 +292,8 @@
         [/water/i, "taken/fontein.jpg"],
       ];
       const CLEANING = /schoonma|reinig|poets|afwas/i;
-      const SPARKLES = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2.5l1.6 4.4 4.4 1.6-4.4 1.6L11 14.5l-1.6-4.4L5 8.5l4.4-1.6z"/><path d="M18 12.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/><path d="M6.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
+      // Schrobborstel: schoonmaken (icoon "brush-cleaning" uit Lucide, ISC-licentie).
+      const CLEAN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 22-1-4"/><path d="M19 13.99a1 1 0 0 0 1-1V12a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v.99a1 1 0 0 0 1 1"/><path d="M5 14h14l1.973 6.767A1 1 0 0 1 20 22H4a1 1 0 0 1-.973-1.233z"/><path d="m8 22 1-4"/></svg>';
       const pictureFor = (title) => (PICTURES.find(([test]) => test.test(title)) || [])[1] || null;
 
       // Belangrijkste eerst: dagtaken met een seintje, dan dagtaken, dan de rest.
@@ -334,7 +335,7 @@
           const color = item.all ? "all" : `t${tone.get(item.task.id) || 0}`;
           const photo = item.all ? null : pictureFor(item.task.title);
           const inside = (photo ? `<img src="${photo}" alt="">` : art(item.all ? "heart" : item.task.icon))
-            + (!item.all && CLEANING.test(item.task.title) ? `<span class="art-badge">${SPARKLES}</span>` : "");
+            + (!item.all && CLEANING.test(item.task.title) ? `<span class="art-badge">${CLEAN_ICON}</span>` : "");
           el.className = `piece ${size} f${index % 3} ${isOpen ? "open" : "done"}${item.all ? " all" : ""}`;
           el.innerHTML = `<span class="frame"><span class="mat"><span class="art ${color}${photo ? " photo" : ""}" aria-hidden="true">${inside}</span></span><i class="tick" aria-hidden="true">${isOpen ? "" : CHECK}</i></span>
             <span class="label"><strong></strong><small></small></span>`;

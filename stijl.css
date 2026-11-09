@@ -425,7 +425,7 @@ button.piece:active {
   object-fit: contain;
   mix-blend-mode: multiply;
 }
-/* Schoonmaken: sterretjes in een rondje op het schilderij. */
+/* Schoonmaken: een schrobborstel in een rondje op het schilderij. */
 .art-badge {
   position: absolute;
   top: 7%;
@@ -435,13 +435,14 @@ button.piece:active {
   width: 30%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--tone);
+  /* Goud, net als de lijst. */
+  background: #c9973f;
   color: #fff8f0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 0 0 1px rgba(90, 60, 25, 0.18), 0 2px 6px rgba(0, 0, 0, 0.22);
 }
 .art-badge svg {
-  width: 62%;
-  height: 62%;
+  width: 60%;
+  height: 60%;
 }
 /* Gedaan: een donkergroene waas over het schilderij (net als het vinkje). */
 .piece.done:not(.all) .art img,
