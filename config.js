@@ -65,6 +65,7 @@ window.PIP_CONFIG = {
     { id: 693610779, start: 6, artist: "Duran Duran", title: "Hungry Like the Wolf", slides: ["food"] }, // eten
     { id: 697417501, start: 8.5, artist: "The Hollies", title: "He Ain't Heavy, He's My Brother", slides: ["weight"] }, // gewicht
     { id: 283305973, start: 0, artist: "Dolly Parton", title: "9 to 5", slides: ["top"] }, // de klusjes (het fragment begint met "…nine to five")
+    { id: 1437581470, start: 9, artist: "Reel 2 Real", title: "I Like to Move It", slides: ["play"] }, // spelen met Pip: alles wat beweegt
     { id: 1576849672, start: 4, artist: "André Hazes", title: "Zij gelooft in mij", slides: ["human"] }, // favoriete baasje
     { id: 6781080602, start: 2, artist: "Queen", title: "We Are the Champions", slides: ["records"] }, // records
     { id: 1440816971, start: 0.5, artist: "ABBA", title: "Money, Money, Money", slides: ["costs"] }, // kosten

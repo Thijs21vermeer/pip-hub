@@ -439,6 +439,28 @@
       slides.push({ type: "top", tasks: top });
     }
 
+    // Spelen met Pip: hoe lang er dit jaar met Pip gespeeld is, en wie het meest.
+    const plays = ticks.filter((tick) => tick.play);
+    if (plays.length) {
+      const minutes = sum(plays, (tick) => tick.min || 0);
+      const perPlayer = new Map();
+      plays.forEach((tick) => count(perPlayer, tick.by, tick.min || 0));
+      const players = [...perPlayer.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 4).map(([name, min]) => ({ name, minutes: min }));
+      const hours = Math.floor(minutes / 60);
+      const big = minutes >= 120 ? `${num(hours)} uur` : `${num(minutes)} min`;
+      const rest = minutes % 60;
+      slides.push({
+        type: "play",
+        minutes,
+        big,
+        sub: minutes >= 120 && rest ? `en ${rest} ${rest === 1 ? "minuut" : "minuten"} met Pip gespeeld` : "met Pip gespeeld",
+        line: `${num(plays.length)} keer, met alles wat beweegt.`,
+        players,
+      });
+      summary.push({ label: "Gespeeld", value: big, sub: `${num(plays.length)} keer met Pip` });
+    }
+
     // Favoriete baasje
     const year_ = scores({ ...log, ticks }, "year", new Date(`${lastKey}T12:00:00`).getTime(), people, resetHour);
     const ranked = year_.ranking.filter((p) => p.points > 0);

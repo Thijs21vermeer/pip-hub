@@ -25,6 +25,46 @@
   };
   const stroke = (body, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 
+  // Spelen met Pip: "45 min", "3 uur" of "3 uur 15 min".
+  function playTime(minutes) {
+    if (minutes < 60) return `${num(minutes)} min`;
+    const rest = minutes % 60;
+    return `${num(Math.floor(minutes / 60))} uur${rest ? ` ${rest} min` : ""}`;
+  }
+
+  const PLAY_GREEN = "#a8d98a";
+
+  // Wie het meest met Pip speelde: rondje, naam, tijd en een balkje.
+  function playRows(s, ctx, size) {
+    const max = Math.max(...s.players.map((p) => p.minutes), 1);
+    return s.players.map((p, i) => {
+      const photo = ctx.avatar(p.name);
+      const face = photo
+        ? `<div class="wr-round wr-photo" style="flex:none;width:${size.face}px;height:${size.face}px"><img src="${esc(photo)}" alt=""></div>`
+        : `<div class="wr-round" style="flex:none;width:${size.face}px;height:${size.face}px;display:grid;place-items:center;font-size:${Math.round(size.face * 0.45)}px;font-weight:800;background:${i === 0 ? PLAY_GREEN : "rgba(168,217,138,.25)"};color:${i === 0 ? "#1f3a2a" : "#f1f8ec"}">${esc(p.name.charAt(0).toUpperCase())}</div>`;
+      return `
+        <div class="wr-up wr-row" style="gap:${size.gap}px;align-items:center;${delay(0.45 + i * 0.12)}">
+          ${face}
+          <div style="flex:1;min-width:0">
+            <div class="wr-row" style="justify-content:space-between;align-items:baseline;gap:10px">
+              <span style="font-size:${size.name}px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
+              <span style="font-size:${size.time}px;font-weight:600;color:${PLAY_GREEN};white-space:nowrap">${esc(playTime(p.minutes))}</span>
+            </div>
+            <div style="margin-top:6px;height:7px;border-radius:99px;background:rgba(255,255,255,.12)">
+              <div class="wr-growx" style="height:100%;border-radius:99px;width:${Math.round((p.minutes / max) * 100)}%;background:${i === 0 ? PLAY_GREEN : "rgba(168,217,138,.5)"};${delay(0.6 + i * 0.12)}"></div>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  // Een foto van Pip op een kaartje, scheef opgehangen.
+  function playCard(ctx, radius) {
+    return `
+      <div aria-hidden="true" class="wr-abs" style="inset:0;transform:rotate(-6deg)"><div class="wr-pop d1" style="width:100%;height:100%;border-radius:${radius}px;background:${PLAY_GREEN}"></div></div>
+      <div class="wr-abs" style="inset:0;transform:rotate(4deg)"><div class="wr-pop d2 wr-photo" style="width:100%;height:100%;border-radius:${radius}px"><img src="${esc(ctx.photo || ctx.portrait)}" alt="Pip"></div></div>`;
+  }
+
   // Grote getallen krimpen als ze langer worden, zodat ze altijd passen.
   function fit(text, size, width) {
     const guess = String(text).length * 0.56 * size;
@@ -260,6 +300,20 @@
         <div aria-hidden="true" class="wr-abs" style="left:690px;top:122px;transform:rotate(-6deg)"><div class="wr-pop d1" style="width:270px;height:330px;border-radius:28px;background:#f2a6a0"></div></div>
         <div class="wr-abs" style="left:690px;top:122px;transform:rotate(4deg)"><div class="wr-pop d2 wr-photo" style="width:270px;height:330px;border-radius:28px"><img src="${esc(ctx.portrait)}" alt="Pip"></div></div>
         <p class="wr-abs wr-up d5 wr-serif" style="left:690px;top:486px;width:270px;text-align:center;font-size:30px;color:#f2a6a0">Pip keurt het goed.</p>
+      </div>`;
+    },
+
+    play(s, ctx) {
+      return `<div class="wr-slide" style="background:#1f3a2a;color:#f1f8ec">
+        <div class="wr-abs" style="left:64px;top:84px;width:560px">
+          <p class="wr-up wr-eyebrow" style="color:${PLAY_GREEN}">Spelen met Pip</p>
+          <p class="wr-pop d1 wr-num" style="margin-top:12px;font-size:${fit(s.big, 120, 540)}px;line-height:.9">${esc(s.big)}</p>
+          <p class="wr-up d2" style="margin-top:14px;font-size:23px;font-weight:600">${esc(s.sub)}</p>
+          <p class="wr-up d3" style="margin-top:4px;font-size:19px;color:rgba(241,248,236,.7)">${esc(s.line)}</p>
+          <div class="wr-stack" style="margin-top:26px;gap:14px">${playRows(s, ctx, { face: 40, gap: 14, name: 21, time: 18 })}</div>
+        </div>
+        <div class="wr-abs" style="left:690px;top:112px;width:270px;height:330px">${playCard(ctx, 28)}</div>
+        <p class="wr-abs wr-up d5 wr-serif" style="left:690px;top:476px;width:270px;text-align:center;font-size:30px;color:${PLAY_GREEN}">Pip wil nog een keer.</p>
       </div>`;
     },
 
@@ -664,6 +718,24 @@
             <div class="wr-abs" style="inset:0;transform:rotate(4deg)"><div class="wr-pop d2 wr-photo" style="width:100%;height:100%;border-radius:22px"><img src="${esc(ctx.portrait)}" alt="Pip"></div></div>
           </div>
           <p class="wr-up d5 wr-serif" style="font-size:32px;color:#f2a6a0">Pip keurt het goed.</p>
+        </div>
+        ${END}`);
+    },
+
+    play(s, ctx) {
+      return tall("#1f3a2a", "#f1f8ec", `
+        ${SPACE}
+        <div>
+          <p class="wr-up wr-eyebrow" style="color:${PLAY_GREEN}">Spelen met Pip</p>
+          <p class="wr-pop d1 wr-num" data-fit="play" style="margin-top:12px;font-size:${fit(s.big, 96, 344)}px;line-height:.9;white-space:nowrap">${esc(s.big)}</p>
+          <p class="wr-up d2" style="margin-top:14px;font-size:20px;font-weight:600">${esc(s.sub)}</p>
+          <p class="wr-up d3" style="margin-top:4px;font-size:17px;color:rgba(241,248,236,.7)">${esc(s.line)}</p>
+          <div class="wr-stack" style="margin-top:24px;gap:14px">${playRows(s, ctx, { face: 34, gap: 12, name: 18, time: 16 })}</div>
+        </div>
+        ${GAP}
+        <div class="wr-row" style="gap:26px">
+          <div style="position:relative;flex:none;width:150px;height:184px">${playCard(ctx, 22)}</div>
+          <p class="wr-up d5 wr-serif" style="font-size:32px;color:${PLAY_GREEN}">Pip wil nog een keer.</p>
         </div>
         ${END}`);
     },
