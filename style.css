@@ -1783,17 +1783,21 @@ main {
 .scores-ranking {
   display: flex;
   flex-direction: column;
+  /* Overal even veel ruimte: links, rechts, boven en onder dezelfde rand; de
+     rijen verdelen de rest gelijk (de eerste bovenaan, de laatste onderaan). */
+  justify-content: space-between;
   gap: 0.6rem;
-  padding: 1.1rem 1.4rem;
+  padding: var(--scores-pad);
   border: 1px solid var(--line);
   border-radius: 1.35rem;
   background: var(--surface);
   box-shadow: var(--shadow);
   overflow: hidden;
+  --scores-pad: 1.5rem;
 }
 
 .score-row {
-  flex: 1;
+  flex: none;
   min-height: 0;
   display: flex;
   align-items: center;
@@ -1805,7 +1809,12 @@ main {
   color: var(--muted);
   font-size: 1.25rem;
   font-weight: 700;
-  text-align: center;
+  text-align: left;
+}
+
+/* Alleen één huisgenoot: die rij in het midden. */
+.score-row:only-child {
+  margin: auto 0;
 }
 
 .score-avatar {
