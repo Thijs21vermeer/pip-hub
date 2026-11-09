@@ -78,6 +78,10 @@ window.PIP_CONFIG = {
     styleUrl: "https://pip-kattenbak.netlify.app/api/fotolijst",
   },
 
+  // Profielfoto's van de baasjes (Scores, held van de week, Pip Wrapped). Je zet
+  // ze erop onder Baasjes op fotos.html. Zelfde servertje en code.
+  baasjes: { url: "https://pip-kattenbak.netlify.app/api/baasjes" },
+
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is
   // openbaar): je vult hem in op de startpagina of in voerraad-code.txt.

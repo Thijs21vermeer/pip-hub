@@ -1499,6 +1499,49 @@
     clearTimeout(logTimer);
   }
 
+  // ---- Profielfoto's van de baasjes ----
+
+  // Gezet op fotos.html onder Baasjes; bewaard op het servertje (baasjes.mjs).
+  const avatarUrls = new Map(); // naam in kleine letters → { id, url }
+
+  function avatarsUrl() {
+    return localOverride("baasjes") || (config.baasjes && config.baasjes.url);
+  }
+
+  function avatarFor(name) {
+    const avatar = avatarUrls.get(String(name || "").toLowerCase());
+    return avatar ? avatar.url : null;
+  }
+
+  async function refreshAvatars() {
+    if (!actionCode() || !avatarsUrl()) return;
+    try {
+      const response = await fetch(avatarsUrl(), { headers: authHeader(), cache: "no-store" });
+      if (!response.ok) return;
+      const list = await response.json();
+      const keep = new Set();
+      for (const avatar of list) {
+        const key = String(avatar.name).toLowerCase();
+        keep.add(key);
+        const known = avatarUrls.get(key);
+        if (known && known.id === avatar.id) continue;
+        const image = await fetch(`${avatarsUrl()}/${avatar.id}`, { headers: authHeader() });
+        if (!image.ok) continue;
+        if (known) URL.revokeObjectURL(known.url);
+        avatarUrls.set(key, { id: avatar.id, url: URL.createObjectURL(await image.blob()) });
+      }
+      avatarUrls.forEach((avatar, key) => {
+        if (keep.has(key)) return;
+        URL.revokeObjectURL(avatar.url);
+        avatarUrls.delete(key);
+      });
+      renderScores();
+      renderRest();
+    } catch (error) {
+      // Niet bereikbaar: dan de eerste letter, zoals altijd.
+    }
+  }
+
   // ---- Scores en Pip Wrapped ----
 
   // Het servertje schrijft elk vinkje in een jaarlog (netlify/lib/history.mjs);
@@ -1568,7 +1611,9 @@
       return `
         <div class="score-row${first ? " first" : ""}">
           <span class="score-place">${index + 1}</span>
-          <span class="score-avatar">${escapeHtml(person.name.charAt(0).toUpperCase())}</span>
+          ${avatarFor(person.name)
+            ? `<img class="score-avatar" src="${escapeHtml(avatarFor(person.name))}" alt="">`
+            : `<span class="score-avatar">${escapeHtml(person.name.charAt(0).toUpperCase())}</span>`}
           <div class="score-main">
             <div class="score-name">${escapeHtml(person.name)}${first ? ICONS.crown : ""}</div>
             <div class="score-bar"><i style="width:${Math.round((person.points / max) * 100)}%"></i></div>
@@ -1603,8 +1648,8 @@
     clearTimeout(scoresTimer);
   }
 
-  // Bovenin het kaartje van de ruststand: wie deze week leidt, en zondag vanaf
-  // 20:00 de held van de week (met één keer confetti).
+  // Bovenin het kaartje van de ruststand alleen zondag vanaf 20:00 de held van
+  // de week (met één keer confetti); de tussenstand staat alleen bij Scores.
   function restScores() {
     if (!jaarlog) return "";
     const now = Date.now();
@@ -1615,16 +1660,21 @@
         setTimeout(() => celebrate(true), 600);
       }
       const others = hero.others.map((person) => `${escapeHtml(person.name)} ${person.points}`).join(", ");
+      const photo = avatarFor(hero.name);
       return `
         <div class="rest-hero">
           <div class="rest-title">Held van de week</div>
-          <div class="rest-hero-name">${escapeHtml(hero.name)}</div>
-          <div class="rest-hero-points">${hero.points} punten${others ? ` · daarna ${others}` : ""}</div>
+          <div class="rest-hero-row">
+            ${photo ? `<img class="rest-hero-avatar" src="${escapeHtml(photo)}" alt="">` : ""}
+            <div>
+              <div class="rest-hero-name">${escapeHtml(hero.name)}</div>
+              <div class="rest-hero-points">${hero.points} punten${others ? ` · daarna ${others}` : ""}</div>
+            </div>
+          </div>
         </div>`;
     }
-    const lead = window.PipStats.leader(jaarlog, now, config.resetHour);
-    if (!lead) return "";
-    return `<div class="rest-title">Deze week</div><ul class="rest-list">${restRow(ICONS.crown, `${lead.name} leidt`, `${lead.points} pt`)}</ul>`;
+    // Geen tussenstand in de ruststand: die staat bij Scores.
+    return "";
   }
 
   // Welk jaar Pip Wrapped laat zien: in december dit jaar, in de eerste helft
@@ -1683,6 +1733,7 @@
       photo: photoList()[0] || "pip-foto.jpg",
       portrait: "pip-icoon.jpg",
       music: config.wrappedMusic || [],
+      avatar: avatarFor,
       // QR-code naar de deelkaart (deel.html), met dezelfde bibliotheek als de ruststand.
       qr: async (text) => {
         await loadQrLibrary();
@@ -2337,6 +2388,8 @@
   setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
   refreshPhotos();
   setInterval(refreshPhotos, 5 * 60 * 1000); // wijzigingen op fotos.html binnen 5 minuten
+  refreshAvatars();
+  setInterval(refreshAvatars, 5 * 60 * 1000); // nieuwe profielfoto's binnen 5 minuten
   refreshJaarlog();
   setInterval(refreshJaarlog, ((config.jaarlog && config.jaarlog.refreshMinutes) || 30) * 60 * 1000);
   scheduleSlide();

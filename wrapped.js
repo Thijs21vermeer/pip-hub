@@ -266,7 +266,7 @@
       </div>`;
     },
 
-    human(s) {
+    human(s, ctx) {
       const order = s.podium.length >= 3 ? [1, 0, 2] : s.podium.length === 2 ? [1, 0] : [0];
       const heights = [230, 160, 100];
       const colors = [["#a9642f", "#ffffff"], ["#e2c9a8", "#7d4820"], ["#efe2d1", "#7d4820"]];
@@ -276,7 +276,9 @@
         return `
           <div class="wr-stack" style="flex:1;align-items:center;gap:10px">
             ${place === 0 ? `<span class="wr-pop d6" style="color:#c98a1c">${stroke('<path d="M3 18h18l-1.6-10-5 4.5L12 5l-2.4 7.5-5-4.5z"/>', 34)}</span>` : ""}
-            <div class="wr-pop wr-round" style="width:76px;height:76px;display:grid;place-items:center;font-size:32px;font-weight:800;background:${place === 0 ? bg : "#e9dccb"};color:${place === 0 ? "#fff" : "#24170f"};${delay(0.36 + i * 0.12)}">${esc(person.name.charAt(0).toUpperCase())}</div>
+            ${ctx.avatar(person.name)
+              ? `<div class="wr-pop wr-round wr-photo" style="width:76px;height:76px;box-shadow:0 0 0 3px ${place === 0 ? "#a9642f" : "#e2c9a8"};${delay(0.36 + i * 0.12)}"><img src="${esc(ctx.avatar(person.name))}" alt=""></div>`
+              : `<div class="wr-pop wr-round" style="width:76px;height:76px;display:grid;place-items:center;font-size:32px;font-weight:800;background:${place === 0 ? bg : "#e9dccb"};color:${place === 0 ? "#fff" : "#24170f"};${delay(0.36 + i * 0.12)}">${esc(person.name.charAt(0).toUpperCase())}</div>`}
             <div class="wr-up" style="text-align:center;${delay(0.36 + i * 0.12)}"><p style="font-size:19px;font-weight:700">${esc(person.name)}</p><p style="font-size:15px;color:#6b5f54">${num(person.points)} punten</p></div>
             <div class="wr-grow" style="width:100%;height:${heights[place]}px;padding-top:14px;border-radius:18px 18px 0 0;background:${bg};display:flex;justify-content:center;font-size:${place === 0 ? 56 : 46}px;font-weight:800;color:${fg};${delay(0.1 + i * 0.12)}">${place + 1}</div>
           </div>`;
@@ -632,7 +634,7 @@
 
   function open(data, options) {
     root = document.getElementById("wrapped");
-    const ctx = { year: data.year, photo: options.photo, portrait: options.portrait };
+    const ctx = { year: data.year, photo: options.photo, portrait: options.portrait, avatar: options.avatar || (() => null) };
     state = {
       index: 0,
       playing: true,
