@@ -1560,7 +1560,10 @@
     const result = window.PipStats.scores(jaarlog, scoresPeriod, Date.now(), people(), config.resetHour);
     els.scoresLabel.textContent = result.label;
     const max = Math.max(1, ...result.ranking.map((person) => person.points));
-    els.scoresRanking.innerHTML = result.ranking.slice(0, 5).map((person, index) => {
+    // Vanaf 5 huisgenoten iets compacter, zodat alle rijen even ver uit elkaar blijven.
+    const shown = result.ranking.slice(0, MAX_PEOPLE);
+    els.scoresRanking.classList.toggle("compact", shown.length > 4);
+    els.scoresRanking.innerHTML = shown.map((person, index) => {
       const first = index === 0 && person.points > 0;
       return `
         <div class="score-row${first ? " first" : ""}">

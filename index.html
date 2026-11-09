@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700;800&display=swap">
   <!-- ?v= bij elke nieuwe versie ophogen: GitHub Pages laat bestanden 10 minuten cachen,
        zonder nieuw nummer draait de Google Hub dan nog half de oude versie. -->
-  <link rel="stylesheet" href="style.css?v=20261109-8">
+  <link rel="stylesheet" href="style.css?v=20261109-9">
 </head>
 <body>
   <header class="top">
@@ -101,7 +101,10 @@
         <div class="scores-badge-list" id="scores-badges"></div>
       </div>
     </div>
-    <p class="scores-foot">Dagtaak 1 punt · weektaak 3 · maand- of kwartaaltaak 5. Zondag om 20:00 is er een held van de week; maandag begint de week opnieuw.</p>
+    <div class="scores-foot">
+      <span><strong>Punten per vinkje:</strong> dagtaak 1 · weektaak 3 · maand- of kwartaaltaak 5</span>
+      <span><strong>Elke week opnieuw:</strong> zondag 20:00 de held van de week, maandag weer op 0</span>
+    </div>
   </section>
 
   <!-- Pip Wrapped: het jaar van Pip in schermen die vanzelf doorlopen (wrapped.js). -->
@@ -112,7 +115,7 @@
   <section class="rest" id="rest" data-action="wake" aria-label="Ruststand">
     <!-- Twee lagen die in elkaar overvloeien: de standaardfoto en de foto's die
          jullie via de startpagina sturen. -->
-    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-8" alt="Pip"></div>
+    <div class="rest-photo shown"><img class="rest-bg" alt=""><img class="rest-fg" src="pip-foto.jpg?v=20261109-9" alt="Pip"></div>
     <div class="rest-photo"><img class="rest-bg" alt=""><img class="rest-fg" alt="Pip"></div>
     <div class="rest-card" id="rest-card" hidden></div>
     <!-- Telefoon koppelen: QR-knopje linksonder; de QR-code klapt daar open. Hij
@@ -150,10 +153,10 @@
     <div class="sheet" id="sheet-body" role="dialog" aria-modal="true"></div>
   </div>
 
-  <script src="config.js?v=20261109-8"></script>
-  <script src="stats.js?v=20261109-8"></script>
-  <script src="wrapped.js?v=20261109-8"></script>
-  <script src="app.js?v=20261109-8"></script>
-  <script src="cast.js?v=20261109-8"></script>
+  <script src="config.js?v=20261109-9"></script>
+  <script src="stats.js?v=20261109-9"></script>
+  <script src="wrapped.js?v=20261109-9"></script>
+  <script src="app.js?v=20261109-9"></script>
+  <script src="cast.js?v=20261109-9"></script>
 </body>
 </html>

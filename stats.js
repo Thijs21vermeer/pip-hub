@@ -147,7 +147,7 @@
       .map((person) => {
         const top = topOf(person.tasks);
         const run = longestRun(person.days).length;
-        const parts = [`${person.count} ${person.count === 1 ? "taak" : "taken"}`];
+        const parts = [`${person.count} ${person.count === 1 ? "taak" : "taken"} afgevinkt`];
         if (top && top[1] > 1) parts.push(`${names.get(top[0]).title.toLowerCase()} ${top[1]}×`);
         if (run >= 2) parts.push(`reeks ${run} dagen`);
         return { name: person.name, points: person.points, count: person.count, detail: person.count ? parts.join(" · ") : "nog niets afgevinkt" };
