@@ -2477,6 +2477,18 @@ img.score-avatar {
   touch-action: manipulation;
 }
 
+/* Dun strookje bovenaan in de kleur van het scherm, zodat de statusbalk van de
+   app op het beginscherm meekleurt (wrapped.js, paintTopStrip). */
+.wr-topstrip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  height: 6px;
+  pointer-events: none;
+}
+
 .wrapped[hidden] {
   display: none;
 }

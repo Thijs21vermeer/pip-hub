@@ -1207,16 +1207,37 @@
     const color = slide ? getComputedStyle(slide).backgroundColor : "";
     if (!color) return;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (!state.edges) state.edges = { meta: meta ? meta.content : null, html: document.documentElement.style.background };
+    if (!state.edges) {
+      state.edges = { meta: meta ? meta.content : null, html: document.documentElement.style.background, body: document.body.style.background };
+    }
     if (meta) meta.content = color;
     document.documentElement.style.background = color;
+    document.body.style.background = color;
+    paintTopStrip(color);
+  }
+
+  // Statusbalk in de app op het beginscherm (iOS 26): die neemt de kleur van een
+  // vaste laag bovenaan, en kijkt pas opnieuw als zo'n laag verschijnt of
+  // verdwijnt. theme-color en een andere achtergrondkleur negeert hij; zonder
+  // dit blijft de balk de kleur van het startscherm. Daarom bij elk scherm een
+  // nieuw dun strookje in de kleur van dat scherm (onzichtbaar: zelfde kleur).
+  function paintTopStrip(color) {
+    const old = [...document.querySelectorAll(".wr-topstrip")];
+    const strip = document.createElement("div");
+    strip.className = "wr-topstrip";
+    strip.setAttribute("aria-hidden", "true");
+    strip.style.background = color;
+    document.body.appendChild(strip);
+    setTimeout(() => old.forEach((el) => el.remove()), 60);
   }
 
   function restoreEdges(edges) {
+    document.querySelectorAll(".wr-topstrip").forEach((el) => el.remove());
     if (!edges) return;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta && edges.meta !== null) meta.content = edges.meta;
     document.documentElement.style.background = edges.html;
+    document.body.style.background = edges.body;
   }
 
   function show(index) {
