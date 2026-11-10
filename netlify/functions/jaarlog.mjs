@@ -13,7 +13,7 @@ import { getStore } from "@netlify/blobs";
 import { readPart, writePart } from "../lib/history.mjs";
 import { localTime } from "../lib/notify.mjs";
 import { accessToken, DAY_MS, readVisits } from "../lib/tuya.mjs";
-import { cleanVisits } from "../lib/visits.mjs";
+import { cleanVisits, usualWeight } from "../lib/visits.mjs";
 
 const WINDOW_DAYS = 7;
 
@@ -34,9 +34,14 @@ export default async () => {
   };
 
   let visits = [];
+  const store = getStore({ name: "pip", consistency: "strong" });
   try {
     // Alleen echte bezoeken van Pip (zie lib/visits.mjs).
-    visits = cleanVisits(await readVisits(await accessToken(), WINDOW_DAYS));
+    const raw = await readVisits(await accessToken(), WINDOW_DAYS);
+    const usualKg = usualWeight(raw);
+    visits = cleanVisits(raw, { usualKg });
+    // Pips gewone gewicht van deze 7 dagen, voor de teller van vandaag (kattenbak.mjs).
+    if (usualKg > 0) await store.setJSON("usual-weight", { kg: usualKg, at: now });
   } catch (error) {
     // Tuya even niet bereikbaar: de volgende run probeert het opnieuw.
     console.error(JSON.stringify({ event: "jaarlog.tuya.error", code: error.code || "UNKNOWN" }));
@@ -53,7 +58,7 @@ export default async () => {
     }
   }
 
-  const log = (await getStore({ name: "pip", consistency: "strong" }).get("action-log", { type: "json" })) || {};
+  const log = (await store.get("action-log", { type: "json" })) || {};
   for (const feed of log.feeds || []) {
     const slot = dayFor(feed.at);
     if (!slot) continue;

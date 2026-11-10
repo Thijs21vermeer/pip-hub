@@ -20,7 +20,7 @@ import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json, setting } from "../lib/http.mjs";
 import { localTime } from "../lib/notify.mjs";
 import { accessToken, DAY_MS, readVisits, tuya } from "../lib/tuya.mjs";
-import { cleanVisits } from "../lib/visits.mjs";
+import { cleanVisits, usualWeight } from "../lib/visits.mjs";
 
 // Pip-actie → datapunt van deze kattenbak (uitgelezen met tools/tuya_check.py).
 const ACTIONS = { clean: "Clean", odourless: "odourless" };
@@ -109,10 +109,17 @@ async function noteFeederRecord(lastFeed) {
   await logStore().setJSON(LOG_KEY, log);
 }
 
+// Pips gewone gewicht van de afgelopen 7 dagen (jaarlog.mjs zet het elke 3 uur
+// klaar), of 0 als dat er nog niet is.
+async function readUsualWeight() {
+  const saved = await logStore().get("usual-weight", { type: "json" }).catch(() => null);
+  return saved && saved.kg > 0 ? saved.kg : 0;
+}
+
 async function readLogbook() {
   const token = await accessToken();
   const [raw, log] = await Promise.all([readVisits(token, LOG_DAYS), readLog()]);
-  const visits = cleanVisits(raw);
+  const visits = cleanVisits(raw, { usualKg: usualWeight(raw) });
   return {
     visits,
     feeds: [...log.feeds].reverse(),
@@ -122,11 +129,21 @@ async function readLogbook() {
 
 // Bezoeken van vandaag, geteld uit de meldingen van de bak zelf. De teller in de
 // bak (excretion_times_day) gaat bij draaien terug naar 0 en klopt dan niet meer.
+// Met het gewicht van het laatste echte bezoek (niet van iemand die schoonmaakt).
 async function countVisitsToday(token) {
   const here = localTime(Date.now());
   const sinceMidnight = (here.hour * 60 + here.minute + 1) * 60 * 1000;
-  const visits = cleanVisits(await readVisits(token, sinceMidnight / DAY_MS));
-  return visits.filter((visit) => localTime(visit.at).date === here.date).length;
+  const [raw, usualKg] = await Promise.all([readVisits(token, sinceMidnight / DAY_MS), readUsualWeight()]);
+  const visits = cleanVisits(raw, { usualKg }).filter((visit) => localTime(visit.at).date === here.date);
+  return { count: visits.length, latestKg: visits[0] ? visits[0].weightKg : null, usualKg };
+}
+
+// Wat de bak nu als gewicht meldt is de laatste meting, ook als dat iemand was
+// die schoonmaakte. Alleen geloven als het bij Pip past.
+function plausibleKg(kg, usualKg) {
+  if (typeof kg !== "number" || kg <= 0) return null;
+  if (!usualKg) return kg >= 1 && kg <= 12 ? kg : null;
+  return kg >= usualKg * 0.6 && kg <= usualKg * 1.4 ? kg : null;
 }
 
 async function readStatus() {
@@ -142,9 +159,10 @@ async function readStatus() {
   await noteFeederRecord(feeder && feeder.lastFeed).catch(() => {});
   return {
     online,
-    // cat_weight staat in grammen.
-    catWeightKg: typeof value.cat_weight === "number" ? Math.round(value.cat_weight / 100) / 10 : null,
-    visitsToday: counted ?? (typeof value.excretion_times_day === "number" ? value.excretion_times_day : null),
+    // cat_weight staat in grammen. Liever het gewicht van het laatste echte bezoek.
+    catWeightKg: (counted && counted.latestKg)
+      || plausibleKg(typeof value.cat_weight === "number" ? Math.round(value.cat_weight / 100) / 10 : null, counted && counted.usualKg),
+    visitsToday: counted ? counted.count : (typeof value.excretion_times_day === "number" ? value.excretion_times_day : null),
     // Laatste keer gedraaid via het overzicht (ms), of null.
     lastCleanAt: lastClean || null,
     binFull: Boolean(value.trash_status),
