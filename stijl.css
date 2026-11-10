@@ -721,6 +721,134 @@ button.piece.open:active .tick {
   width: 13px;
   height: 13px;
 }
+/* Held van de week (zondagavond): goud, zoals de trofee op de Hub, met de
+   stand van de week als balkjes. */
+.held {
+  position: relative;
+  overflow: hidden;
+  min-height: 250px;
+  padding: 24px 22px 22px;
+  border-radius: 30px;
+  background: linear-gradient(140deg, #f6d690 0%, #e2ad52 52%, #b9792c 100%);
+  color: #2b1d10;
+  box-shadow: 0 14px 34px rgba(150, 95, 30, 0.32);
+}
+.held-kick {
+  display: block;
+  color: #7a4a12;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.held h2 {
+  margin: 8px 0 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1;
+}
+.held-bars {
+  display: grid;
+  gap: 5px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.held-bars li {
+  display: grid;
+  grid-template-columns: 24px 68px 1fr 26px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.held-av {
+  position: relative;
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+.held-av .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.held-crown {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+}
+.held-bars .nm {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.held-bars .bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(122, 74, 18, 0.16);
+}
+.held-bars .bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: rgba(43, 29, 16, 0.42);
+}
+.held-bars li.first .bar i {
+  background: #2b1d10;
+}
+.held-bars b {
+  color: #7a4a12;
+  text-align: right;
+}
+.held-bars li.first b {
+  color: #2b1d10;
+}
+.held-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+.held-due {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(43, 29, 16, 0.6);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+.held-due svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+.held-go {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 18px 0 20px;
+  border-radius: 99px;
+  background: #2b1d10;
+  color: #f6d690;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.held-go svg {
+  width: 17px;
+  height: 17px;
+}
+
 .wr-due {
   display: flex;
   align-items: center;
@@ -2793,6 +2921,33 @@ body.fb-page {
   border-radius: 50%;
   background: #3a2618 center / cover no-repeat;
   box-shadow: 0 0 0 3px var(--bg);
+}
+/* Held: altijd een gouden ring, met het baasje erin en een kroontje erop. */
+.ev-ring.gold {
+  position: relative;
+  background: conic-gradient(from 210deg, #f6d690, #e2ad52, #b9792c, #f6d690);
+}
+.ev-ring.gold .avatar {
+  width: 62px;
+  height: 62px;
+  font-size: 26px;
+  box-shadow: 0 0 0 2.5px var(--bg);
+}
+.ev-crown {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  filter: drop-shadow(0 2px 3px rgba(90, 50, 20, 0.3));
+}
+.ev-crown svg,
+.held-crown svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .ev-ring i.wr {
   background: linear-gradient(140deg, #2b2152, #6b3f4f);

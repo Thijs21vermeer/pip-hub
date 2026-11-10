@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-64">
+  <link rel="stylesheet" href="stijl.css?v=20261109-66">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -38,13 +38,22 @@
 
   <main class="page" style="padding-top: 0">
     <div id="linked" hidden>
-      <!-- Evenementen: rondjes onder de foto (de Fotobattle, en in december en
-           januari Pip Wrapped). Tik er een en het blok groeit eruit open; nog eens
-           tikken vouwt het terug. renderEvents. -->
+      <!-- Evenementen: rondjes onder de foto (zondagavond de Held van de week, de
+           Fotobattle en Pip Wrapped). Tik er een en het blok groeit eruit open; nog
+           eens tikken vouwt het terug. renderEvents. -->
       <section class="events" id="events" aria-label="Evenementen" hidden>
         <div class="event-row" id="event-row"></div>
         <div class="event-reveal is-closed" id="event-reveal">
           <div class="event-inner"><div class="event-stage">
+            <section class="held" id="held" aria-labelledby="held-title" hidden>
+              <small class="held-kick">Held van de week</small>
+              <h2 id="held-title"></h2>
+              <ol class="held-bars" id="held-bars"></ol>
+              <div class="held-foot">
+                <small class="held-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Nieuwe week om 04:00</small>
+                <a class="held-go" href="scores.html">Alle scores<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+              </div>
+            </section>
             <section class="fotobattle" id="fotobattle" aria-label="Fotobattle" hidden></section>
             <section class="wrapped" id="wrapped" aria-labelledby="wrapped-title" hidden>
               <div class="wr-deck" aria-hidden="true"><i></i><i></i><i><b id="wrapped-stat"></b><small id="wrapped-stat-label"></small></i></div>
@@ -213,10 +222,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-64"></script>
-  <script src="telefoon.js?v=20261109-64"></script>
-  <script src="taken.js?v=20261109-64"></script>
-  <script src="stats.js?v=20261109-64"></script>
+  <script src="config.js?v=20261109-66"></script>
+  <script src="telefoon.js?v=20261109-66"></script>
+  <script src="taken.js?v=20261109-66"></script>
+  <script src="stats.js?v=20261109-66"></script>
   <script>
     (function () {
       "use strict";
@@ -998,18 +1007,20 @@
 
       // ---- Wrapped, scores en instellen ----
 
-      // Pip Wrapped staat als rondje onder de foto van 1 december tot half januari.
-      // Daarbuiten zit hij bij Scores ("het jaar tot nu toe").
+      // Pip Wrapped staat het hele jaar als rondje onder de foto: van 1 december tot
+      // half januari het hele jaar (nieuw, gaat de eerste keer vanzelf open), de rest
+      // van het jaar het jaar tot nu toe.
       function renderWrapped() {
         const season = P.wrappedSeason();
-        $("wrapped").hidden = !season;
-        if (!season) return;
-        $("wrapped-title").textContent = String(season);
-        $("wrapped-kicker").textContent = new Date().getMonth() === 0 ? "Nog te zien tot half januari" : "Nieuw, te zien tot half januari";
+        const year = season || new Date().getFullYear();
+        $("wrapped").hidden = false;
+        $("wrapped-title").textContent = String(year);
+        $("wrapped-kicker").textContent = !season ? "Het jaar tot nu toe; in december het hele jaar"
+          : new Date().getMonth() === 0 ? "Nog te zien tot half januari" : "Nieuw, te zien tot half januari";
         // Bovenop het stapeltje: hoe vaak Pip dit jaar op de bak zat.
         const days = (data.jaarlog && data.jaarlog.days) || {};
-        const visits = Object.entries(days).filter(([key]) => key.startsWith(`${season}-`)).reduce((sum, [, day]) => sum + (Number(day && day.v) || 0), 0);
-        $("wrapped-stat").textContent = visits ? visits.toLocaleString("nl-NL") : String(season);
+        const visits = Object.entries(days).filter(([key]) => key.startsWith(`${year}-`)).reduce((sum, [, day]) => sum + (Number(day && day.v) || 0), 0);
+        $("wrapped-stat").textContent = visits ? visits.toLocaleString("nl-NL") : String(year);
         $("wrapped-stat-label").innerHTML = visits ? "keer op<br>de bak" : "het jaar<br>van Pip";
       }
 
@@ -1031,6 +1042,34 @@
           el.querySelector(".bar i").style.width = `${Math.round((row.points / max) * 100)}%`;
           box.appendChild(el);
         });
+      }
+
+      // Held van de week (zondag 20:00 tot de nieuwe week om 04:00): wie de week
+      // wint, met de stand van de week eronder. Daarna is het rondje weer weg.
+      let heldWeek = null;
+      function renderHeld() {
+        const box = $("held");
+        const hero = data.jaarlog && window.PipStats ? window.PipStats.hero(data.jaarlog, Date.now(), config.resetHour) : null;
+        heldWeek = hero ? hero.week : null;
+        box.hidden = !hero;
+        if (!hero) return;
+        const people = P.people(data.settings);
+        const ranking = window.PipStats.scores(data.jaarlog, "week", Date.now(), people, config.resetHour).ranking.slice(0, 4);
+        const top = ranking.length ? ranking[0].points : hero.points;
+        const winners = ranking.filter((row) => row.points === top).map((row) => row.name);
+        $("held-title").textContent = winners.length > 1 ? `${names(winners)} winnen samen` : `${hero.name} wint de week`;
+        const list = $("held-bars");
+        list.innerHTML = "";
+        for (const row of ranking) {
+          const first = row.points === top && top > 0;
+          const el = document.createElement("li");
+          el.className = first ? "first" : "";
+          el.innerHTML = `<span class="held-av">${first ? `<span class="held-crown">${FB_CROWN}</span>` : ""}</span><span class="nm"></span><span class="bar"><i></i></span><b>${row.points}</b>`;
+          el.querySelector(".held-av").prepend(P.avatarElement(row.name, people, avatars));
+          el.querySelector(".nm").textContent = row.name;
+          el.querySelector(".bar i").style.width = `${Math.round((row.points / Math.max(1, top)) * 100)}%`;
+          list.appendChild(el);
+        }
       }
 
       function renderSettings() {
@@ -1156,6 +1195,7 @@
         renderActs();
         renderWrapped();
         renderScores();
+        renderHeld();
         renderBattle();
         renderEvents();
         renderSettings();
@@ -1307,7 +1347,7 @@
       // schilderijtjes van Taken even na. Moet je iets doen, dan staat het blok de
       // eerste keer vanzelf open.
       const EVENT_SEEN_KEY = "pip-events-seen";
-      let eventOpen = null; // "fotobattle" | "wrapped" | null
+      let eventOpen = null; // "held" | "fotobattle" | "wrapped" | null
       let eventPhase = "closed"; // closed, opening, open, closing
       let eventTimer = null;
       let eventTouched = false;
@@ -1334,6 +1374,10 @@
       // Wat er nu is, met of er iets voor jou te doen is.
       function eventList() {
         const list = [];
+        // De held staat vooraan, met een gouden ring en een kroontje; zondagavond de eerste keer vanzelf open.
+        if (!$("held").hidden && heldWeek) {
+          list.push({ key: "held", label: "Weekheld", hot: false, seenKey: `held:${heldWeek}`, fresh: true, held: true });
+        }
         if (!$("fotobattle").hidden) {
           const current = battle && battle.current;
           const live = current && (current.result ? current.result.winner : Date.now() < current.closesAt);
@@ -1357,15 +1401,17 @@
           }
           list.push({ key: "fotobattle", label: "Fotobattle", hot, seenKey, face });
         }
+        // Wrapped: het hele jaar; alleen in december en januari nieuw (gaat dan de eerste keer vanzelf open).
         const season = P.wrappedSeason();
-        if (season && !$("wrapped").hidden) {
-          list.push({ key: "wrapped", label: "Wrapped", hot: false, seenKey: `wrapped:${season}`, wrapped: String(season).slice(2), fresh: true });
+        if (!$("wrapped").hidden) {
+          const year = season || new Date().getFullYear();
+          list.push({ key: "wrapped", label: "Wrapped", hot: false, seenKey: season ? `wrapped:${season}` : null, wrapped: String(year).slice(2), fresh: Boolean(season) });
         }
         return list;
       }
 
       function eventBlock(key) {
-        return key === "wrapped" ? $("wrapped") : key === "fotobattle" ? $("fotobattle") : null;
+        return key === "wrapped" ? $("wrapped") : key === "fotobattle" ? $("fotobattle") : key === "held" ? $("held") : null;
       }
 
       function renderEvents() {
@@ -1382,9 +1428,15 @@
           button.type = "button";
           button.dataset.key = event.key;
           button.className = `ev${event.hot ? " hot" : ""}`;
-          button.innerHTML = event.wrapped
+          button.innerHTML = event.held
+            ? `<span class="ev-ring gold"><span class="ev-crown">${FB_CROWN}</span></span><b>${event.label}</b>`
+            : event.wrapped
             ? `<span class="ev-ring purple"><i class="wr">${P.escapeHtml(event.wrapped)}</i></span><b>${event.label}</b>`
             : `<span class="ev-ring"><i style="background-image:url('pip-foto.jpg')"></i></span><b>${event.label}</b>`;
+          if (event.held) {
+            const hero = window.PipStats.hero(data.jaarlog, Date.now(), config.resetHour);
+            if (hero) button.querySelector(".ev-ring").prepend(P.avatarElement(hero.name, P.people(data.settings), avatars));
+          }
           if (event.face) battleCard(button.querySelector(".ev-ring i"), event.face);
           button.addEventListener("click", () => tapEvent(event.key));
           row.appendChild(button);
@@ -1400,7 +1452,7 @@
 
       // Welk blok zichtbaar is en hoe de rondjes erbij staan.
       function updateEvents() {
-        for (const key of ["fotobattle", "wrapped"]) eventBlock(key).classList.toggle("ev-off", key !== eventOpen);
+        for (const key of ["held", "fotobattle", "wrapped"]) eventBlock(key).classList.toggle("ev-off", key !== eventOpen);
         const showing = eventPhase === "open" || eventPhase === "opening" ? eventOpen : null;
         $("event-row").querySelectorAll(".ev").forEach((button) => {
           const on = button.dataset.key === showing;
