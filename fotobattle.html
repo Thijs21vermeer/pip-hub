@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-62">
+  <link rel="stylesheet" href="stijl.css?v=20261109-63">
   <!-- Fotobattle: de hele maand je 3 mooiste foto's van Pip insturen; op de 1e
        kiezen jullie samen, blind, steeds uit twee (een toernooi). Daarna de
        uitslag: de winnaar, van wie hij is, de top 3 en wat ieder koos. De maker
@@ -97,19 +97,18 @@
   </main>
 
   <div class="sheet" id="slot-sheet" hidden>
-    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="slot-title">
+    <!-- Donker, net als de rest van de fotobattle. -->
+    <div class="sheet-panel fb-sheet" role="dialog" aria-modal="true" aria-labelledby="slot-title">
+      <small class="fb-kick" id="slot-title"></small>
       <div class="fb-sheet-photo" id="slot-photo"></div>
-      <h2 id="slot-title"></h2>
-      <div class="sheet-actions">
-        <button type="button" class="sheet-action" id="slot-replace"><span>Andere foto kiezen</span></button>
-        <button type="button" class="sheet-action danger" id="slot-remove"><span>Weghalen uit de battle</span></button>
-      </div>
+      <button type="button" class="fb-go wide" id="slot-replace">Andere foto kiezen</button>
+      <button type="button" class="fb-link danger" id="slot-remove">Weghalen uit de battle</button>
       <button class="sheet-cancel" id="slot-close" type="button">Sluiten</button>
     </div>
   </div>
 
-  <script src="config.js?v=20261109-62"></script>
-  <script src="telefoon.js?v=20261109-62"></script>
+  <script src="config.js?v=20261109-63"></script>
+  <script src="telefoon.js?v=20261109-63"></script>
   <script>
     (function () {
       "use strict";
@@ -317,7 +316,7 @@
 
       function openSlot(photo, index) {
         slotOpen = photo;
-        $("slot-title").textContent = `Foto ${index + 1}`;
+        $("slot-title").textContent = `Foto ${index + 1} van ${summary.entry.max}`;
         src(photo.id).then((url) => paint($("slot-photo"), url)).catch(() => {});
         $("slot-sheet").hidden = false;
       }

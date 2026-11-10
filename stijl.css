@@ -2446,11 +2446,37 @@ body.fb-page {
 .fb-in .fb-av .avatar {
   box-shadow: 0 0 0 2.5px #2b1d15;
 }
+/* Het venster bij een ingestuurde foto: donker, zoals de fotobattle zelf. */
+.fb-page .sheet-panel.fb-sheet {
+  padding-top: 24px;
+  background: linear-gradient(170deg, #2f2016 0%, #3a2618 100%);
+  color: #fbf4e8;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35);
+}
+.fb-page .fb-sheet .fb-kick {
+  margin: 0 0 16px;
+}
 .fb-sheet-photo {
-  height: 200px;
-  margin-bottom: 14px;
-  border-radius: 18px;
-  background: var(--track) center / cover no-repeat;
+  height: min(240px, 32vh);
+  margin: 0 3px 24px;
+  border-radius: 20px;
+  background: #3a2618 center / cover no-repeat;
+  box-shadow: 0 0 0 3px #fbf4e8, 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+.fb-page .fb-sheet .fb-go.wide {
+  width: 100%;
+  margin: 0;
+}
+.fb-page .fb-sheet .fb-link {
+  margin: 14px auto 0;
+}
+.fb-link.danger {
+  color: #f0a77c;
+}
+.fb-page .fb-sheet .sheet-cancel {
+  margin-top: 14px;
+  border-color: rgba(251, 244, 232, 0.22);
+  color: #fbf4e8;
 }
 .fb-champ i {
   position: relative;
