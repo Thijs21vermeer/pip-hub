@@ -475,8 +475,9 @@
 
   // De taak die bij de kattenbak hoort (het icoontje van de bak, bv. "Bak draaien").
   // Draai je de bak via de knop, dan staat die taak meteen op gedaan.
+  // Alleen de dagtaak: de grote beurt van de kattenbak (elk kwartaal) hoort er niet bij.
   function cleanTask() {
-    return tasks().find((task) => task.icon === "box" && !task.play) || null;
+    return tasks().find((task) => task.icon === "box" && !task.play && repeatOf(task) === "daily") || null;
   }
 
   // Geeft terug of het lukte.
@@ -739,6 +740,7 @@
       // Melding als hij gedaan is en een seintje op een vaste tijd (op het servertje ingesteld).
       if (task.notify) item.notify = true;
       if (task.remind) item.remind = task.remind;
+      if (task.overdue) item.overdue = task.overdue; // melding als hij zo veel maanden niet gedaan is
       if (task.play) item.play = true; // Spelen met Pip
       return item;
     });

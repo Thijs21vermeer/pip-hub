@@ -69,6 +69,9 @@ function cleanTasks(list) {
       task.day = day;
       if (Number.isInteger(item.from) && item.from > 0 && item.from < 100000) task.from = item.from;
     }
+    // Melding als hij zo veel maanden niet gedaan is (herinnering.mjs), bv. de
+    // grote beurt van de kattenbak: overdue: 3. Alleen bij maand- en kwartaaltaken.
+    if (month && Number.isInteger(item.overdue) && item.overdue >= 1 && item.overdue <= 12) task.overdue = item.overdue;
     tasks.push(task);
   }
   return tasks.length ? tasks : null;

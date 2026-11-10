@@ -10,6 +10,9 @@
 // deze week de meeste punten haalde (zie lib/history.mjs). En een speeltimer die
 // afliep terwijl niemand keek, wordt hier alsnog een punt (lib/play.mjs).
 // De fotobattle gaat hier open en dicht (lib/battle.mjs).
+//
+// Een taak met overdue: 3 geeft een melding als hij 3 maanden niet gedaan is
+// (de grote beurt van de kattenbak), en daarna elke week opnieuw tot hij gedaan is.
 
 import { getStore } from "@netlify/blobs";
 import { readPart, recordReminder, weekScores, weekStart, yearOf } from "../lib/history.mjs";
@@ -65,6 +68,59 @@ async function remindOpenTasks(store, settings, now) {
 }
 
 // Zondag 20:00 tot middernacht, één keer per week.
+// Te lang niet gedaan: overdue maanden na de laatste keer (of, nooit gedaan, na de
+// eerste keer dat we de taak zagen). Overdag (10:00 tot 21:00), daarna elke week.
+const OVERDUE_FROM_HOUR = 10;
+const OVERDUE_UNTIL_HOUR = 21;
+const OVERDUE_AGAIN_MS = 7 * 24 * 60 * 60 * 1000;
+
+function addMonths(ms, months) {
+  const date = new Date(ms);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  return date.getTime();
+}
+
+function longDay(ms) {
+  return new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long" }).format(new Date(ms));
+}
+
+async function remindOverdue(store, settings, now) {
+  const tasks = (settings.tasks || []).filter((task) => Number.isInteger(task.overdue));
+  if (!tasks.length) return;
+  const state = (await store.get("overdue-sent", { type: "json" })) || {};
+  const hour = localTime(now).hour;
+  let changed = false;
+  for (const task of tasks) {
+    const done = (settings.done || {})[task.id];
+    let entry = state[task.id] || {};
+    if (!entry.seen) {
+      entry = { ...entry, seen: now };
+      changed = true;
+    }
+    const base = done && Number.isFinite(done.at) ? done.at : entry.seen;
+    // Opnieuw gedaan sinds de vorige melding: weer vanaf nul tellen.
+    if (entry.base !== base) {
+      entry = { seen: entry.seen, base };
+      changed = true;
+    }
+    state[task.id] = entry;
+    if (now < addMonths(base, task.overdue)) continue;
+    if (hour < OVERDUE_FROM_HOUR || hour >= OVERDUE_UNTIL_HOUR) continue;
+    if (entry.sentAt && now - entry.sentAt < OVERDUE_AGAIN_MS) continue;
+    const months = task.overdue === 1 ? "een maand" : `${task.overdue} maanden`;
+    await notify({
+      title: entry.sentAt ? `Nog steeds: ${task.title}` : task.title,
+      message: done
+        ? `Al ${months} niet gedaan: de laatste keer was op ${longDay(done.at)}, door ${done.by}. Vink hem af als het gebeurd is.`
+        : `"${task.title}" is al ${months} niet afgevinkt. Vink hem af als het gebeurd is.`,
+      priority: 4,
+    });
+    state[task.id] = { ...entry, sentAt: now };
+    changed = true;
+  }
+  if (changed) await store.setJSON("overdue-sent", state);
+}
+
 async function announceHero(store, now) {
   const here = localTime(now);
   const weekday = new Date(`${here.date}T12:00:00Z`).getUTCDay();
@@ -95,6 +151,8 @@ export default async () => {
   const settings = (await store.get("settings", { type: "json" })) || {};
   const now = Date.now();
   await remindOpenTasks(store, settings, now);
+  await remindOverdue(store, settings, now).catch((error) =>
+    console.error(JSON.stringify({ event: "overdue.error", code: error.code || error.name || "UNKNOWN" })));
   await announceHero(store, now).catch((error) =>
     console.error(JSON.stringify({ event: "hero.error", code: error.code || error.name || "UNKNOWN" })));
   // Spelen: een timer die af is maar nog door niemand is gezien (Hub uit, telefoon

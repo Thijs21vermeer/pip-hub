@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-68">
+  <link rel="stylesheet" href="stijl.css?v=20261109-69">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -243,10 +243,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-68"></script>
-  <script src="telefoon.js?v=20261109-68"></script>
-  <script src="taken.js?v=20261109-68"></script>
-  <script src="stats.js?v=20261109-68"></script>
+  <script src="config.js?v=20261109-69"></script>
+  <script src="telefoon.js?v=20261109-69"></script>
+  <script src="taken.js?v=20261109-69"></script>
+  <script src="stats.js?v=20261109-69"></script>
   <script>
     (function () {
       "use strict";
@@ -458,7 +458,7 @@
         [/kattenbak|\bbak\b/i, "taken/kattenbak.jpg"],
         [/water/i, "taken/fontein.jpg"],
       ];
-      const CLEANING = /schoonma|reinig|poets|afwas/i;
+      const CLEANING = /schoonma|reinig|poets|afwas|grote beurt/i;
       // Schrobborstel: schoonmaken (icoon "brush-cleaning" uit Lucide, ISC-licentie).
       const CLEAN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 22-1-4"/><path d="M19 13.99a1 1 0 0 0 1-1V12a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v.99a1 1 0 0 0 1 1"/><path d="M5 14h14l1.973 6.767A1 1 0 0 1 20 22H4a1 1 0 0 1-.973-1.233z"/><path d="m8 22 1-4"/></svg>';
       const pictureFor = (title) => (PICTURES.find(([test]) => test.test(title)) || [])[1] || null;
@@ -926,7 +926,8 @@
       // De taak die bij de kattenbak hoort (het icoontje van de bak, bv. "Bak draaien").
       // Draai je de bak via de knop, dan staat die taak meteen op gedaan.
       function cleanTask() {
-        return tasksOf(data.settings).find((task) => task.icon === "box" && !task.play) || null;
+        // Alleen de dagtaak: de grote beurt van de kattenbak (elk kwartaal) hoort er niet bij.
+        return tasksOf(data.settings).find((task) => task.icon === "box" && !task.play && window.PipTasks.repeatOf(task) === "daily") || null;
       }
       function cleanTaskDone(task) {
         const item = window.PipTasks.status([task], data.settings.done || {}, new Date(), config.resetHour).find((entry) => entry.task.id === task.id);
