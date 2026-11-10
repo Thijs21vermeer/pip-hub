@@ -2642,6 +2642,28 @@ img.score-avatar {
   border-radius: 24px;
 }
 
+/* Staand: een rij per maand, links de maand, rechts de dagen 1 tot en met 31. */
+.wr-months {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 8px;
+}
+.wr-month {
+  font-size: 12px;
+  color: #ffe9d2;
+}
+.wr-days {
+  display: grid;
+  grid-template-columns: repeat(31, 1fr);
+  gap: 2px;
+}
+.wr-days i {
+  display: block;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border-radius: 2px;
+}
 .wr-heat {
   display: grid;
   grid-auto-flow: column;
@@ -2982,6 +3004,18 @@ img.score-avatar {
 .wr-gap {
   min-height: 20px;
   max-height: 56px;
+}
+/* Kosten: weinig ruimte boven de kop, veel tussen het bedrag en de lijst. */
+.wr-space.low {
+  flex-grow: 0.35;
+}
+.wr-space.end.low {
+  flex-grow: 0.45;
+}
+.wr-gap.wide {
+  flex-grow: 2;
+  min-height: 32px;
+  max-height: 120px;
 }
 .wrapped.tall .wr-progress {
   left: 14px;

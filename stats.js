@@ -217,19 +217,23 @@
 
   // ---- Pip Wrapped ----
 
-  // Pips wc-ritme: het uur waarop Pip het vaakst op de kattenbak zit (plassen
-  // en poepen), als kattentype.
-  const CAT_TYPES = [
-    { from: 4, to: 8, name: "De Ochtendkat", line: "Het vaakst op de pot in de vroege ochtend." },
-    { from: 9, to: 11, name: "De Uitslaper", line: "Het vaakst op de pot halverwege de ochtend." },
-    { from: 12, to: 16, name: "De Middagkat", line: "Het vaakst op de pot in de middag." },
-    { from: 17, to: 20, name: "De Avondkat", line: "Het vaakst op de pot rond etenstijd." },
+  // Pips wc-ritme: in welk dagdeel Pip het vaakst op de kattenbak zit (plassen en
+  // poepen), als kattentype. Het type komt van het dagdeel met de meeste bezoeken,
+  // dezelfde dagdelen als de percentages op het scherm (niet van één druk uur,
+  // zoals de voertijd om 06:00).
+  const DAY_PARTS = [
+    { id: "ochtend", name: "'s ochtends", short: "Ochtend", from: 6, to: 11 },
+    { id: "middag", name: "'s middags", short: "Middag", from: 12, to: 17 },
+    { id: "avond", name: "'s avonds", short: "Avond", from: 18, to: 23 },
+    { id: "nacht", name: "'s nachts", short: "Nacht", from: 0, to: 5 },
   ];
-  const NIGHT_TYPE = { name: "De Nachtkat", line: "Het vaakst op de pot als iedereen slaapt." };
-
-  function catType(hour) {
-    return CAT_TYPES.find((type) => hour >= type.from && hour <= type.to) || NIGHT_TYPE;
-  }
+  const CAT_TYPES = {
+    ochtend: { name: "De Ochtendkat", line: "Het vaakst op de pot in de ochtend." },
+    uitslaper: { name: "De Uitslaper", line: "Het vaakst op de pot laat in de ochtend." },
+    middag: { name: "De Middagkat", line: "Het vaakst op de pot in de middag." },
+    avond: { name: "De Avondkat", line: "Het vaakst op de pot in de avond." },
+    nacht: { name: "De Nachtkat", line: "Het vaakst op de pot als iedereen slaapt." },
+  };
 
   // Bakjes voor een grafiek door de tijd: per dag als het om hooguit drie weken
   // gaat, maanden als er minstens 3 zijn, en daartussen weken.
@@ -331,28 +335,38 @@
       days.forEach((d) => (d.h || []).forEach((n, hour) => { hours[hour] += n; }));
       const counted = hours.reduce((a, b) => a + b, 0);
       if (counted >= 10) {
-        const peak = hours.indexOf(Math.max(...hours));
-        typeOfCat = catType(peak);
-        const parts = [
-          { name: "'s ochtends", from: 6, to: 11 },
-          { name: "'s middags", from: 12, to: 17 },
-          { name: "'s avonds", from: 18, to: 23 },
-          { name: "'s nachts", from: 0, to: 5 },
-        ].map((part) => ({ ...part, share: Math.round((sum(hours.slice(part.from, part.to + 1), (n) => n) / counted) * 100) }))
-          .filter((part) => part.share > 0)
-          .sort((a, b) => b.share - a.share)
-          .slice(0, 3)
-          .map((part) => `${part.share}% ${part.name}`);
-        slides.push({ type: "type", name: typeOfCat.name, line: typeOfCat.line, hours, peak: `${pad(peak)}:00`, chips: parts });
-        summary.unshift({ label: "Wc-ritme", value: `${pad(peak)}:00`, sub: typeOfCat.name });
+        const parts = DAY_PARTS.map((part) => {
+          const visitsInPart = sum(hours.slice(part.from, part.to + 1), (n) => n);
+          return { ...part, visits: visitsInPart, share: Math.round((visitsInPart / counted) * 100) };
+        }).sort((a, b) => b.visits - a.visits);
+        const top = parts[0];
+        // Het drukste uur binnen dat dagdeel; ochtend met de meeste bezoeken na 9:00 is een uitslaper.
+        const inTop = hours.slice(top.from, top.to + 1);
+        const topHour = top.from + inTop.indexOf(Math.max(...inTop));
+        typeOfCat = CAT_TYPES[top.id === "ochtend" && topHour >= 9 ? "uitslaper" : top.id];
+        const chips = parts.filter((part) => part.share > 0).slice(0, 3).map((part) => `${part.share}% ${part.name}`);
+        slides.push({
+          type: "type",
+          name: typeOfCat.name,
+          line: typeOfCat.line,
+          hours,
+          part: { from: top.from, to: top.to, name: top.name, share: top.share },
+          peak: `${pad(topHour)}:00`,
+          chips,
+        });
+        summary.unshift({ label: "Wc-ritme", value: top.short, sub: `${typeOfCat.name} · ${top.share}%` });
       }
     }
 
-    // Eten: de dagtaak met een herinnering (natvoer), anders de vaakst gedane dagtaak
-    // (niet Spelen met Pip: dat kan vaker per dag en is geen verzorging).
+    // Eten: alleen een eet-taak (natvoer, brokjes, ontbijt, avondeten: het icoontje
+    // van het bakje, de zon of de maan, of "voer" of "eten" in de naam). Nooit de
+    // kattenbak, water of Spelen met Pip. De eet-taak met een herinnering (natvoer)
+    // gaat voor, anders de vaakst gedane.
+    const isFood = (item) => item && item.icon !== "box" && item.icon !== "drop" && !item.play
+      && (["bowl", "sun", "moon"].includes(item.icon) || /voer|eten|ontbijt|brokje|blikje|zakje/i.test(item.title || ""));
     const daily = new Map();
-    ticks.filter((tick) => tick.repeat === "daily" && !tick.play).forEach((tick) => count(daily, tick.id));
-    const reminded = tasks.find((task) => task.remind && daily.has(task.id));
+    ticks.filter((tick) => tick.repeat === "daily" && !tick.play && isFood(tick)).forEach((tick) => count(daily, tick.id));
+    const reminded = tasks.find((task) => task.remind && isFood(task) && daily.has(task.id));
     const careId = reminded ? reminded.id : (topOf(daily) || [null])[0];
     const portions = sum(days, (d) => d.p);
     if (careId || portions > 0) {
@@ -361,7 +375,8 @@
       let streak = null;
       let careTitle = null;
       if (careId) {
-        const careTicks = ticks.filter((tick) => tick.id === careId);
+        // Alleen de eet-vinkjes: "Bak draaien" heette eerst Avondeten (zelfde id).
+        const careTicks = ticks.filter((tick) => tick.id === careId && isFood(tick));
         careTitle = careTicks[careTicks.length - 1].title;
         const doneDays = new Set(careTicks.map((tick) => dayKey(tick.at, resetHour)));
         stats.push({ value: String(doneDays.size), label: `${doneDays.size === 1 ? "dag" : "dagen"} ${doneForm(careTitle)}` });
@@ -449,7 +464,10 @@
     }
 
     // Spelen met Pip: hoe lang er dit jaar met Pip gespeeld is, en wie het meest.
-    const plays = ticks.filter((tick) => tick.play);
+    // Elk vinkje van de speeltaak telt als een keer, ook een zonder minuten (zoals
+    // op 9 november, net voordat de timer er was); zo klopt het met de top 5.
+    const playIds = new Set(tasks.filter((task) => task.play).map((task) => task.id).concat(ticks.filter((tick) => tick.play).map((tick) => tick.id)));
+    const plays = ticks.filter((tick) => tick.play || playIds.has(tick.id));
     if (plays.length) {
       const minutes = sum(plays, (tick) => tick.min || 0);
       const perPlayer = new Map();

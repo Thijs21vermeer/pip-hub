@@ -74,8 +74,19 @@
   // Pips wc-ritme: hoe laat Pip het vaakst op de kattenbak zit. Eronder
   // waar het op gebaseerd is, en een knipoog: spelen doet Pip 's avonds, daar
   // is geen kattenbak voor nodig.
+  const MONTHS_SHORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
   const TYPE_NOTE = "Elk bezoek aan de kattenbak telt mee, per uur van de dag.";
-  const PLAY_STICKER = `<div class="wr-sticker"><small>En met spelen?</small><strong>'s Avonds.</strong><span>Precies als jullie op de bank willen zitten.</span></div>`;
+  // De klok van het wc-ritme: donker zijn de uren van het dagdeel van het type
+  // (stats.js, part), in het midden welk deel van de bezoeken dat is. De strepen
+  // blijven binnen de uren aan de rand (0:00, 6:00, 12:00, 18:00).
+  const BAR_REACH = 58;
+  function partOf(s) {
+    if (s.part) return (hour) => hour >= s.part.from && hour <= s.part.to;
+    const peakHour = Number(String(s.peak || "0").slice(0, 2));
+    return (hour) => Math.abs(hour - peakHour) <= 1 || Math.abs(hour - peakHour) === 23;
+  }
+  const clockMain = (s) => (s.part ? `${s.part.share}%` : s.peak);
+  const clockSub = (s) => (s.part ? s.part.name : "piekuur");
 
   // ---- Schermen ----
 
@@ -149,12 +160,12 @@
       const max = Math.max(...s.hours, 1);
       let base = "";
       let hot = "";
-      const peakHour = Number(s.peak.slice(0, 2));
+      const inPart = partOf(s);
       s.hours.forEach((value, hour) => {
         const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
-        const outer = 80 + (value / max) * 96;
-        const part = `M${(200 + Math.cos(angle) * 74).toFixed(1)} ${(200 + Math.sin(angle) * 74).toFixed(1)} L${(200 + Math.cos(angle) * outer).toFixed(1)} ${(200 + Math.sin(angle) * outer).toFixed(1)} `;
-        if (Math.abs(hour - peakHour) <= 1 || Math.abs(hour - peakHour) === 23) hot += part;
+        const outer = 88 + (value / max) * BAR_REACH;
+        const part = `M${(200 + Math.cos(angle) * 82).toFixed(1)} ${(200 + Math.sin(angle) * 82).toFixed(1)} L${(200 + Math.cos(angle) * outer).toFixed(1)} ${(200 + Math.sin(angle) * outer).toFixed(1)} `;
+        if (inPart(hour)) hot += part;
         else base += part;
       });
       const label = (x, y, anchor, text) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="14" font-weight="600" fill="#2a1508">${text}</text>`;
@@ -165,12 +176,11 @@
           <svg width="400" height="400" viewBox="0 0 400 400" font-family="Outfit, sans-serif" role="img" aria-label="Bezoeken aan de kattenbak per uur van de dag">
             <path d="${base}" fill="none" stroke="#2a1508" stroke-opacity=".3" stroke-width="10" stroke-linecap="round"/>
             <path d="${hot}" fill="none" stroke="#2a1508" stroke-width="10" stroke-linecap="round"/>
-            <circle cx="200" cy="200" r="60" fill="#fbf7f2"/>
-            <text x="200" y="200" text-anchor="middle" font-size="30" font-weight="700" fill="#2a1508">${esc(s.peak)}</text>
-            <text x="200" y="224" text-anchor="middle" font-size="14" fill="#5a2f1a">piekuur</text>
+            <circle cx="200" cy="200" r="70" fill="#fbf7f2"/>
+            <text x="200" y="200" text-anchor="middle" font-size="30" font-weight="700" fill="#2a1508">${esc(clockMain(s))}</text>
+            <text x="200" y="224" text-anchor="middle" font-size="14" fill="#5a2f1a">${esc(clockSub(s))}</text>
             ${label(200, 16, "middle", "0:00")}${label(394, 205, "end", "6:00")}${label(200, 396, "middle", "12:00")}${label(6, 205, "start", "18:00")}
           </svg>
-          <div class="wr-abs" style="right:-34px;bottom:-34px;transform:rotate(-5deg)"><div class="wr-pop d6">${PLAY_STICKER}</div></div>
         </div>
         <div class="wr-abs" style="left:64px;top:96px;width:460px">
           <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips wc-ritme</p>
@@ -475,6 +485,10 @@
   const SPACE = '<i class="wr-space" aria-hidden="true"></i>';
   const GAP = '<i class="wr-gap" aria-hidden="true"></i>';
   const END = '<i class="wr-space end" aria-hidden="true"></i>';
+  // Kosten: de kop hoger, de lijst lager (meer lucht ertussen).
+  const SPACE_LOW = '<i class="wr-space low" aria-hidden="true"></i>';
+  const GAP_WIDE = '<i class="wr-gap wide" aria-hidden="true"></i>';
+  const END_LOW = '<i class="wr-space end low" aria-hidden="true"></i>';
   const tall = (bg, color, inner) =>
     `<div class="wr-slide wr-tall" style="background:${bg}${color ? `;color:${color}` : ""}">${inner}</div>`;
 
@@ -483,21 +497,21 @@
     const max = Math.max(...s.hours, 1);
     let base = "";
     let hot = "";
-    const peakHour = Number(s.peak.slice(0, 2));
+    const inPart = partOf(s);
     s.hours.forEach((value, hour) => {
       const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
-      const outer = 80 + (value / max) * 96;
-      const part = `M${(200 + Math.cos(angle) * 74).toFixed(1)} ${(200 + Math.sin(angle) * 74).toFixed(1)} L${(200 + Math.cos(angle) * outer).toFixed(1)} ${(200 + Math.sin(angle) * outer).toFixed(1)} `;
-      if (Math.abs(hour - peakHour) <= 1 || Math.abs(hour - peakHour) === 23) hot += part;
+      const outer = 88 + (value / max) * BAR_REACH;
+      const part = `M${(200 + Math.cos(angle) * 82).toFixed(1)} ${(200 + Math.sin(angle) * 82).toFixed(1)} L${(200 + Math.cos(angle) * outer).toFixed(1)} ${(200 + Math.sin(angle) * outer).toFixed(1)} `;
+      if (inPart(hour)) hot += part;
       else base += part;
     });
     const label = (x, y, anchor, text) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="17" font-weight="600" fill="#2a1508">${text}</text>`;
     return `<svg width="${size}" height="${size}" viewBox="0 0 400 400" font-family="Outfit, sans-serif" role="img" aria-label="Bezoeken aan de kattenbak per uur van de dag">
       <path d="${base}" fill="none" stroke="#2a1508" stroke-opacity=".3" stroke-width="10" stroke-linecap="round"/>
       <path d="${hot}" fill="none" stroke="#2a1508" stroke-width="10" stroke-linecap="round"/>
-      <circle cx="200" cy="200" r="60" fill="#fbf7f2"/>
-      <text x="200" y="202" text-anchor="middle" font-size="32" font-weight="700" fill="#2a1508">${esc(s.peak)}</text>
-      <text x="200" y="228" text-anchor="middle" font-size="16" fill="#5a2f1a">piekuur</text>
+      <circle cx="200" cy="200" r="70" fill="#fbf7f2"/>
+      <text x="200" y="202" text-anchor="middle" font-size="32" font-weight="700" fill="#2a1508">${esc(clockMain(s))}</text>
+      <text x="200" y="228" text-anchor="middle" font-size="16" fill="#5a2f1a">${esc(clockSub(s))}</text>
       ${label(200, 18, "middle", "0:00")}${label(396, 206, "end", "6:00")}${label(200, 396, "middle", "12:00")}${label(4, 206, "start", "18:00")}
     </svg>`;
   }
@@ -578,19 +592,18 @@
     },
 
     type(s) {
-      const chips = s.chips.map((chip, i) => `<span class="wr-up wr-chip" style="font-size:15px;padding:9px 14px;background:#2a1508;color:#ffe1d4;${delay(0.5 + i * 0.12)}">${esc(chip)}</span>`).join("");
+      const chips = s.chips.map((chip, i) => `<span class="wr-up wr-chip" style="font-size:13px;padding:8px 11px;white-space:nowrap;background:#2a1508;color:#ffe1d4;${delay(0.5 + i * 0.12)}">${esc(chip)}</span>`).join("");
       return tall("#ff8c66", "#2a1508", `
         <div>
           <p class="wr-up wr-eyebrow" style="color:#5a1f08">Pips wc-ritme</p>
           <h2 class="wr-pop d1 wr-num wr-type-name" style="margin-top:16px;line-height:.92">${esc(s.name)}</h2>
           <p class="wr-up d2 wr-serif" style="margin-top:16px;font-size:32px">${esc(s.line)}</p>
           <p class="wr-up d3" style="margin-top:10px;font-size:15px;line-height:1.4;color:#5a2f1a">${TYPE_NOTE}</p>
-          <div class="wr-wrap" style="margin-top:18px">${chips}</div>
+          <div class="wr-row" style="flex-wrap:nowrap;gap:6px;margin-top:18px">${chips}</div>
         </div>
         <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding-top:16px">
           <div class="wr-pop d1 wr-round" style="position:relative;height:100%;max-height:316px;aspect-ratio:1/1;padding:10px;background:#ffa585">
             <div class="wr-pop d2" style="width:100%;height:100%">${clockSvg(s, "100%")}</div>
-            <div class="wr-abs wr-sticker-spot" style="transform:rotate(-5deg)"><div class="wr-pop d6">${PLAY_STICKER}</div></div>
           </div>
         </div>`);
     },
@@ -610,12 +623,26 @@
           unknown: "background:rgba(255,244,230,.12)",
           today: "border:2px dashed rgba(255,244,230,.6)",
         };
-        // Staand: drie weken per rij (21 vakjes), van januari tot nu.
-        const perRow = 21;
-        const size = 11;
-        const cells = new Array(s.heat.offset).fill('<i style="visibility:hidden"></i>')
-          .concat(s.heat.cells.map((kind, i) => `<i class="wr-cell" style="${looks[kind]};${delay(0.35 + Math.floor((i + s.heat.offset) / perRow) * 0.04)}"></i>`));
-        const width = perRow * (size + 3) - 3;
+        // Staand: een rij per maand (links jan, feb, …), de dagen 1 tot en met 31
+        // van links naar rechts. Zo lees je het als een kalender.
+        const rowsHtml = [];
+        let month = -1;
+        let row = [];
+        const flush = () => {
+          if (month < 0) return;
+          const filler = new Array(31 - row.length).fill('<i style="visibility:hidden"></i>').join("");
+          rowsHtml.push(`<span class="wr-month">${MONTHS_SHORT[month]}</span><span class="wr-days">${row.join("")}${filler}</span>`);
+        };
+        s.heat.cells.forEach((kind, i) => {
+          const day = s.heat.days[i] ? s.heat.days[i].day : (i % 31) + 1;
+          if (day === 1 || month < 0) {
+            flush();
+            month += 1;
+            row = [];
+          }
+          row.push(`<i class="wr-cell" style="${looks[kind]};${delay(0.35 + month * 0.05)}"></i>`);
+        });
+        flush();
         const line = s.streak
           ? `<strong style="color:#ffe7b0">${s.streak.length} dagen op rij</strong> ${esc(s.doneTitle || s.title.toLowerCase())}, van ${esc(s.streak.from)} t/m ${esc(s.streak.to)}.`
           : s.heat.since ? `Bijgehouden sinds <strong style="color:#ffe7b0">${esc(s.heat.since)}</strong>; daarvoor staat het nog niet in het jaarlog.` : "";
@@ -628,8 +655,7 @@
               <span class="wr-row" style="gap:6px"><i class="wr-key" style="border:2px solid rgba(255,244,230,.6)"></i>Vergeten</span>
               ${s.heat.hasUnknown ? '<span class="wr-row" style="gap:6px"><i class="wr-key" style="background:rgba(255,244,230,.12)"></i>Nog niet bijgehouden</span>' : ""}
             </div>
-            <div class="wr-heat" style="margin-top:14px;grid-auto-flow:row;gap:3px;grid-template-columns:repeat(${perRow},${size}px);grid-auto-rows:${size}px">${cells.join("")}</div>
-            <div class="wr-row" style="justify-content:space-between;gap:16px;width:${width}px;margin-top:8px;font-size:12px;color:#ffe9d2"><span>${esc(s.heat.first)}</span><span>${esc(s.heat.last)}</span></div>
+            <div class="wr-months" style="margin-top:14px">${rowsHtml.join("")}</div>
             ${line ? `<p style="margin-top:10px;font-size:15px;line-height:1.4">${line}</p>` : ""}
           </div>`;
       }
@@ -821,17 +847,17 @@
       const total = `€ ${num(s.total)}`;
       return tall("#262046", "", `
         <div aria-hidden="true" class="wr-abs wr-pop d5 wr-round" style="right:-70px;top:150px;width:200px;height:200px;background:#2f2858"></div>
-        ${SPACE}
+        ${SPACE_LOW}
         <div style="position:relative">
           <p class="wr-up wr-eyebrow" style="color:#c9c2ff">Wat Pip kostte</p>
-          <p class="wr-up d1" data-fit="cost-line" style="margin-top:18px;font-size:22px;font-weight:600;white-space:nowrap">Jullie gaven ${s.since ? esc(s.since) : "dit jaar"}…</p>
-          <p class="wr-pop d2 wr-num" data-fit="cost-total" style="margin-top:8px;font-size:${fit(total, 100, 344)}px;line-height:.92;letter-spacing:-0.02em;color:#c9c2ff">${total}</p>
-          <p class="wr-up d3" data-fit="cost-line" style="margin-top:8px;font-size:22px;font-weight:600;line-height:1.3;white-space:nowrap">…uit aan Pip. Dat is elke cent waard!</p>
-          <p class="wr-up d4" style="margin-top:14px;font-size:16px;line-height:1.45;color:rgba(255,255,255,.88)"><span class="wr-line">Gemiddeld ${euro(s.perDay)} per dag.</span>${s.priciest ? `<span class="wr-line">Duurste maand: ${esc(s.priciest)}.</span>` : ""}</p>
+          <p class="wr-up d1" data-fit="cost-line" style="margin-top:26px;font-size:22px;font-weight:600;white-space:nowrap">Jullie gaven ${s.since ? esc(s.since) : "dit jaar"}…</p>
+          <p class="wr-pop d2 wr-num" data-fit="cost-total" style="margin-top:12px;font-size:${fit(total, 100, 344)}px;line-height:.92;letter-spacing:-0.02em;color:#c9c2ff">${total}</p>
+          <p class="wr-up d3" data-fit="cost-line" style="margin-top:12px;font-size:22px;font-weight:600;line-height:1.3;white-space:nowrap">…uit aan Pip. Dat is elke cent waard!</p>
+          <p class="wr-up d4" style="margin-top:48px;font-size:16px;line-height:1.6;color:rgba(255,255,255,.88)"><span class="wr-line">Gemiddeld ${euro(s.perDay)} per dag.</span>${s.priciest ? `<span class="wr-line">Duurste maand: ${esc(s.priciest)}.</span>` : ""}</p>
         </div>
-        ${GAP}
-        <div class="wr-stack" style="position:relative;gap:11px">${toyRow}${rows}</div>
-        ${END}`);
+        ${GAP_WIDE}
+        <div class="wr-stack" style="position:relative;gap:16px">${toyRow}${rows}</div>
+        ${END_LOW}`);
     },
 
     photos(s) {
