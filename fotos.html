@@ -20,7 +20,7 @@
   <meta name="theme-color" content="#fbf7f2" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="telefoon.css?v=20261109-66">
+  <link rel="stylesheet" href="telefoon.css?v=20261109-67">
 </head>
 <body>
   <main>
@@ -66,7 +66,7 @@
           <button class="switch" data-style="motion" aria-label="Rustig inzoomen"></button>
         </div>
       </div>
-      <p class="note">Tik op een foto om te kiezen hoe hij op de Google Hub staat. De Google Hub neemt wijzigingen binnen 5 minuten over.</p>
+      <p class="note">Tik op een foto om te kiezen hoe hij op Thuis en op de Google Hub staat. De Google Hub neemt wijzigingen binnen 5 minuten over.</p>
 
     </div>
 
@@ -80,17 +80,26 @@
         <span class="saved" id="saved">Opgeslagen</span>
       </div>
 
-      <h2>Op de Google Hub</h2>
+      <h2>Zo staat hij</h2>
+      <!-- Twee uitsneden: Thuis op de telefoon is hoog, de Google Hub breed. -->
+      <div class="where" id="where" role="tablist" aria-label="Waar">
+        <button type="button" role="tab" data-where="phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>Telefoon</button>
+        <button type="button" role="tab" data-where="hub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Google Hub</button>
+      </div>
+      <!-- Thuis: met het vervagen en de rondjes erin, zodat je ziet wat er wegvalt. -->
+      <div class="phone-pv" id="phone" hidden><div class="scr crop" id="phone-screen"><img class="fg" alt="Voorbeeld op Thuis"><i class="pv-fade"></i><span class="pv-rings" aria-hidden="true"><i class="gold"></i><i></i><i class="purple"></i></span></div></div>
       <div class="hub" id="hub"><img class="bg" alt=""><img class="fg" alt="Voorbeeld op de Google Hub"></div>
 
-      <h2>Weergave</h2>
-      <div class="pills" id="fit">
-        <button data-value="cover">Vullen</button>
-        <button data-value="contain">Hele foto</button>
+      <div id="fit-box">
+        <h2>Weergave</h2>
+        <div class="pills" id="fit">
+          <button data-value="cover">Vullen</button>
+          <button data-value="contain">Hele foto</button>
+        </div>
       </div>
 
       <div id="crop-box">
-        <p class="note">Sleep de foto om hem te verschuiven. Knijp met twee vingers, of gebruik de schuif, om in te zoomen.</p>
+        <p class="note" id="crop-note">Sleep de foto om hem te verschuiven. Knijp met twee vingers, of gebruik de schuif, om in te zoomen.</p>
         <div class="zoom-row">
           <button id="zoom-out" aria-label="Uitzoomen">−</button>
           <input id="zoom" type="range" min="1" max="4" step="0.05" value="1" aria-label="Zoom">
@@ -103,7 +112,7 @@
     </main>
   </section>
 
-  <script src="config.js?v=20261109-66"></script>
+  <script src="config.js?v=20261109-67"></script>
   <script>
     (function () {
       "use strict";
@@ -322,7 +331,30 @@
       const MAX_ZOOM = 4;
       // Wat er op de Hub te zien is: zoom, en het punt van de foto (x, y in %) dat
       // in het midden staat.
-      let view = { zoom: 1, x: 50, y: 50 };
+      let view = { zoom: 1, x: 50, y: 50 }; // op de Google Hub
+      let phoneView = { zoom: 1, x: 50, y: 50 }; // op Thuis (telefoon)
+      let where = "phone"; // welk tabje: "phone" of "hub"
+
+      // Thuis neemt zonder eigen keuze het punt van de Hub over (instellingen.html, heroView).
+      function phoneViewOf(photo) {
+        return {
+          zoom: photo.phoneZoom || 1,
+          x: photo.phoneX ?? photo.focusX ?? 50,
+          y: photo.phoneY ?? photo.focusY ?? 50,
+        };
+      }
+
+      // Het lijstje en de foto van het tabje dat open staat.
+      function frame() {
+        return where === "phone" ? $("phone-screen") : $("hub");
+      }
+      function current() {
+        return where === "phone" ? phoneView : view;
+      }
+      function setCurrent(next) {
+        if (where === "phone") phoneView = next;
+        else view = next;
+      }
 
       // Vullen met zoom en verschuiving, zonder dat er rand zichtbaar wordt. Precies
       // dezelfde berekening als op de Google Hub (app.js, placeCover). Geeft het
@@ -348,43 +380,82 @@
         return { x: ((frameWidth / 2 - left) / width) * 100, y: ((frameHeight / 2 - top) / height) * 100 };
       }
 
+      // Thuis vult altijd; op de Hub alleen bij Vullen.
       function canCrop() {
-        return Boolean(editing) && editing.id !== DEFAULT_ID && fitOf(editing) === "cover";
+        if (!editing || editing.id === DEFAULT_ID) return false;
+        return where === "phone" || fitOf(editing) === "cover";
       }
 
       function renderEditor() {
-        const fit = fitOf(editing);
-        const front = $("hub").querySelector(".fg");
-        $("hub").classList.toggle("whole", fit === "contain");
-        $("hub").classList.toggle("crop", canCrop());
-        if (fit === "cover") {
-          const placed = placeCover(front, view);
-          if (placed) Object.assign(view, placed);
+        const phone = where === "phone";
+        $("where").querySelectorAll("button").forEach((button) => {
+          const on = button.dataset.where === where;
+          button.classList.toggle("on", on);
+          button.setAttribute("aria-selected", String(on));
+        });
+        $("phone").hidden = !phone;
+        $("hub").hidden = phone;
+        $("fit-box").hidden = phone || editing.id === DEFAULT_ID;
+        if (phone) {
+          const placed = placeCover($("phone-screen").querySelector(".fg"), phoneView);
+          if (placed) Object.assign(phoneView, placed);
         } else {
-          front.removeAttribute("style");
+          const fit = fitOf(editing);
+          const front = $("hub").querySelector(".fg");
+          $("hub").classList.toggle("whole", fit === "contain");
+          $("hub").classList.toggle("crop", canCrop());
+          if (fit === "cover") {
+            const placed = placeCover(front, view);
+            if (placed) Object.assign(view, placed);
+          } else {
+            front.removeAttribute("style");
+          }
+          $("fit").querySelectorAll("button").forEach((button) => button.classList.toggle("on", button.dataset.value === fit));
         }
-        $("fit").querySelectorAll("button").forEach((button) => button.classList.toggle("on", button.dataset.value === fit));
         $("crop-box").hidden = !canCrop();
-        $("zoom").value = view.zoom;
+        $("crop-note").textContent = phone
+          ? "Zo staat hij op Thuis. Sleep Pip boven de rondjes; knijp met twee vingers, of gebruik de schuif, om in te zoomen."
+          : "Sleep de foto om hem te verschuiven. Knijp met twee vingers, of gebruik de schuif, om in te zoomen.";
+        $("reset").textContent = phone ? "Zoals op de Google Hub" : "Terugzetten";
+        $("zoom").value = current().zoom;
       }
 
-      async function openEditor(photo) {
+      // Het voorbeeld van Thuis even hoog als de foto bovenaan Thuis op deze telefoon
+      // (stijl.css, .hero: zo breed als het scherm, min(470px, 62vh) hoog).
+      function sizePhonePreview() {
+        const height = Math.min(470, window.innerHeight * 0.62);
+        $("phone-screen").style.aspectRatio = `${window.innerWidth} / ${Math.round(height)}`;
+        $("phone-screen").style.setProperty("--s", String(Math.min(1, $("phone-screen").clientWidth / window.innerWidth) || 0.8));
+      }
+
+      $("where").querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
+        where = button.dataset.where;
+        renderEditor();
+        sizePhonePreview();
+        renderEditor();
+      }));
+
+      async function openEditor(photo, tab = "phone") {
         editing = { ...photo };
         const isDefault = photo.id === DEFAULT_ID;
         // De standaardfoto staat vast; die kun je alleen aan- of uitzetten bij Stijl.
-        $("fit").hidden = isDefault;
-        $("fit").previousElementSibling.hidden = isDefault;
+        $("where").hidden = isDefault;
         $("remove").hidden = isDefault;
+        where = isDefault ? "hub" : tab;
         view = isDefault
           ? { zoom: 1, x: 50, y: 62 }
           : { zoom: photo.zoom || 1, x: photo.focusX ?? 50, y: photo.focusY ?? 50 };
+        phoneView = phoneViewOf(photo);
         if (isDefault) editing = { ...photo, fit: "cover" };
         const url = await imageUrl(photo);
-        const front = $("hub").querySelector(".fg");
+        const fronts = [$("hub").querySelector(".fg"), $("phone-screen").querySelector(".fg")];
         $("hub").querySelectorAll("img").forEach((image) => { image.src = url; });
+        fronts[1].src = url;
         $("editor").hidden = false; // eerst zichtbaar: de berekening heeft de maat van het lijstje nodig
         $("editor").scrollTop = 0;
-        await front.decode().catch(() => {});
+        await Promise.all(fronts.map((image) => image.decode().catch(() => {})));
+        renderEditor();
+        sizePhonePreview();
         renderEditor();
       }
 
@@ -395,11 +466,10 @@
       let viewTimer = null;
       function saveView() {
         clearTimeout(viewTimer);
-        viewTimer = setTimeout(() => savePhoto({
-          zoom: Math.round(view.zoom * 100) / 100,
-          focusX: Math.round(view.x),
-          focusY: Math.round(view.y),
-        }), 300);
+        const change = where === "phone"
+          ? { phoneZoom: Math.round(phoneView.zoom * 100) / 100, phoneX: Math.round(phoneView.x), phoneY: Math.round(phoneView.y) }
+          : { zoom: Math.round(view.zoom * 100) / 100, focusX: Math.round(view.x), focusY: Math.round(view.y) };
+        viewTimer = setTimeout(() => savePhoto(change), 300);
       }
 
       // Slepen met één vinger, knijpen met twee (of slepen met de muis).
@@ -419,9 +489,9 @@
 
       function startGesture() {
         const points = [...pointers.values()];
-        const front = $("hub").querySelector(".fg");
+        const front = frame().querySelector(".fg");
         gesture = {
-          view: { ...view },
+          view: { ...current() },
           width: parseFloat(front.style.width) || 1,
           height: parseFloat(front.style.height) || 1,
           middle: middle(points),
@@ -429,10 +499,11 @@
         };
       }
 
-      $("hub").addEventListener("pointerdown", (event) => {
-        if (!canCrop()) return;
+      for (const box of [$("hub"), $("phone-screen")]) {
+      box.addEventListener("pointerdown", (event) => {
+        if (!canCrop() || box !== frame()) return;
         try {
-          $("hub").setPointerCapture(event.pointerId); // blijven volgen, ook buiten het lijstje
+          box.setPointerCapture(event.pointerId); // blijven volgen, ook buiten het lijstje
         } catch (error) {
           // Niet erg: dan alleen zolang de vinger in het lijstje blijft.
         }
@@ -440,7 +511,7 @@
         startGesture();
       });
 
-      $("hub").addEventListener("pointermove", (event) => {
+      box.addEventListener("pointermove", (event) => {
         if (!pointers.has(event.pointerId) || !gesture) return;
         pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
         const points = [...pointers.values()];
@@ -450,44 +521,59 @@
         const grow = zoom / gesture.view.zoom;
         const now = middle(points);
         // Vinger naar rechts = foto naar rechts = het midden schuift naar links in de foto.
-        view = {
+        setCurrent({
           zoom,
           x: gesture.view.x - ((now.x - gesture.middle.x) / (gesture.width * grow)) * 100,
           y: gesture.view.y - ((now.y - gesture.middle.y) / (gesture.height * grow)) * 100,
-        };
+        });
         renderEditor();
       });
 
-      ["pointerup", "pointercancel"].forEach((type) => $("hub").addEventListener(type, (event) => {
+      ["pointerup", "pointercancel"].forEach((type) => box.addEventListener(type, (event) => {
         if (!pointers.delete(event.pointerId)) return;
         if (pointers.size) return startGesture(); // nog een vinger: verder vanaf hier
         gesture = null;
         saveView();
       }));
+      }
 
       $("zoom").addEventListener("input", () => {
-        view.zoom = clampZoom(Number($("zoom").value));
+        current().zoom = clampZoom(Number($("zoom").value));
         renderEditor();
         saveView();
       });
 
       [["zoom-out", -0.25], ["zoom-in", 0.25]].forEach(([id, step]) => $(id).addEventListener("click", () => {
-        view.zoom = clampZoom(view.zoom + step);
+        current().zoom = clampZoom(current().zoom + step);
         renderEditor();
         saveView();
       }));
 
+      // Thuis: terug naar het punt van de Hub (de eigen uitsnede gaat weg). Hub: het midden.
       $("reset").addEventListener("click", () => {
+        clearTimeout(viewTimer);
+        if (where === "phone") {
+          for (const key of ["phoneZoom", "phoneX", "phoneY"]) delete editing[key];
+          phoneView = phoneViewOf({ ...editing, ...{ focusX: view.x, focusY: view.y } });
+          renderEditor();
+          savePhoto({ phone: null });
+          return;
+        }
         view = { zoom: 1, x: 50, y: 50 };
         renderEditor();
         saveView();
       });
 
-      window.addEventListener("resize", () => { if (editing) renderEditor(); });
+      window.addEventListener("resize", () => {
+        if (!editing) return;
+        sizePhonePreview();
+        renderEditor();
+      });
 
       let savedTimer = null;
       async function savePhoto(change) {
-        Object.assign(editing, change);
+        const { phone, ...known } = change;
+        Object.assign(editing, known);
         renderEditor();
         try {
           const response = await fetch(`${photosUrl}/${editing.id}`, {
@@ -518,7 +604,14 @@
         status("Foto verwijderd.", "ok");
       });
 
+      // Kwam je via Thuis (de foto vasthouden), dan brengt Klaar je daar terug.
+      const params = new URLSearchParams(location.search);
+      const fromHome = params.get("foto");
       $("close").addEventListener("click", () => {
+        if (fromHome) {
+          location.href = "instellingen.html";
+          return;
+        }
         $("editor").hidden = true;
         editing = null;
       });
@@ -531,7 +624,9 @@
         $("linked").hidden = !linked;
         $("not-linked").hidden = linked;
         if (linked) {
-          load();
+          await load();
+          const photo = fromHome && photos.find((item) => item.id === fromHome);
+          if (photo) openEditor(photo, params.get("op") === "hub" ? "hub" : "phone");
         } else {
           $("summary").textContent = "";
         }

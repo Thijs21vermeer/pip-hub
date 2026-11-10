@@ -2,11 +2,15 @@
 // fotopagina (fotos.html) op je telefoon; de Hub wisselt ertussen. Bewaard in Netlify Blobs
 // (store "pip-media"), met dezelfde code als de rest (PIP_ACTION_CODE).
 //
-//   GET    /api/fotos        lijst: [{ id, at, width, height, fit?, zoom?, focusX?, focusY? }], oudste eerst
+//   GET    /api/fotos        lijst: [{ id, at, width, height, fit?, zoom?, focusX?, focusY?,
+//                            phoneZoom?, phoneX?, phoneY? }], oudste eerst
 //   GET    /api/fotos/:id    de foto zelf (JPEG)
 //   POST   /api/fotos?w=&h=  nieuwe foto: de JPEG-bytes, al verkleind door de fotopagina
 //   PATCH  /api/fotos/:id    { fit: "cover" | "contain" | null, zoom (1-4), focusX, focusY (0-100) }
 //                            focusX/focusY: het punt van de foto dat in het midden van de Hub staat
+//                            phoneZoom (1-4), phoneX, phoneY (0-100): hetzelfde voor Thuis op de
+//                            telefoon (instellingen.html). { phone: null } wist die weer: dan
+//                            neemt Thuis het punt van de Hub over.
 //   DELETE /api/fotos/:id    foto weg
 //   GET    /api/fotolijst    stijl van de fotolijst: { seconds, order, includeDefault, motion }
 //   PUT    /api/fotolijst    stijl aanpassen
@@ -127,6 +131,18 @@ export default async (request, context) => {
       for (const key of ["focusX", "focusY"]) {
         const value = percent(body[key]);
         if (value !== undefined) photo[key] = value;
+      }
+      if (body.phone === null) {
+        delete photo.phoneZoom;
+        delete photo.phoneX;
+        delete photo.phoneY;
+      } else {
+        const phoneZoom = zoomOf(body.phoneZoom);
+        if (phoneZoom !== undefined) photo.phoneZoom = phoneZoom;
+        for (const key of ["phoneX", "phoneY"]) {
+          const value = percent(body[key]);
+          if (value !== undefined) photo[key] = value;
+        }
       }
       await store.setJSON(LIST_KEY, photos);
       return json(200, photo, headers);

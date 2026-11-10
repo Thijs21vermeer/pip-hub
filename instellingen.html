@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-66">
+  <link rel="stylesheet" href="stijl.css?v=20261109-67">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -34,6 +34,8 @@
     <a class="hero-camera" href="fotos.html" aria-label="Foto van Pip toevoegen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
     </a>
+    <!-- Foto vasthouden: deze foto verschuiven (fotos.html, het tabje Telefoon). -->
+    <a class="hero-menu" id="hero-menu" href="fotos.html" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Foto verschuiven</a>
   </div>
 
   <main class="page" style="padding-top: 0">
@@ -222,10 +224,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-66"></script>
-  <script src="telefoon.js?v=20261109-66"></script>
-  <script src="taken.js?v=20261109-66"></script>
-  <script src="stats.js?v=20261109-66"></script>
+  <script src="config.js?v=20261109-67"></script>
+  <script src="telefoon.js?v=20261109-67"></script>
+  <script src="taken.js?v=20261109-67"></script>
+  <script src="stats.js?v=20261109-67"></script>
   <script>
     (function () {
       "use strict";
@@ -249,6 +251,32 @@
       let photoIds = [];
       const photoUrls = new Map();
       let slide = 0;
+      let shownId = null; // de foto die nu in beeld is (null: de standaardfoto)
+      // Per foto hoe hij op Thuis staat: de eigen uitsnede voor de telefoon, of
+      // anders het punt van de Hub (fotos.html, phoneViewOf).
+      let photoViews = P.recall("photo-views") || {};
+      function viewOf(photo) {
+        return { zoom: photo.phoneZoom || 1, x: photo.phoneX ?? photo.focusX ?? 50, y: photo.phoneY ?? photo.focusY ?? 50 };
+      }
+
+      // Vullen, inzoomen en het gekozen punt in het midden, zonder rand (zelfde
+      // rekensom als fotos.html en app.js, placeCover). Geeft terug waar hij staat.
+      function placeHero(image, view) {
+        const box = $("slides");
+        const frameWidth = box.clientWidth;
+        const frameHeight = box.clientHeight;
+        if (!view || !image.naturalWidth || !frameWidth) return null;
+        const scale = Math.max(frameWidth / image.naturalWidth, frameHeight / image.naturalHeight) * view.zoom;
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        const left = Math.min(0, Math.max(frameWidth - width, frameWidth / 2 - (view.x / 100) * width));
+        const top = Math.min(0, Math.max(frameHeight - height, frameHeight / 2 - (view.y / 100) * height));
+        Object.assign(image.style, { inset: "auto", left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`, maxWidth: "none", objectFit: "fill" });
+        return { left, top, width };
+      }
+      window.addEventListener("resize", () => {
+        $("slides").querySelectorAll("img[data-id]").forEach((image) => placeHero(image, photoViews[image.dataset.id]));
+      });
 
       // Bewaard op de telefoon (telefoon.js, mediaUrl): na de eerste keer meteen in beeld.
       async function photoUrl(id) {
@@ -264,14 +292,17 @@
         } catch (error) {
           return;
         }
+        const id = photoIds[index % photoIds.length];
         const image = new Image();
         image.alt = "Pip";
+        image.dataset.id = id;
         image.src = url;
         await image.decode().catch(() => {});
         const slides = $("slides");
         const old = [...slides.children];
         slides.appendChild(image);
-        colorBarFrom(image);
+        shownId = id;
+        colorBarFrom(image, placeHero(image, photoViews[id]));
         requestAnimationFrame(() => {
           image.classList.add("on");
           old.forEach((el) => el.classList.remove("on"));
@@ -284,9 +315,9 @@
       // De statusbalk in de kleur van de bovenkant van de foto; scrol je voorbij
       // de foto, dan in de kleur van de pagina (telefoon.js, paintStatusBar).
       let photoColor = null;
-      function colorBarFrom(image) {
+      function colorBarFrom(image, placed) {
         const box = $("slides");
-        photoColor = P.topColorOf(image, box.clientWidth, box.clientHeight) || photoColor;
+        photoColor = P.topColorOf(image, box.clientWidth, box.clientHeight, placed || undefined) || photoColor;
         updateBar();
       }
       function updateBar() {
@@ -300,6 +331,44 @@
         const first = document.querySelector("#slides img");
         if (first.complete && first.naturalWidth) colorBarFrom(first);
         else first.addEventListener("load", () => colorBarFrom(first), { once: true });
+      }
+
+      // Foto vasthouden (een halve seconde, zonder te schuiven): Foto verschuiven.
+      // Brengt je bij deze foto in fotos.html, op het tabje Telefoon.
+      {
+        const hero = document.querySelector(".hero");
+        const menu = $("hero-menu");
+        let pressTimer = null;
+        let pressAt = null;
+        const cancel = () => { clearTimeout(pressTimer); pressAt = null; };
+        const hide = () => { menu.hidden = true; };
+        hero.addEventListener("pointerdown", (event) => {
+          if (event.target.closest(".hero-camera, .hero-menu")) return;
+          hide();
+          if (!shownId) return;
+          const id = shownId;
+          pressAt = { x: event.clientX, y: event.clientY };
+          clearTimeout(pressTimer);
+          pressTimer = setTimeout(() => {
+            const box = hero.getBoundingClientRect();
+            menu.href = `fotos.html?foto=${encodeURIComponent(id)}&op=telefoon`;
+            menu.hidden = false;
+            const left = Math.min(box.width - menu.offsetWidth - 16, Math.max(16, pressAt.x - box.left - menu.offsetWidth / 2));
+            const top = Math.max(16, pressAt.y - box.top - menu.offsetHeight - 28);
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+            if (navigator.vibrate) navigator.vibrate(10);
+            pressAt = null;
+          }, 550);
+        });
+        hero.addEventListener("pointermove", (event) => {
+          if (pressAt && Math.hypot(event.clientX - pressAt.x, event.clientY - pressAt.y) > 10) cancel();
+        });
+        ["pointerup", "pointercancel", "pointerleave"].forEach((type) => hero.addEventListener(type, cancel));
+        // Geen eigen menu van de telefoon (foto bewaren en zo) op de foto.
+        hero.addEventListener("contextmenu", (event) => { if (!event.target.closest(".hero-camera, .hero-menu")) event.preventDefault(); });
+        document.addEventListener("pointerdown", (event) => { if (!hero.contains(event.target)) hide(); });
+        window.addEventListener("scroll", () => { cancel(); hide(); }, { passive: true });
       }
 
       async function startSlides() {
@@ -316,7 +385,11 @@
         try {
           const list = await getJson(urls.photos);
           photoIds = list.map((photo) => photo.id);
+          photoViews = Object.fromEntries(list.map((photo) => [photo.id, viewOf(photo)]));
           P.remember("photos", photoIds);
+          P.remember("photo-views", photoViews);
+          // Staat de foto van nu er al (van de vorige keer), dan meteen op zijn plek.
+          $("slides").querySelectorAll("img[data-id]").forEach((image) => colorBarFrom(image, placeHero(image, photoViews[image.dataset.id])));
           P.pruneMedia(urls.photos, new Set(photoIds.map((id) => `${urls.photos}/${id}`)));
         } catch (error) {
           if (!photoIds.length) photoIds = [];

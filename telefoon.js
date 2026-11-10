@@ -510,16 +510,18 @@
 
   // Gemiddelde kleur van de bovenste rand van een foto zoals hij in beeld staat
   // (object-fit: cover, in het midden), of null.
-  function topColorOf(img, boxWidth, boxHeight) {
+  // placed: waar de foto echt staat ({ left, top, width }, in px), als hij niet
+  // gewoon in het midden staat (Thuis met een eigen uitsnede).
+  function topColorOf(img, boxWidth, boxHeight, placed) {
     try {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
       if (!iw || !ih || !boxWidth || !boxHeight) return null;
-      const scale = Math.max(boxWidth / iw, boxHeight / ih);
+      const scale = placed ? placed.width / iw : Math.max(boxWidth / iw, boxHeight / ih);
       const sw = boxWidth / scale;
       const sh = Math.max(1, (boxHeight * 0.04) / scale);
-      const sx = (iw - sw) / 2;
-      const sy = (ih - boxHeight / scale) / 2;
+      const sx = placed ? -placed.left / scale : (iw - sw) / 2;
+      const sy = placed ? -placed.top / scale : (ih - boxHeight / scale) / 2;
       const canvas = document.createElement("canvas");
       canvas.width = 24;
       canvas.height = 3;
