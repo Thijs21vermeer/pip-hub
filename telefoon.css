@@ -478,7 +478,7 @@ button {
 .phone-pv .scr {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 375 / 470;
+  aspect-ratio: 375 / 400;
   border-radius: 27px;
   background: var(--home-bg);
   touch-action: none;

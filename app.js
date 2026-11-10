@@ -473,6 +473,13 @@
     return `${count} ${count === 1 ? "portie" : "porties"}`;
   }
 
+  // De taak die bij de kattenbak hoort (het icoontje van de bak, bv. "Bak draaien").
+  // Draai je de bak via de knop, dan staat die taak meteen op gedaan.
+  function cleanTask() {
+    return tasks().find((task) => task.icon === "box" && !task.play) || null;
+  }
+
+  // Geeft terug of het lukte.
   async function runAction(action, extra = {}) {
     busyActions.add(action.id);
     renderActions();
@@ -500,6 +507,7 @@
       playFeedSignal();
       setTimeout(refreshKattenbak, 30 * 1000);
     }
+    return result.kind === "ok";
   }
 
   function setActionCode(code) {
@@ -2489,15 +2497,31 @@
     clearTimeout(sheetTimer);
   }
 
+  // Kattenbak draaien: wie het doet krijgt de kattenbak-taak meteen afgevinkt.
+  // Met één baasje, zonder die taak of als hij al gedaan is: gewoon bevestigen.
   function confirmAction(action) {
-    openSheet(null, `
-      <h3>${escapeHtml(action.title)}</h3>
-      <p>${escapeHtml(action.confirm)}</p>
+    const task = action.id === "clean" ? cleanTask() : null;
+    const ask = Boolean(task) && !currentDone(task) && people().length > 1;
+    const body = ask
+      ? `<p>Wie draait hem? Die krijgt ${escapeHtml(task.title)} meteen afgevinkt.</p>
+      <div class="choices">${people().map((person) =>
+        `<button class="choice" data-action="act-person" data-person="${escapeHtml(person)}">${escapeHtml(person)}</button>`).join("")}</div>
+      <div class="choices"><button class="choice secondary" data-action="close">Annuleren</button></div>`
+      : `<p>${escapeHtml(action.confirm)}</p>
       <div class="choices">
         <button class="choice" data-action="act-confirm">${escapeHtml(action.button)}</button>
         <button class="choice secondary" data-action="close">Annuleren</button>
-      </div>`);
+      </div>`;
+    openSheet(null, `
+      <h3>${escapeHtml(action.title)}</h3>
+      ${body}`);
     sheetAction = action;
+  }
+
+  async function cleanBy(action, person) {
+    const ok = await runAction(action);
+    const task = cleanTask();
+    if (ok && task && !currentDone(task)) markDone(task, person);
   }
 
   // ---- Naar de Google Hub ----
@@ -2962,12 +2986,18 @@
       if (!kattenbakLinked()) showNotLinked();
       else if (act.id === "feed") askFeed(act);
       else confirmAction(act);
+    } else if (action === "act-person" && sheetAction) {
+      const act = sheetAction;
+      closeSheet();
+      cleanBy(act, target.dataset.person);
     } else if (action === "act-confirm" && sheetAction) {
       const act = sheetAction;
       closeSheet();
       if (act.id === "feed") {
         writeStorage(FEED_PORTIONS_KEY, String(feedPortions));
         runAction(act, { portions: feedPortions });
+      } else if (act.id === "clean" && people().length === 1) {
+        cleanBy(act, people()[0]); // één baasje: die heeft hem gedraaid
       } else {
         runAction(act);
       }

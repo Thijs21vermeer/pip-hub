@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-67">
+  <link rel="stylesheet" href="stijl.css?v=20261109-68">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -31,6 +31,8 @@
   <div class="hero">
     <div class="hero-slides" id="slides"><img class="on" src="pip-foto.jpg" alt="Pip"></div>
     <div class="hero-fade"></div>
+    <!-- Wie deze telefoon gebruikt: tik om te wisselen (renderMe, openMe). -->
+    <button type="button" class="hero-me" id="hero-me" aria-label="Wie ben jij?" hidden></button>
     <a class="hero-camera" href="fotos.html" aria-label="Foto van Pip toevoegen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
     </a>
@@ -197,6 +199,8 @@
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="clean-title">
       <h2 id="clean-title">Kattenbak draaien</h2>
       <p id="clean-text">Nu laten draaien?</p>
+      <!-- Wie draait hem: die krijgt de kattenbak-taak meteen afgevinkt. -->
+      <div class="who" id="clean-who"></div>
       <button type="button" class="primary" id="clean-go">Ja, draaien</button>
       <button class="sheet-cancel" id="clean-cancel" type="button">Annuleren</button>
     </div>
@@ -215,6 +219,21 @@
     </div>
   </div>
 
+  <div class="sheet" id="me-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="me-title">
+      <h2 id="me-title">Wie ben jij?</h2>
+      <p id="me-text"></p>
+      <div class="who" id="me-who"></div>
+      <button class="sheet-cancel" id="me-cancel" type="button">Later</button>
+    </div>
+  </div>
+  <!-- Na afvinken: even onderaan wie het deed, met Iemand anders? -->
+  <div class="toast" id="toast" role="status" hidden>
+    <span class="toast-av" id="toast-av"></span>
+    <span class="toast-text" id="toast-text"></span>
+    <button type="button" class="toast-other" id="toast-other">Iemand anders?</button>
+  </div>
+
   <div class="sheet" id="sheet" hidden>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <h2 id="sheet-title">Wie heeft het gedaan?</h2>
@@ -224,10 +243,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-67"></script>
-  <script src="telefoon.js?v=20261109-67"></script>
-  <script src="taken.js?v=20261109-67"></script>
-  <script src="stats.js?v=20261109-67"></script>
+  <script src="config.js?v=20261109-68"></script>
+  <script src="telefoon.js?v=20261109-68"></script>
+  <script src="taken.js?v=20261109-68"></script>
+  <script src="stats.js?v=20261109-68"></script>
   <script>
     (function () {
       "use strict";
@@ -343,7 +362,7 @@
         const cancel = () => { clearTimeout(pressTimer); pressAt = null; };
         const hide = () => { menu.hidden = true; };
         hero.addEventListener("pointerdown", (event) => {
-          if (event.target.closest(".hero-camera, .hero-menu")) return;
+          if (event.target.closest(".hero-camera, .hero-menu, .hero-me")) return;
           hide();
           if (!shownId) return;
           const id = shownId;
@@ -366,7 +385,7 @@
         });
         ["pointerup", "pointercancel", "pointerleave"].forEach((type) => hero.addEventListener(type, cancel));
         // Geen eigen menu van de telefoon (foto bewaren en zo) op de foto.
-        hero.addEventListener("contextmenu", (event) => { if (!event.target.closest(".hero-camera, .hero-menu")) event.preventDefault(); });
+        hero.addEventListener("contextmenu", (event) => { if (!event.target.closest(".hero-camera, .hero-menu, .hero-me")) event.preventDefault(); });
         document.addEventListener("pointerdown", (event) => { if (!hero.contains(event.target)) hide(); });
         window.addEventListener("scroll", () => { cancel(); hide(); }, { passive: true });
       }
@@ -499,7 +518,7 @@
             sub.textContent = due;
             sub.classList.toggle("soon", Boolean(item.task.remind));
             el.setAttribute("aria-label", `${item.task.title} afvinken (${due.toLowerCase()})`);
-            el.addEventListener("click", () => askWho(item.task));
+            el.addEventListener("click", () => doTask(item.task));
           } else {
             title.textContent = item.task.title;
             const at = item.done.at >= today ? P.clock(item.done.at) : P.longDate(new Date(item.done.at)).replace(/^\w+ /, "");
@@ -682,7 +701,9 @@
         const people = P.people(data.settings);
         const today = playToday();
         const last = today[today.length - 1];
-        if (!people.includes(playChoice.who)) playChoice.who = last && people.includes(last.by) ? last.by : people[0];
+        // Eerst wie deze telefoon gebruikt, anders wie het laatst speelde.
+        const me = P.me(data.settings);
+        if (!people.includes(playChoice.who)) playChoice.who = me || (last && people.includes(last.by) ? last.by : people[0]);
         playChoice.noTimer = false;
         playChoice.busy = false;
         $("play-error").hidden = true;
@@ -902,14 +923,47 @@
         return result;
       }
 
-      // Kattenbak draaien: eerst vragen; zit Pip erin, dan alleen zeggen.
+      // De taak die bij de kattenbak hoort (het icoontje van de bak, bv. "Bak draaien").
+      // Draai je de bak via de knop, dan staat die taak meteen op gedaan.
+      function cleanTask() {
+        return tasksOf(data.settings).find((task) => task.icon === "box" && !task.play) || null;
+      }
+      function cleanTaskDone(task) {
+        const item = window.PipTasks.status([task], data.settings.done || {}, new Date(), config.resetHour).find((entry) => entry.task.id === task.id);
+        return item ? item.done : null;
+      }
+
+      // Kattenbak draaien: eerst vragen wie het doet; zit Pip erin, dan alleen zeggen.
       function paintCleanSheet() {
         const inside = kbStatus && kbStatus.catInside;
+        const people = P.people(data.settings);
+        const task = cleanTask();
+        const done = task && cleanTaskDone(task);
+        const me = P.me(data.settings);
+        // Weet de telefoon wie je bent, of is er maar één baasje (of geen kattenbak-taak):
+        // niet vragen, gewoon Ja, draaien.
+        const ask = !inside && task && !done && people.length > 1 && !me;
+        const free = kbStatus ? "Pip zit er niet in. " : "";
         $("clean-title").textContent = inside ? "Pip zit erin" : "Kattenbak draaien";
         $("clean-text").textContent = inside
           ? "De bak draait niet zolang Pip erin zit. Probeer het straks nog eens."
+          : ask ? `${free}Wie draait hem? Die krijgt ${task.title} meteen afgevinkt.`
+          : task && !done && me ? `Nu laten draaien? ${free}${task.title} komt op naam van ${me}.`
           : kbStatus ? "Nu laten draaien? Pip zit er niet in." : "Nu laten draaien?";
-        $("clean-go").hidden = Boolean(inside);
+        const who = $("clean-who");
+        who.innerHTML = "";
+        who.hidden = !ask;
+        if (ask) {
+          for (const name of people) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.appendChild(P.avatarElement(name, people, avatars));
+            button.append(name);
+            button.addEventListener("click", () => runClean(name));
+            who.appendChild(button);
+          }
+        }
+        $("clean-go").hidden = Boolean(inside) || ask;
         $("clean-cancel").textContent = inside ? "Oké" : "Annuleren";
       }
       $("act-clean").addEventListener("click", () => {
@@ -919,27 +973,41 @@
       });
       $("clean-cancel").addEventListener("click", () => { $("clean-sheet").hidden = true; });
       $("clean-sheet").addEventListener("click", (event) => { if (event.target === $("clean-sheet")) $("clean-sheet").hidden = true; });
-      $("clean-go").addEventListener("click", async () => {
+      // by: wie hem draait (dan de kattenbak-taak meteen afvinken), of null.
+      let cleaning = false;
+      async function runClean(by) {
+        if (cleaning) return;
+        cleaning = true;
         const button = $("clean-go");
-        if (button.disabled) return;
         button.disabled = true;
         button.textContent = "Bezig…";
+        $("clean-who").querySelectorAll("button").forEach((item) => { item.disabled = true; });
         try {
           await runAct({ action: "clean" });
           justDone.clean = Date.now();
           $("clean-sheet").hidden = true;
-          actMessage("De kattenbak draait. Klaar over een paar minuten.");
-          renderActs();
-          load();
+          const task = cleanTask();
+          const name = by || (P.people(data.settings).length === 1 ? P.people(data.settings)[0] : null);
+          if (task && name && !cleanTaskDone(task)) {
+            actMessage(`De kattenbak draait. ${task.title} staat op gedaan door ${name}.`);
+            renderActs();
+            await tick(task, name, { quiet: true });
+          } else {
+            actMessage("De kattenbak draait. Klaar over een paar minuten.");
+            renderActs();
+            load();
+          }
         } catch (error) {
           if (error.code === "CAT_INSIDE" && kbStatus) kbStatus.catInside = true;
           $("clean-sheet").hidden = true;
           actMessage(ACT_ERRORS[error.code] || "Dat lukte niet. Probeer het nog eens.", true);
           renderActs();
         }
+        cleaning = false;
         button.disabled = false;
         button.textContent = "Ja, draaien";
-      });
+      }
+      $("clean-go").addEventListener("click", () => runClean(P.me(data.settings) || null));
 
       // Voeren: hoeveel porties (1-10, net als op de Hub).
       function paintFeedSheet() {
@@ -1038,9 +1106,11 @@
 
       // ---- Afvinken vanaf de telefoon ----
 
-      function askWho(task) {
+      // onPick: wat er gebeurt met de gekozen naam (standaard: afvinken).
+      function askWho(task, onPick = (name) => tick(task, name), title = "Wie heeft het gedaan?") {
         const people = P.people(data.settings);
-        if (people.length === 1) return tick(task, people[0]);
+        if (people.length === 1) return onPick(people[0]);
+        $("sheet-title").textContent = title;
         $("sheet-task").textContent = task.title;
         const who = $("who");
         who.innerHTML = "";
@@ -1049,10 +1119,160 @@
           button.type = "button";
           button.appendChild(P.avatarElement(name, people, avatars));
           button.append(name);
-          button.addEventListener("click", () => tick(task, name));
+          button.addEventListener("click", () => onPick(name));
           who.appendChild(button);
         }
         $("sheet").hidden = false;
+      }
+
+      // Een taak aantikken: meteen gedaan op naam van wie deze telefoon gebruikt.
+      // Weet de telefoon dat nog niet, dan eerst één keer vragen.
+      function doTask(task) {
+        const people = P.people(data.settings);
+        if (people.length === 1) return tick(task, people[0]);
+        const me = P.me(data.settings);
+        if (me) return tickAs(task, me);
+        openMe({ then: (name) => tickAs(task, name) });
+      }
+
+      async function tickAs(task, by) {
+        if (await tick(task, by, { quiet: true })) showToast(`Gedaan door ${by}`, by, task);
+      }
+
+      // Iemand anders deed het: eerst jouw vinkje eraf (ook de punten), dan op de goede naam.
+      async function reassign(task, by) {
+        closeSheet();
+        const entry = (data.settings.done || {})[task.id];
+        if (entry && entry.by === by) return showToast(`Gedaan door ${by}`, by, task);
+        try {
+          if (entry) {
+            const response = await fetch(urls.settings, {
+              method: "PUT",
+              headers: auth({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ untick: { id: task.id, at: entry.at } }),
+            });
+            if (!response.ok && response.status !== 409) throw new Error(String(response.status));
+          }
+        } catch (error) {
+          status("Dat lukte niet. Probeer het nog eens.", "error");
+          return;
+        }
+        await tickAs(task, by);
+      }
+
+      // ---- Het balkje onderaan ----
+      let toastTimer = null;
+      let toastTask = null;
+      function hideToast() {
+        clearTimeout(toastTimer);
+        $("toast").hidden = true;
+        toastTask = null;
+      }
+      function showToast(text, name, task = null) {
+        const people = P.people(data.settings);
+        toastTask = task;
+        $("toast-av").innerHTML = "";
+        $("toast-av").appendChild(P.avatarElement(name, people, avatars));
+        $("toast-text").textContent = text;
+        $("toast-other").hidden = !task || people.length <= 1;
+        const toast = $("toast");
+        toast.hidden = true;
+        void toast.offsetWidth; // de animatie opnieuw
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(hideToast, 6000);
+      }
+      $("toast-other").addEventListener("click", () => {
+        const task = toastTask;
+        hideToast();
+        if (task) askWho(task, (name) => reassign(task, name), "Wie deed het?");
+      });
+
+      // ---- Wie ben jij (per telefoon) ----
+      // Geen wachtwoorden: elke telefoon onthoudt wie hem gebruikt (telefoon.js, me).
+      // Linksboven op de foto staat jouw rondje; tik om te wisselen.
+      const ME_ASKED_KEY = "pip-ik-gevraagd";
+      let meThen = null;
+      let meAsked = false;
+
+      function renderMe() {
+        const people = P.people(data.settings);
+        const me = P.me(data.settings);
+        const button = $("hero-me");
+        button.hidden = people.length <= 1; // één baasje: niets te kiezen
+        // Een pilletje: jouw rondje, je naam en een pijltje (je kunt wisselen).
+        button.innerHTML = "";
+        if (me) button.appendChild(P.avatarElement(me, people, avatars));
+        else button.insertAdjacentHTML("beforeend", '<span class="avatar me-unknown">?</span>');
+        const label = document.createElement("span");
+        label.className = "me-name";
+        label.textContent = me || "Wie ben jij?";
+        button.append(label);
+        button.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>');
+        button.classList.toggle("unknown", !me);
+        button.setAttribute("aria-label", me ? `Jij bent ${me}. Tik om te wisselen.` : "Wie ben jij?");
+      }
+
+      // then: wat er na het kiezen moet (bv. het vinkje dat je net zette).
+      function openMe({ then = null } = {}) {
+        meThen = then;
+        const people = P.people(data.settings);
+        const me = P.me(data.settings);
+        $("me-text").textContent = then
+          ? "Dan komt dit vinkje, en straks elk vinkje, op jouw naam. Deze telefoon onthoudt het."
+          : me ? "Wissel naar iemand anders. Alleen op deze telefoon."
+          : "Dan hoef je bij afvinken niet meer te kiezen. Deze telefoon onthoudt het; wisselen kan altijd linksboven.";
+        $("me-cancel").textContent = me || then ? "Annuleren" : "Later";
+        const who = $("me-who");
+        who.innerHTML = "";
+        for (const name of people) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.setAttribute("aria-pressed", String(name === me));
+          button.appendChild(P.avatarElement(name, people, avatars));
+          button.append(name);
+          button.addEventListener("click", () => pickMe(name));
+          who.appendChild(button);
+        }
+        $("me-sheet").hidden = false;
+      }
+
+      function closeMe() {
+        $("me-sheet").hidden = true;
+        meThen = null;
+        try {
+          localStorage.setItem(ME_ASKED_KEY, "1");
+        } catch (error) {
+          // Niet erg: dan vraagt hij het nog eens.
+        }
+      }
+
+      function pickMe(name) {
+        const then = meThen;
+        const changed = name !== P.me(data.settings);
+        P.setMe(name);
+        closeMe();
+        renderAll();
+        refreshBattle(); // de fotobattle weet ook wie je bent
+        if (then) then(name);
+        else if (changed) showToast(`Je bent nu ${name} op deze telefoon`, name);
+      }
+
+      $("hero-me").addEventListener("click", () => openMe());
+      $("me-cancel").addEventListener("click", closeMe);
+      $("me-sheet").addEventListener("click", (event) => { if (event.target === $("me-sheet")) closeMe(); });
+
+      // De eerste keer (nog niemand gekozen en nog niet gevraagd): één keer vragen.
+      function maybeAskMe() {
+        if (meAsked || P.people(data.settings).length <= 1 || P.me(data.settings)) return;
+        meAsked = true;
+        let asked = false;
+        try {
+          asked = localStorage.getItem(ME_ASKED_KEY) === "1";
+        } catch (error) {
+          asked = false;
+        }
+        if (!asked && [...document.querySelectorAll(".sheet")].every((sheet) => sheet.hidden)) openMe();
       }
 
       function closeSheet() {
@@ -1061,9 +1281,10 @@
       $("sheet-cancel").addEventListener("click", closeSheet);
       $("sheet").addEventListener("click", (event) => { if (event.target === $("sheet")) closeSheet(); });
 
-      async function tick(task, by) {
+      // quiet: de melding staat al ergens anders (bij Acties, na de bak draaien).
+      async function tick(task, by, { quiet = false } = {}) {
         closeSheet();
-        status(`${task.title} afvinken…`);
+        if (!quiet) status(`${task.title} afvinken…`);
         try {
           const response = await fetch(urls.settings, {
             method: "PUT",
@@ -1071,10 +1292,13 @@
             body: JSON.stringify({ tick: { id: task.id, by } }),
           });
           if (!response.ok) throw new Error(String(response.status));
-          status(`${task.title}: gedaan door ${by}. De Google Hub neemt het binnen 5 minuten over.`, "ok");
+          if (!quiet) status(`${task.title}: gedaan door ${by}. De Google Hub neemt het binnen 5 minuten over.`, "ok");
+          else status("");
           await load();
+          return true;
         } catch (error) {
-          status("Afvinken lukte niet. Probeer het nog eens.", "error");
+          status(`${task.title} afvinken lukte niet. Probeer het nog eens.`, "error");
+          return false;
         }
       }
 
@@ -1261,9 +1485,11 @@
         }
         renderAll();
         refreshBattle();
+        maybeAskMe();
       }
 
       function renderAll() {
+        renderMe();
         renderTasks();
         renderActs();
         renderWrapped();

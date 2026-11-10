@@ -20,7 +20,7 @@
   <meta name="theme-color" content="#fbf7f2" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="telefoon.css?v=20261109-67">
+  <link rel="stylesheet" href="telefoon.css?v=20261109-68">
 </head>
 <body>
   <main>
@@ -112,7 +112,7 @@
     </main>
   </section>
 
-  <script src="config.js?v=20261109-67"></script>
+  <script src="config.js?v=20261109-68"></script>
   <script>
     (function () {
       "use strict";
@@ -421,9 +421,9 @@
       }
 
       // Het voorbeeld van Thuis even hoog als de foto bovenaan Thuis op deze telefoon
-      // (stijl.css, .hero: zo breed als het scherm, min(470px, 62vh) hoog).
+      // (stijl.css, .hero: zo breed als het scherm, min(400px, 54vh) hoog).
       function sizePhonePreview() {
-        const height = Math.min(470, window.innerHeight * 0.62);
+        const height = Math.min(400, window.innerHeight * 0.54);
         $("phone-screen").style.aspectRatio = `${window.innerWidth} / ${Math.round(height)}`;
         $("phone-screen").style.setProperty("--s", String(Math.min(1, $("phone-screen").clientWidth / window.innerWidth) || 0.8));
       }

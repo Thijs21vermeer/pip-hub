@@ -172,7 +172,7 @@ a {
 
 .hero {
   position: relative;
-  height: min(470px, 62vh);
+  height: min(400px, 54vh);
   overflow: hidden;
   background: var(--bg);
 }
@@ -219,6 +219,104 @@ a {
 .hero-camera svg {
   width: 22px;
   height: 22px;
+}
+/* Wie deze telefoon gebruikt: linksboven, tegenover de camera. Een pilletje
+   met jouw rondje, je naam en een pijltje omlaag. */
+.hero-me {
+  position: absolute;
+  left: 16px;
+  top: max(16px, env(safe-area-inset-top));
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 92px);
+  height: 44px;
+  padding: 0 12px 0 5px;
+  border: 0;
+  border-radius: 99px;
+  background: rgba(255, 250, 244, 0.88);
+  color: #2b2019;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.hero-me[hidden] {
+  display: none;
+}
+.hero-me .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+.hero-me .me-unknown {
+  background: #d9ccbd;
+  color: #5e4f43;
+}
+.me-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hero-me svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: #8c7b6b;
+}
+
+/* Het balkje onderaan na afvinken: wie het deed, met Iemand anders? */
+.toast {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 14px 10px 10px;
+  border-radius: 18px;
+  background: rgba(36, 26, 20, 0.94);
+  color: #fbf4e8;
+  font-size: 15px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  animation: toast-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.toast[hidden] {
+  display: none;
+}
+.toast-av .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+.toast-text {
+  flex: 1;
+  min-width: 0;
+}
+.toast-other {
+  flex: none;
+  padding: 6px 0 6px 8px;
+  border: 0;
+  background: none;
+  color: #f3c77a;
+  font: inherit;
+  font-weight: 700;
+}
+.toast-other[hidden] {
+  display: none;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
 }
 /* Foto vasthouden: Foto verschuiven. Geen eigen menu van de telefoon op de foto. */
 .hero {
@@ -1201,6 +1299,9 @@ button.piece.open:active .tick {
   width: 52px;
   height: 52px;
   font-size: 20px;
+}
+.who[hidden] {
+  display: none;
 }
 /* Koppeling: kopiëren of ontkoppelen. */
 .sheet-actions {
