@@ -3049,3 +3049,25 @@ img.score-avatar {
   height: 3.2rem;
   border-radius: 0.7rem;
 }
+
+.rest-battle-wrap {
+  position: relative;
+  flex: none;
+}
+
+.rest-battle-maker {
+  position: absolute;
+  right: -0.5rem;
+  bottom: -0.5rem;
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: #7d8c5a;
+  color: #fff8f0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  object-fit: cover;
+  box-shadow: 0 0 0 2.5px #fbf7f2;
+}

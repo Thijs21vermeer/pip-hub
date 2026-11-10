@@ -135,6 +135,12 @@
     for (const tick of ticks) {
       if (!people.has(tick.by)) people.set(tick.by, { name: tick.by, points: 0, count: 0, tasks: new Map(), days: [], early: 0 });
       const person = people.get(tick.by);
+      // Foto van de maand (fotobattle): wel punten, geen taak.
+      if (tick.battle) {
+        person.points += tick.pts || 0;
+        person.photos = (person.photos || 0) + 1;
+        continue;
+      }
       person.points += tick.pts || 1;
       person.count += 1;
       count(person.tasks, tick.id);
@@ -163,16 +169,17 @@
       .map((person) => {
         const top = topOf(person.tasks);
         const run = longestRun(person.days).length;
-        const parts = [`${person.count} ${person.count === 1 ? "taak" : "taken"} afgevinkt`];
+        const parts = person.count ? [`${person.count} ${person.count === 1 ? "taak" : "taken"} afgevinkt`] : [];
         if (top && top[1] > 1) parts.push(`${names.get(top[0]).title.toLowerCase()} ${top[1]}×`);
         if (run >= 2) parts.push(`reeks ${run} dagen`);
-        return { name: person.name, points: person.points, count: person.count, detail: person.count ? parts.join(" · ") : "nog niets afgevinkt" };
+        if (person.photos) parts.push(person.photos === 1 ? "foto van de maand" : `${person.photos}× foto van de maand`);
+        return { name: person.name, points: person.points, count: person.count, photo: Boolean(person.photos), detail: parts.length ? parts.join(" · ") : "nog niets afgevinkt" };
       });
 
     const badges = [];
     // De taak die het vaakst gedaan is, en wie hem het vaakst deed.
     const perTask = new Map();
-    ticks.forEach((tick) => count(perTask, tick.id));
+    ticks.filter((tick) => !tick.battle).forEach((tick) => count(perTask, tick.id));
     const topTask = topOf(perTask);
     if (topTask) {
       const doers = new Map();
@@ -256,7 +263,9 @@
 
   function wrapped(log, extra, now, resetHour) {
     const year = Number(log.year) || new Date(now).getFullYear();
-    const ticks = (log.ticks || []).filter((tick) => dayKey(tick.at, resetHour).slice(0, 4) === String(year));
+    const yearTicks = (log.ticks || []).filter((tick) => dayKey(tick.at, resetHour).slice(0, 4) === String(year));
+    // Taken zonder de foto van de maand (die telt wel mee voor de punten).
+    const ticks = yearTicks.filter((tick) => !tick.battle);
     const dayEntries = Object.entries(log.days || {}).filter(([key]) => key.slice(0, 4) === String(year)).sort(([a], [b]) => a.localeCompare(b));
     const days = dayEntries.map(([key, day]) => ({ key, ...day }));
     const reminders = log.reminders || [];
@@ -462,11 +471,11 @@
     }
 
     // Favoriete baasje
-    const year_ = scores({ ...log, ticks }, "year", new Date(`${lastKey}T12:00:00`).getTime(), people, resetHour);
+    const year_ = scores({ ...log, ticks: yearTicks }, "year", new Date(`${lastKey}T12:00:00`).getTime(), people, resetHour);
     const ranked = year_.ranking.filter((p) => p.points > 0);
     if (ranked.length) {
       const first = ranked[0];
-      const stats = perPerson(ticks.filter((tick) => tick.by === first.name), resetHour).get(first.name);
+      const stats = perPerson(yearTicks.filter((tick) => tick.by === first.name), resetHour).get(first.name);
       const top = topOf(stats.tasks);
       const names = titles(ticks);
       slides.push({

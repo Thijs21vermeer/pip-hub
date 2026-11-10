@@ -1642,6 +1642,8 @@
   // met één keer confetti en bovenin het kaartje "Foto van oktober". Daarna krijgt
   // hij een klein label onder de datum zolang hij op de fotolijst staat.
   const BATTLE_SHOWN_KEY = "pip-hub-battle-shown";
+  // Zelfde kleuren per baasje als op de telefoon (telefoon.js, COLORS).
+  const BATTLE_COLORS = ["#b3562a", "#7d8c5a", "#c08a3e", "#8a5a7a", "#4f7a86", "#a7713a"];
   let battleInfo = null; // { current, winners }
   let battleSlide = null; // de bewaarde winnaar als foto voor de ruststand
 
@@ -1660,7 +1662,7 @@
         const image = await fetch(`${battleUrl()}/${live.result.kept}`, { headers: authHeader() });
         if (image.ok) {
           if (battleSlide) URL.revokeObjectURL(battleSlide.url);
-          battleSlide = { battle: live.id, id: live.result.winner, label: live.label, url: URL.createObjectURL(await image.blob()), tall: false, view: { zoom: 1, x: 50, y: 50 } };
+          battleSlide = { battle: live.id, id: live.result.winner, label: live.label, maker: live.result.maker || "", url: URL.createObjectURL(await image.blob()), tall: false, view: { zoom: 1, x: 50, y: 50 } };
         }
       }
       renderRest();
@@ -1692,14 +1694,21 @@
     const points = result.points[result.winner] || 0;
     const chosen = result.chosenBy || [];
     const who = chosen.length ? ` · ${escapeHtml(joinNames(chosen))} ${chosen.length === 1 ? "koos" : "kozen"} hem` : "";
+    // Met een maker: die groot, "Fotograaf van de maand · +5 punten".
+    const maker = result.maker;
+    const name = maker || "De winnaar";
+    const line = maker
+      ? `Fotograaf van de maand${result.bonus ? ` · +${result.bonus} punten` : ""}`
+      : `${points} ${points === 1 ? "punt" : "punten"}${who}`;
+    const face = maker && avatarFor(maker);
     return `
       <div class="rest-hero">
         <div class="rest-title">${live.test ? "Proef · " : ""}Foto van ${escapeHtml(live.label)}</div>
         <div class="rest-hero-row">
-          ${battleSlide ? `<img class="rest-hero-avatar rest-battle-photo" src="${escapeHtml(battleSlide.url)}" alt="">` : ""}
+          ${battleSlide ? `<span class="rest-battle-wrap"><img class="rest-hero-avatar rest-battle-photo" src="${escapeHtml(battleSlide.url)}" alt="">${maker ? (face ? `<img class="rest-battle-maker" src="${escapeHtml(face)}" alt="">` : `<span class="rest-battle-maker" style="background:${BATTLE_COLORS[Math.max(0, people().findIndex((p) => p.toLowerCase() === maker.toLowerCase())) % BATTLE_COLORS.length]}">${escapeHtml(maker.charAt(0).toUpperCase())}</span>`) : ""}</span>` : ""}
           <div>
-            <div class="rest-hero-name">De winnaar</div>
-            <div class="rest-hero-points">${points} ${points === 1 ? "punt" : "punten"}${who}</div>
+            <div class="rest-hero-name">${escapeHtml(name)}</div>
+            <div class="rest-hero-points">${line}</div>
           </div>
         </div>
       </div>`;
@@ -1709,13 +1718,19 @@
   function renderRestLabel() {
     if (!els.restLabel) return;
     let label = "";
-    if (shownSlide === battleSlide && battleSlide) label = battleSlide.label;
-    else if (shownSlide && shownSlide.id && battleInfo) {
+    let maker = "";
+    if (shownSlide === battleSlide && battleSlide) {
+      label = battleSlide.label;
+      maker = battleSlide.maker;
+    } else if (shownSlide && shownSlide.id && battleInfo) {
       const winner = (battleInfo.winners || []).find((item) => item.photo === shownSlide.id);
-      if (winner) label = winner.label;
+      if (winner) {
+        label = winner.label;
+        maker = winner.maker || "";
+      }
     }
     els.restLabel.hidden = !label;
-    if (label) els.restLabel.innerHTML = `${ICONS.crown}Foto van ${escapeHtml(label)}`;
+    if (label) els.restLabel.innerHTML = `${ICONS.crown}Foto van ${escapeHtml(label)}${maker ? ` · ${escapeHtml(maker)}` : ""}`;
   }
 
   // ---- Scores en Pip Wrapped ----

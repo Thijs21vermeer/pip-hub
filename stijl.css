@@ -2342,3 +2342,231 @@ body.fb-page {
   margin: 24px;
   color: rgba(251, 244, 232, 0.75);
 }
+
+/* Fotobattle: insturen (fotobattle.html, "Jouw foto's") en de maker bij de uitslag. */
+.fb-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: min(210px, 28vh) min(150px, 20vh);
+  gap: 12px;
+  margin: 22px 24px 0;
+}
+.fb-slot {
+  position: relative;
+  display: block;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #3a2618 center / cover no-repeat;
+  color: inherit;
+}
+.fb-slot:first-child {
+  grid-column: span 2;
+}
+.fb-slot.filled {
+  box-shadow: 0 0 0 3px #fbf4e8, 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+.fb-slot.vacant {
+  background: rgba(251, 244, 232, 0.05);
+  box-shadow: inset 0 0 0 2px rgba(251, 244, 232, 0.28);
+}
+.fb-slot .add {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #f3c77a;
+}
+.fb-slot .add svg {
+  width: 30px;
+  height: 30px;
+}
+.fb-slot .add b {
+  color: rgba(251, 244, 232, 0.85);
+  font-size: 15px;
+  font-weight: 600;
+}
+.fb-slot .num {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(36, 26, 20, 0.75);
+  color: #fbf4e8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.fb-slot.filled .num {
+  background: #fbf4e8;
+  color: #241a14;
+}
+.fb-count {
+  margin: 14px 24px 0;
+  color: #f3c77a;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+.fb-note,
+.fb-blind {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 24px 0;
+  color: rgba(251, 244, 232, 0.62);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.fb-blind {
+  margin-top: 12px;
+  color: rgba(251, 244, 232, 0.7);
+  font-size: 14px;
+}
+.fb-note svg,
+.fb-blind svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: #f3c77a;
+}
+.fb-in {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 24px 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(251, 244, 232, 0.1);
+  color: rgba(251, 244, 232, 0.7);
+  font-size: 13.5px;
+}
+.fb-in .fb-av .avatar {
+  box-shadow: 0 0 0 2.5px #2b1d15;
+}
+.fb-sheet-photo {
+  height: 200px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  background: var(--track) center / cover no-repeat;
+}
+.fb-champ i {
+  position: relative;
+}
+.fb-maker {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 99px;
+  background: #fbf4e8;
+  color: #241a14;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.fb-maker .avatar {
+  box-shadow: 0 0 0 2px #fbf4e8;
+}
+.fb-quiet {
+  margin: 26px 30px 0;
+  color: rgba(251, 244, 232, 0.75);
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
+.fb-quiet b {
+  color: #f3c77a;
+  font-weight: 600;
+}
+.fb-page .fb-score {
+  margin-top: 10px;
+  color: rgba(251, 244, 232, 0.6);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.fb-podium figure div {
+  position: relative;
+  height: 78px;
+  border-radius: 12px;
+  background: #3a2618 center / cover no-repeat;
+  box-shadow: 0 0 0 2px rgba(251, 244, 232, 0.85);
+}
+.fb-podium figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 7px;
+  color: rgba(251, 244, 232, 0.75);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.fb-podium figcaption .avatar {
+  font-size: 8px;
+}
+/* Het blok op Thuis: lege kaartjes om te vullen, en de maker bij de uitslag. */
+.fb-deck i.vacant {
+  background: #3b2a1f;
+  box-shadow: inset 0 0 0 2px rgba(251, 244, 232, 0.35), 0 10px 20px rgba(0, 0, 0, 0.25);
+}
+.fb-deck i.vacant span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #f3c77a;
+}
+.fb-deck i.vacant svg {
+  width: 32px;
+  height: 32px;
+}
+.fb-badge.ok {
+  background: #8fb36a;
+  color: #fff;
+}
+.fb-badge.ok svg {
+  width: 14px;
+  height: 14px;
+}
+.fb-go.ghost {
+  background: transparent;
+  color: #fbf4e8;
+  box-shadow: inset 0 0 0 1.5px rgba(251, 244, 232, 0.45);
+}
+.fb-win .fb-av {
+  position: absolute;
+  left: -10px;
+  bottom: -8px;
+  z-index: 2;
+}
+.mini-scores .cam {
+  display: inline-flex;
+  margin-left: 5px;
+  color: #c9973f;
+  vertical-align: -2px;
+}
+.mini-scores .cam svg {
+  width: 15px;
+  height: 15px;
+}
+/* Rondjes over elkaar: de eerste bovenop, zodat elk vinkje te zien is. */
+.fb-stack .fb-av:nth-child(1) { z-index: 6; }
+.fb-stack .fb-av:nth-child(2) { z-index: 5; }
+.fb-stack .fb-av:nth-child(3) { z-index: 4; }
+.fb-stack .fb-av:nth-child(4) { z-index: 3; }
+.fb-stack .fb-av:nth-child(5) { z-index: 2; }
+.fb-stack .fb-av:nth-child(6) { z-index: 1; }

@@ -135,6 +135,19 @@ export async function recordPlay(task, sessions, now = Date.now()) {
   }
 }
 
+// ---- Fotobattle ----
+
+// De maker van de foto van de maand krijgt punten: een vinkje met battle: true,
+// zodat het scoreboard de punten telt maar het niet als taak meetelt.
+export async function recordBattleWin(by, label, at = Date.now(), points = 5) {
+  const tick = { id: "fotobattle", title: "Foto van de maand", icon: "camera", repeat: "monthly", by, at, pts: points, battle: true, month: label };
+  const year = yearOf(at);
+  const part = (await readPart(year, "ticks")) || { startedAt: at, list: [] };
+  if (part.list.some((t) => t.id === tick.id && t.at === tick.at)) return;
+  const list = part.list.concat(tick).sort((a, b) => a.at - b.at);
+  await writePart(year, "ticks", { startedAt: part.startedAt, list });
+}
+
 // ---- Herinneringen ----
 
 // Een baasje heet voortaan anders: in het jaarlog (vinkjes) van dit en vorig jaar
