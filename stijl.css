@@ -201,7 +201,7 @@ a {
 .hero-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 56%, color-mix(in srgb, var(--bg) 55%, transparent) 78%, var(--bg) 97%);
+  background: linear-gradient(180deg, transparent calc(100% - 140px), color-mix(in srgb, var(--bg) 55%, transparent) calc(100% - 78px), var(--bg) calc(100% - 36px));
   pointer-events: none;
 }
 .hero-camera {
@@ -589,51 +589,36 @@ button.piece.open:active .tick {
   font-size: 15px;
 }
 
+/* Pip Wrapped (december tot half januari), zelfde opbouw als het Fotobattle-blok:
+   tekst links, rechts een stapeltje schermen, onderaan de knop en tot wanneer. */
 .wrapped {
   position: relative;
   overflow: hidden;
-  margin: 56px 12px 0;
+  min-height: 250px;
   padding: 24px 22px 22px;
   border-radius: 30px;
   background: linear-gradient(140deg, #2b2152 0%, #3a2a5e 55%, #6b3f4f 100%);
   color: #f4f0ff;
   box-shadow: 0 14px 34px rgba(43, 33, 82, 0.35);
 }
-.wrapped::before,
-.wrapped::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-}
-.wrapped::before {
-  right: -40px;
-  top: -50px;
-  width: 190px;
-  height: 190px;
-  background: rgba(201, 194, 255, 0.14);
-}
-.wrapped::after {
-  right: 40px;
-  bottom: -70px;
-  width: 140px;
-  height: 140px;
-  background: rgba(243, 199, 122, 0.16);
-}
-.wrapped > * {
-  position: relative;
-}
-.wrapped small {
+.wr-kick {
+  display: block;
   color: #c9c2ff;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+.wr-text {
+  position: relative;
+  max-width: calc(100% - 150px);
+  min-height: 150px;
+}
 .wrapped h2 {
   margin: 10px 0 0;
   font-family: var(--serif);
   font-weight: 400;
-  font-size: 38px;
+  font-size: 46px;
   line-height: 1;
 }
 .wrapped p {
@@ -642,11 +627,87 @@ button.piece.open:active .tick {
   font-size: 16px;
   line-height: 1.4;
 }
+.wr-deck {
+  position: absolute;
+  right: 18px;
+  top: 24px;
+  width: 146px;
+  height: 150px;
+}
+.wr-deck i {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 108px;
+  height: 138px;
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: 0 0 0 3px #f4f0ff, 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+.wr-deck i:nth-child(1) {
+  background: #2f4a2c;
+  transform: rotate(10deg) translate(10px, 4px);
+}
+.wr-deck i:nth-child(2) {
+  background: #ff8c66;
+  transform: rotate(-7deg) translate(-16px, 2px);
+}
+.wr-deck i:nth-child(3) {
+  background: #f3c77a;
+  color: #24170f;
+  transform: rotate(1deg);
+}
+.wr-deck b {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 0.9;
+}
+.wr-deck small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.wr-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+.wr-music {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wr-music i {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(244, 240, 255, 0.14);
+}
+.wr-music svg {
+  width: 15px;
+  height: 15px;
+}
+.wr-music small {
+  color: rgba(244, 240, 255, 0.75);
+  font-size: 13.5px;
+}
 .play {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
   min-height: 46px;
   padding: 0 20px;
   border-radius: 99px;
@@ -657,8 +718,21 @@ button.piece.open:active .tick {
   text-decoration: none;
 }
 .play svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
+}
+.wr-due {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 0 !important;
+  color: rgba(244, 240, 255, 0.6) !important;
+  font-size: 13.5px !important;
+}
+.wr-due svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
 }
 
 .mini-scores {
@@ -2666,4 +2740,213 @@ body.fb-page {
   margin-top: 2px;
   color: rgba(251, 244, 232, 0.5);
   font-size: 12px;
+}
+
+
+/* ---- Evenementen: rondjes onder de foto (instellingen.html, renderEvents) ---- */
+.events {
+  position: relative;
+  margin-top: -72px;
+}
+.events + .task-gallery {
+  margin-top: 56px;
+}
+.event-row {
+  display: flex;
+  gap: 18px;
+  padding: 0 24px;
+}
+.ev {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 76px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  transition: opacity 0.3s ease;
+}
+.ev-ring {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #d9ccbd;
+  box-shadow: 0 6px 14px rgba(110, 60, 25, 0.16);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
+}
+.ev.hot .ev-ring {
+  background: conic-gradient(from 210deg, #f3c77a, #d08a3f, #b3562a, #f3c77a);
+}
+.ev-ring.purple {
+  background: linear-gradient(140deg, #9a8af0, #5b4bc4);
+}
+.ev-ring i {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #3a2618 center / cover no-repeat;
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.ev-ring i.wr {
+  background: linear-gradient(140deg, #2b2152, #6b3f4f);
+  color: #f4f0ff;
+  font-family: var(--serif);
+  font-size: 28px;
+  font-style: normal;
+  line-height: 1;
+}
+.ev b {
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+.ev.on .ev-ring {
+  transform: scale(1.08);
+  box-shadow: 0 10px 22px rgba(110, 60, 25, 0.26);
+}
+.ev.on b {
+  color: var(--text);
+  font-weight: 700;
+}
+.ev.dim {
+  opacity: 0.55;
+}
+.ev.dim .ev-ring {
+  transform: scale(0.94);
+}
+
+/* Het blok eronder. Beide blokken op dezelfde plek en even groot. */
+.event-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 16px;
+}
+.event-reveal.is-closed {
+  display: none;
+}
+.event-inner {
+  min-height: 0;
+}
+.event-stage {
+  display: grid;
+}
+.event-stage > section {
+  grid-area: 1 / 1;
+  margin: 0 12px;
+  transition: opacity 0.45s ease;
+}
+.event-stage > section > * {
+  transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* Wisselen: eerst gaat de oude tekst weg, dan vloeit de kleur over, dan komt de nieuwe. */
+.event-stage > section:not(.ev-off) > * {
+  transition-delay: 0.2s;
+}
+.event-stage > section.ev-off {
+  opacity: 0;
+  pointer-events: none;
+}
+.event-stage > section.ev-off > * {
+  opacity: 0;
+  transform: translateY(4px);
+}
+/* Openen: de ruimte schuift open, het blok ontvouwt zich als een cirkel vanuit het
+   rondje (--ex, --ey: het midden van het rondje, gezien vanaf het blok), en de
+   inhoud komt er net na zacht in. Dicht: precies andersom. */
+.event-reveal.is-opening {
+  animation: ev-room 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.event-reveal.is-opening .event-stage > section:not(.ev-off) {
+  animation: ev-unfold 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.event-reveal.is-opening .event-stage > section:not(.ev-off) > * {
+  animation: ev-content 0.45s 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.event-reveal.is-closing {
+  animation: ev-room-close 0.45s 0.08s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.event-reveal.is-closing .event-stage > section:not(.ev-off) {
+  animation: ev-fold 0.42s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.event-reveal.is-closing .event-stage > section:not(.ev-off) > * {
+  animation: ev-content-out 0.16s ease both;
+}
+@keyframes ev-room {
+  from { grid-template-rows: 0fr; margin-top: 0; }
+  to { grid-template-rows: 1fr; margin-top: 16px; }
+}
+@keyframes ev-room-close {
+  from { grid-template-rows: 1fr; margin-top: 16px; }
+  to { grid-template-rows: 0fr; margin-top: 0; }
+}
+@keyframes ev-unfold {
+  from { clip-path: circle(34px at var(--ex, 50px) var(--ey, -76px)); transform: translateY(-8px); }
+  to { clip-path: circle(150% at var(--ex, 50px) var(--ey, -76px)); transform: none; }
+}
+@keyframes ev-fold {
+  from { clip-path: circle(150% at var(--ex, 50px) var(--ey, -76px)); transform: none; }
+  to { clip-path: circle(34px at var(--ex, 50px) var(--ey, -76px)); transform: translateY(-8px); }
+}
+@keyframes ev-content {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ev-content-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+/* De schilderijtjes van Taken schommelen even na als de muur verschuift:
+   eerst een paar graden opzij, dan steeds minder, ieder net iets anders.
+   Omlaag (een blok gaat open) eerst de ene kant op, omhoog de andere. */
+.wall .frame {
+  transform-origin: 50% -12px;
+}
+.wall.down { --dir: 1; }
+.wall.up { --dir: -1; }
+.wall-row:nth-child(odd) .piece:nth-child(1) .frame { --a: 2.4deg; --delay: 0.12s; }
+.wall-row:nth-child(odd) .piece:nth-child(2) .frame { --a: -3.4deg; --delay: 0.18s; }
+.wall-row:nth-child(even) .piece:nth-child(1) .frame { --a: 3.2deg; --delay: 0.26s; }
+.wall-row:nth-child(even) .piece:nth-child(2) .frame { --a: -2.2deg; --delay: 0.32s; }
+.wall-row .piece:nth-child(3) .frame { --a: 2.8deg; --delay: 0.22s; }
+.wall.swing-0 .frame {
+  animation: wall-swing-0 1.8s cubic-bezier(0.25, 0.6, 0.3, 1) var(--delay, 0s) both;
+}
+.wall.swing-1 .frame {
+  animation: wall-swing-1 1.8s cubic-bezier(0.25, 0.6, 0.3, 1) var(--delay, 0s) both;
+}
+@keyframes wall-swing-0 {
+  0% { transform: rotate(0); }
+  14% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1))); }
+  32% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * -0.62)); }
+  50% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * 0.36)); }
+  67% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * -0.18)); }
+  84% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * 0.07)); }
+  100% { transform: rotate(0); }
+}
+@keyframes wall-swing-1 {
+  0% { transform: rotate(0); }
+  14% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1))); }
+  32% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * -0.62)); }
+  50% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * 0.36)); }
+  67% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * -0.18)); }
+  84% { transform: rotate(calc(var(--a, 2deg) * var(--dir, 1) * 0.07)); }
+  100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-reveal,
+  .event-stage > section,
+  .event-stage > section > *,
+  .wall .frame {
+    animation: none !important;
+    transition: none !important;
+  }
 }

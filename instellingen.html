@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-63">
+  <link rel="stylesheet" href="stijl.css?v=20261109-64">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -38,6 +38,27 @@
 
   <main class="page" style="padding-top: 0">
     <div id="linked" hidden>
+      <!-- Evenementen: rondjes onder de foto (de Fotobattle, en in december en
+           januari Pip Wrapped). Tik er een en het blok groeit eruit open; nog eens
+           tikken vouwt het terug. renderEvents. -->
+      <section class="events" id="events" aria-label="Evenementen" hidden>
+        <div class="event-row" id="event-row"></div>
+        <div class="event-reveal is-closed" id="event-reveal">
+          <div class="event-inner"><div class="event-stage">
+            <section class="fotobattle" id="fotobattle" aria-label="Fotobattle" hidden></section>
+            <section class="wrapped" id="wrapped" aria-labelledby="wrapped-title" hidden>
+              <div class="wr-deck" aria-hidden="true"><i></i><i></i><i><b id="wrapped-stat"></b><small id="wrapped-stat-label"></small></i></div>
+              <div class="wr-text"><small class="wr-kick">Pip Wrapped</small><h2 id="wrapped-title"></h2><p>Het jaar van Pip<br>in schermen.</p></div>
+              <div class="wr-foot">
+                <span class="wr-music"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></i><small>Met muziek</small></span>
+                <a class="play" href="wrapped.html"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Afspelen</a>
+              </div>
+              <p class="wr-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="wrapped-kicker">Nieuw, te zien tot half januari</span></p>
+            </section>
+          </div></div>
+        </div>
+      </section>
+
       <!-- Taken als schilderijtjes aan de muur: groot en klein om en om.
            Tik op een open schilderijtje om af te vinken. -->
       <section class="section task-gallery" aria-labelledby="tasks-title">
@@ -73,14 +94,6 @@
         <div class="card-foot"><span id="activity-more"></span><a href="activiteit.html">Meer ›</a></div>
       </section>
 
-      <!-- Pip Wrapped staat er altijd; in december en de eerste helft van
-           januari als het hele jaar, daarbuiten als het jaar tot nu toe. -->
-      <section class="wrapped" id="wrapped" aria-labelledby="wrapped-title">
-        <small id="wrapped-kicker">Het jaar tot nu toe</small>
-        <h2 id="wrapped-title"></h2>
-        <p>Het jaar van Pip in schermen, met muziek.</p>
-        <a class="play" href="wrapped.html"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Afspelen</a>
-      </section>
 
       <section class="card mini-scores" aria-labelledby="scores-title">
         <div class="tasks-head"><h2 id="scores-title">Scores</h2><span>Deze week</span></div>
@@ -88,8 +101,6 @@
         <div class="card-foot"><span>Zondag 20:00: held van de week</span><a href="scores.html">Meer ›</a></div>
       </section>
 
-      <!-- Fotobattle: van de 1e tot de uitslag (en die tot de 7e). renderBattle. -->
-      <section class="fotobattle" id="fotobattle" aria-label="Fotobattle" hidden></section>
 
       <section class="section" style="margin-top: 56px" aria-labelledby="settings-title">
         <h2 class="section-title" id="settings-title">Instellen</h2>
@@ -202,10 +213,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-63"></script>
-  <script src="telefoon.js?v=20261109-63"></script>
-  <script src="taken.js?v=20261109-63"></script>
-  <script src="stats.js?v=20261109-63"></script>
+  <script src="config.js?v=20261109-64"></script>
+  <script src="telefoon.js?v=20261109-64"></script>
+  <script src="taken.js?v=20261109-64"></script>
+  <script src="stats.js?v=20261109-64"></script>
   <script>
     (function () {
       "use strict";
@@ -987,10 +998,19 @@
 
       // ---- Wrapped, scores en instellen ----
 
+      // Pip Wrapped staat als rondje onder de foto van 1 december tot half januari.
+      // Daarbuiten zit hij bij Scores ("het jaar tot nu toe").
       function renderWrapped() {
         const season = P.wrappedSeason();
-        $("wrapped-kicker").textContent = season ? "Nieuw · tot half januari" : "Het jaar tot nu toe";
-        $("wrapped-title").textContent = `Pip Wrapped ${season || new Date().getFullYear()}`;
+        $("wrapped").hidden = !season;
+        if (!season) return;
+        $("wrapped-title").textContent = String(season);
+        $("wrapped-kicker").textContent = new Date().getMonth() === 0 ? "Nog te zien tot half januari" : "Nieuw, te zien tot half januari";
+        // Bovenop het stapeltje: hoe vaak Pip dit jaar op de bak zat.
+        const days = (data.jaarlog && data.jaarlog.days) || {};
+        const visits = Object.entries(days).filter(([key]) => key.startsWith(`${season}-`)).reduce((sum, [, day]) => sum + (Number(day && day.v) || 0), 0);
+        $("wrapped-stat").textContent = visits ? visits.toLocaleString("nl-NL") : String(season);
+        $("wrapped-stat-label").innerHTML = visits ? "keer op<br>de bak" : "het jaar<br>van Pip";
       }
 
       function renderScores() {
@@ -1137,6 +1157,7 @@
         renderWrapped();
         renderScores();
         renderBattle();
+        renderEvents();
         renderSettings();
       }
 
@@ -1162,6 +1183,7 @@
           return; // Niet bereikbaar: de vorige stand blijft staan.
         }
         renderBattle();
+        renderEvents();
       }
 
       // Een kaartje van het stapeltje: eerst leeg, de foto zodra hij er is.
@@ -1274,6 +1296,194 @@
         battleCard(cards[0], battlePhoto(deck[0]));
         battleCard(cards[1], battlePhoto(deck[1]));
         battleCard(cards[2], battlePhoto(top));
+      }
+
+      // ---- Evenementen: rondjes onder de foto ----
+      // Rustig: alleen een rondje met één woord, met een gouden ring als er iets
+      // voor jou is. Tik: het blok groeit eruit open (de ruimte schuift open, het
+      // blok ontvouwt zich vanuit het rondje, de inhoud komt er zacht in). Nog eens
+      // tikken: terug in het rondje. Een ander rondje: de blokken zijn even groot en
+      // vloeien alleen in elkaar over. Schuift de muur, dan schommelen de
+      // schilderijtjes van Taken even na. Moet je iets doen, dan staat het blok de
+      // eerste keer vanzelf open.
+      const EVENT_SEEN_KEY = "pip-events-seen";
+      let eventOpen = null; // "fotobattle" | "wrapped" | null
+      let eventPhase = "closed"; // closed, opening, open, closing
+      let eventTimer = null;
+      let eventTouched = false;
+      let swingCount = 0;
+      let swingTimer = null;
+
+      function eventSeen() {
+        try {
+          return JSON.parse(localStorage.getItem(EVENT_SEEN_KEY) || "[]");
+        } catch (error) {
+          return [];
+        }
+      }
+      function markEventSeen(key) {
+        if (!key) return;
+        try {
+          const list = eventSeen().filter((item) => item !== key).concat(key).slice(-20);
+          localStorage.setItem(EVENT_SEEN_KEY, JSON.stringify(list));
+        } catch (error) {
+          // Geen opslag: dan gaat hij de volgende keer weer vanzelf open.
+        }
+      }
+
+      // Wat er nu is, met of er iets voor jou te doen is.
+      function eventList() {
+        const list = [];
+        if (!$("fotobattle").hidden) {
+          const current = battle && battle.current;
+          const live = current && (current.result ? current.result.winner : Date.now() < current.closesAt);
+          const me = P.me(data.settings);
+          let hot = false;
+          let seenKey = null;
+          let face = "";
+          if (live && current.result) {
+            hot = true;
+            seenKey = `fb:${current.id}:uitslag`;
+            face = `${urls.fotobattle}/${current.result.kept}`;
+          } else if (live) {
+            hot = Boolean(me && (current.canVote || []).includes(me) && !(current.voted || []).includes(me));
+            seenKey = `fb:${current.id}:kiezen`;
+            face = current.photos && current.photos[0] ? battlePhoto(current.photos[0].id) : "";
+          } else if (battle && battle.entry) {
+            const mine = battle.entry.mine || [];
+            hot = mine.length === 0;
+            seenKey = `fb:insturen:${battle.entry.month}`;
+            face = mine[0] ? battlePhoto(mine[0].id) : "";
+          }
+          list.push({ key: "fotobattle", label: "Fotobattle", hot, seenKey, face });
+        }
+        const season = P.wrappedSeason();
+        if (season && !$("wrapped").hidden) {
+          list.push({ key: "wrapped", label: "Wrapped", hot: false, seenKey: `wrapped:${season}`, wrapped: String(season).slice(2), fresh: true });
+        }
+        return list;
+      }
+
+      function eventBlock(key) {
+        return key === "wrapped" ? $("wrapped") : key === "fotobattle" ? $("fotobattle") : null;
+      }
+
+      function renderEvents() {
+        const list = eventList();
+        $("events").hidden = !list.length;
+        if (eventOpen && !list.some((event) => event.key === eventOpen)) {
+          eventOpen = null;
+          setEventPhase("closed");
+        }
+        const row = $("event-row");
+        row.innerHTML = "";
+        for (const event of list) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.key = event.key;
+          button.className = `ev${event.hot ? " hot" : ""}`;
+          button.innerHTML = event.wrapped
+            ? `<span class="ev-ring purple"><i class="wr">${P.escapeHtml(event.wrapped)}</i></span><b>${event.label}</b>`
+            : `<span class="ev-ring"><i style="background-image:url('pip-foto.jpg')"></i></span><b>${event.label}</b>`;
+          if (event.face) battleCard(button.querySelector(".ev-ring i"), event.face);
+          button.addEventListener("click", () => tapEvent(event.key));
+          row.appendChild(button);
+        }
+        updateEvents();
+        // Moet je iets doen en zag je het nog niet: de eerste keer vanzelf open.
+        if (!eventTouched && !eventOpen) {
+          const seen = eventSeen();
+          const first = list.find((event) => (event.hot || event.fresh) && event.seenKey && !seen.includes(event.seenKey));
+          if (first) openEvent(first.key);
+        }
+      }
+
+      // Welk blok zichtbaar is en hoe de rondjes erbij staan.
+      function updateEvents() {
+        for (const key of ["fotobattle", "wrapped"]) eventBlock(key).classList.toggle("ev-off", key !== eventOpen);
+        const showing = eventPhase === "open" || eventPhase === "opening" ? eventOpen : null;
+        $("event-row").querySelectorAll(".ev").forEach((button) => {
+          const on = button.dataset.key === showing;
+          button.classList.toggle("on", on);
+          button.classList.toggle("dim", Boolean(showing) && !on);
+          button.setAttribute("aria-expanded", String(on));
+        });
+      }
+
+      // Begint de animatie van een stand opnieuw (ook als het dezelfde is).
+      function setEventPhase(phase) {
+        eventPhase = phase;
+        const reveal = $("event-reveal");
+        reveal.className = "event-reveal";
+        void reveal.offsetWidth;
+        reveal.classList.add(`is-${phase}`);
+      }
+
+      // Waar het rondje zit, gezien vanaf het blok: daar groeit hij uit en vouwt hij in.
+      // Bij openen staat de ruimte nog dicht: dan komt het blok straks 16 px lager.
+      function placeReveal(opening = false) {
+        const ring = $("event-row").querySelector(`[data-key="${eventOpen}"] .ev-ring`);
+        const block = eventBlock(eventOpen);
+        if (!ring || !block) return;
+        const a = ring.getBoundingClientRect();
+        const b = block.getBoundingClientRect();
+        $("event-reveal").style.setProperty("--ex", `${Math.round(a.left + a.width / 2 - b.left)}px`);
+        $("event-reveal").style.setProperty("--ey", `${Math.round(a.top + a.height / 2 - b.top - (opening ? 16 : 0))}px`);
+      }
+
+      function openEvent(key) {
+        const list = eventList();
+        const event = list.find((item) => item.key === key);
+        if (!event) return;
+        markEventSeen(event.seenKey);
+        const switching = eventPhase === "open" || eventPhase === "opening";
+        eventOpen = key;
+        clearTimeout(eventTimer);
+        updateEvents();
+        if (switching) {
+          // Alleen overvloeien; er schuift niets.
+          placeReveal();
+          return;
+        }
+        setEventPhase("opening");
+        updateEvents();
+        placeReveal(true);
+        swingWall("down");
+        // Na de animatie: gewoon open, zodat verversen (elke minuut) niets laat bewegen.
+        eventTimer = setTimeout(() => { if (eventPhase === "opening") setEventPhase("open"); }, 800);
+      }
+
+      function closeEvent() {
+        clearTimeout(eventTimer);
+        placeReveal();
+        setEventPhase("closing");
+        updateEvents();
+        swingWall("up");
+        eventTimer = setTimeout(() => {
+          if (eventPhase !== "closing") return;
+          eventOpen = null;
+          setEventPhase("closed");
+          updateEvents();
+        }, 600);
+      }
+
+      function tapEvent(key) {
+        eventTouched = true;
+        if (eventOpen === key && (eventPhase === "open" || eventPhase === "opening")) closeEvent();
+        else openEvent(key);
+      }
+
+      // De schilderijtjes schommelen even na als de muur verschuift.
+      function swingWall(direction) {
+        const wall = $("tiles");
+        if (!wall) return;
+        swingCount += 1;
+        wall.classList.remove("swing-0", "swing-1", "up", "down");
+        void wall.offsetWidth;
+        wall.classList.add(`swing-${swingCount % 2}`, direction);
+        clearTimeout(swingTimer);
+        // Daarna weg, anders schommelen ze opnieuw als Taken ververst.
+        swingTimer = setTimeout(() => wall.classList.remove("swing-0", "swing-1", "up", "down"), 2600);
       }
 
       // Eerste keer op deze telefoon (nog niets bewaard): lege lijstjes en regels
