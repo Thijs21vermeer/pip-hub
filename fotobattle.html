@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-60">
+  <link rel="stylesheet" href="stijl.css?v=20261109-61">
   <!-- Fotobattle: de hele maand je 3 mooiste foto's van Pip insturen; op de 1e
        kiezen jullie samen, blind, steeds uit twee (een toernooi). Daarna de
        uitslag: de winnaar, van wie hij is, de top 3 en wat ieder koos. De maker
@@ -47,6 +47,7 @@
         <p class="fb-lead" id="send-lead"></p>
         <div class="fb-slots" id="slots"></div>
         <p class="fb-count" id="send-count"></p>
+        <p class="fb-as" id="send-as"></p>
         <p class="fb-note" data-icon="eye">Niemand ziet van wie een foto is, tot de uitslag. Je eigen foto's zitten niet in jouw rondjes.</p>
         <p class="fb-note" data-icon="clock" id="send-until"></p>
         <div class="fb-in" id="send-in"></div>
@@ -104,8 +105,8 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-60"></script>
-  <script src="telefoon.js?v=20261109-60"></script>
+  <script src="config.js?v=20261109-61"></script>
+  <script src="telefoon.js?v=20261109-61"></script>
   <script>
     (function () {
       "use strict";
@@ -225,6 +226,9 @@
         $("send-kick").textContent = `Fotobattle · ${entry.label}`;
         $("send-lead").textContent = `Kies je drie mooiste foto's van Pip van ${entry.label}. Op ${entry.startsText} kiezen jullie samen de foto van de maand.`;
         $("send-until").innerHTML = `${ICON.clock}Je kunt wisselen tot en met ${P.escapeHtml(entry.untilText)}.`;
+        // Gedeelde telefoon (of testen): van naam wisselen.
+        $("send-as").innerHTML = `Je stuurt in als <b>${P.escapeHtml(me())}</b> · <button type="button" id="send-switch">Iemand anders?</button>`;
+        $("send-switch").addEventListener("click", () => askWho(showSend));
         renderSlots();
         show("send");
       }

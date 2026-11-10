@@ -3,7 +3,7 @@
 //   GET    /api/fotobattle?me=Thijs        { current: { id, label, photos, own, voted, mine, result, … } | null, winners, entry }
 //   POST   /api/fotobattle                 { id, by, wins: { fotoId: n }, final: [winnaar, tweede] }
 //   POST   /api/fotobattle                 { proef: true }: een proefbattle met de inzendingen van deze maand
-//                                          (met stil: true zonder meldingen)
+//                                          (met stil: true zonder meldingen); { proef: "stop" } stopt hem stil
 //   POST   /api/fotobattle/inzending?by=Thijs&w=&h=&vervang=<id>   een foto insturen (JPEG)
 //   DELETE /api/fotobattle/inzending/:id?by=Thijs                  een eigen inzending weghalen
 //   GET    /api/fotobattle/foto/:id        een foto uit de battle (JPEG, zonder maker)
@@ -11,7 +11,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
-import { battlePhoto, battleSummary, castVote, keptPhoto, removeEntry, startProef, submitEntry } from "../lib/battle.mjs";
+import { battlePhoto, battleSummary, castVote, keptPhoto, removeEntry, startProef, stopProef, submitEntry } from "../lib/battle.mjs";
 
 const MAX_BYTES = 1.5 * 1024 * 1024;
 const PHOTO_ID = /^[a-z0-9]{8,40}$/;
@@ -83,6 +83,11 @@ export default async (request, context) => {
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") return json(400, { error: "BAD_REQUEST" }, headers);
+    if (body.proef === "stop") {
+      const result = await stopProef(people);
+      if (result.error) return json(409, { error: result.error }, headers);
+      return json(200, await battleSummary(people, null), headers);
+    }
     if (body.proef === true) {
       const result = await startProef(people, Date.now(), { silent: body.stil === true });
       if (result.error) return json(409, { error: result.error }, headers);

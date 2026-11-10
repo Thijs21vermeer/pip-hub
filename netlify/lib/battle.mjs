@@ -345,6 +345,8 @@ export async function startProef(people, now = Date.now(), { silent = false } = 
   const battle = await currentBattle(store);
   if (battle && !battle.skipped && !battle.result) return { error: "ALREADY_OPEN" };
   const month = entryMonth(now);
+  // Keuzes van een eerdere proef van deze maand tellen niet mee.
+  for (const person of people || []) await store.delete(voteKey(`${month}-proef`, person));
   const opened = await openBattle(store, {
     id: `${month}-proef`,
     month,
@@ -354,6 +356,17 @@ export async function startProef(people, now = Date.now(), { silent = false } = 
     closesAt: now + PROEF_HOURS * 60 * 60 * 1000,
   }, people, { fromList: true });
   return opened ? { battle: opened } : { error: "TOO_FEW_PHOTOS" };
+}
+
+// Een lopende proef stilletjes stoppen (zonder uitslag en zonder melding). Thuis
+// laat dan weer het insturen zien.
+export async function stopProef(people, now = Date.now()) {
+  const store = pip();
+  const battle = await currentBattle(store);
+  if (!battle || !battle.test || battle.skipped) return { error: "NO_PROEF" };
+  await store.setJSON(`battle/${battle.id}`, { ...battle, skipped: true, stoppedAt: now });
+  for (const person of people || []) await store.delete(voteKey(battle.id, person));
+  return { ok: true };
 }
 
 export async function castVote(body, people, now = Date.now()) {
