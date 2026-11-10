@@ -486,8 +486,8 @@ async function lastCall(store, battle, people, now, here) {
   if (todo.length) {
     await deliver(store, notes, [{
       to: todo,
-      title: `Nog ${hours} uur: foto van ${monthLabel(battle.month)}`,
-      message: voted.length ? `${names(voted)} ${voted.length === 1 ? "koos" : "kozen"} al. Jij nog?` : `Kiezen kan tot ${localTime(battle.closesAt).time}.`,
+      title: `Nog ${hours} uur om te kiezen`,
+      message: `Foto van ${monthLabel(battle.month)}: ${voted.length ? `${names(voted)} ${voted.length === 1 ? "koos" : "kozen"} al. Jij nog?` : `kiezen kan tot ${localTime(battle.closesAt).time}.`}`,
       url: "fotobattle.html",
       badge: 1,
       tag: `fb-${battle.id}`,
