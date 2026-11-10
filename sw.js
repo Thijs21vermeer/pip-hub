@@ -12,13 +12,20 @@ self.addEventListener("push", (event) => {
   } catch (error) {
     data = { body: event.data ? event.data.text() : "" };
   }
-  event.waitUntil(self.registration.showNotification(data.title || "Pip", {
-    body: data.body || "",
-    icon: "icoon-192.png",
-    badge: "icoon-192.png",
-    tag: data.tag || undefined,
-    data: { url: data.url || "instellingen.html" },
-  }));
+  // Het getal op het app-icoon (fotobattle: 1 zolang jij nog moet kiezen).
+  const badge = Number.isInteger(data.badge) && self.navigator
+    ? (data.badge > 0 ? self.navigator.setAppBadge && self.navigator.setAppBadge(data.badge) : self.navigator.clearAppBadge && self.navigator.clearAppBadge())
+    : null;
+  event.waitUntil(Promise.all([
+    Promise.resolve(badge).catch(() => null),
+    self.registration.showNotification(data.title || "Pip", {
+      body: data.body || "",
+      icon: "icoon-192.png",
+      badge: "icoon-192.png",
+      tag: data.tag || undefined,
+      data: { url: data.url || "instellingen.html" },
+    }),
+  ]));
 });
 
 self.addEventListener("notificationclick", (event) => {

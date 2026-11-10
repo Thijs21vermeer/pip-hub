@@ -1,7 +1,7 @@
 // Fotobattle: elke maand kiezen jullie samen de foto van de maand.
 //
 // De hele maand stuurt iedereen zijn mooiste foto's van Pip in, hooguit 3 per
-// persoon (fotobattle.html, "Jouw foto's"). Op de 1e om 10:00 (de planner,
+// persoon (fotobattle.html, "Jouw foto's"). Op de 1e om 19:30 (de planner,
 // herinnering.mjs) gaan de inzendingen van vorige maand de battle in, als er
 // minstens 2 baasjes iets instuurden. Iedereen kiest op zijn eigen telefoon steeds
 // uit twee (een toernooi), blind: niemand ziet van wie een foto is, en je eigen
@@ -22,6 +22,15 @@
 //   entries/<maand>/<naam>       [{ id, at, width, height }]: iemands inzendingen (hooguit 3)
 // en in "pip-media": inzending/<id> (de foto's), maand/<id> (de winnaar) en
 // maand-list ([{ id, month, at, points, photo, maker }]).
+//
+// Meldingen, elk alleen voor wie er iets aan heeft (push per baasje, zie
+// lib/push.mjs; ntfy krijgt alleen de algemene):
+//   - 3 dagen voor het einde van de maand, 19:30: insturen, aan wie nog niets stuurde;
+//   - de 1e om 19:30: kiezen begint, aan wie mag kiezen (met "jouw foto doet mee");
+//   - de 3e om 12:00: laatste kans, aan wie nog niet koos;
+//   - de uitslag: de maker hoort het meteen, de rest krijgt "wie maakte hem?".
+// Nooit tussen 22:00 en 8:00 (een uitslag van 's nachts wacht tot 8:00), en een
+// stille proef stuurt niets. Wat al gestuurd is staat in battle-notes.
 
 import { randomBytes } from "node:crypto";
 import { getStore } from "@netlify/blobs";
@@ -32,7 +41,13 @@ export const MAX_PHOTOS = 16;
 export const MAX_PER_PERSON = 3;
 export const WIN_POINTS = 5;
 const MAX_LIST = 40; // zoveel foto's houdt de fotolijst (fotos.mjs)
-const OPEN_HOUR = 10;
+const OPEN_MINUTES = 19 * 60 + 30; // de 1e om 19:30: als iedereen thuis is
+const LAST_CALL_HOUR = 12; // de 3e: laatste kans voor wie nog niet koos
+const SEND_REMIND_DAYS = 3; // zoveel dagen voor het einde van de maand: insturen
+const SEND_REMIND_MINUTES = 19 * 60 + 30;
+const EVENING_UNTIL_HOUR = 21; // daarna geen herinneringen meer (de planner liep niet)
+const QUIET_FROM_HOUR = 22; // 's nachts geen meldingen
+const QUIET_UNTIL_HOUR = 8;
 const CLOSE_DAY = 3;
 const CLOSE_HOUR = 20;
 // Tot de 7e (04:00) staat de uitslag nog op Thuis.
@@ -103,6 +118,51 @@ function personIn(people, name) {
 
 function newId() {
   return Date.now().toString(36) + randomBytes(4).toString("hex");
+}
+
+// ---- Meldingen ----
+
+const NOTES_KEY = "battle-notes";
+
+async function readNotes(store) {
+  const notes = (await store.get(NOTES_KEY, { type: "json" })) || {};
+  return { sent: notes.sent || {}, later: notes.later || [] };
+}
+
+async function writeNotes(store, notes) {
+  // Alleen de laatste 60 (een paar jaar): de rest is al lang voorbij.
+  const sent = Object.fromEntries(Object.entries(notes.sent).sort((a, b) => b[1] - a[1]).slice(0, 60));
+  await store.setJSON(NOTES_KEY, { sent, later: notes.later });
+}
+
+function quiet(now) {
+  const hour = localTime(now).hour;
+  return hour >= QUIET_FROM_HOUR || hour < QUIET_UNTIL_HOUR;
+}
+
+// De eerstvolgende 8:00 in Nederland.
+function morningAfter(now) {
+  const here = localTime(now);
+  const date = here.hour < QUIET_UNTIL_HOUR ? here.date : localTime(now + 12 * 60 * 60 * 1000).date;
+  return amsterdamMs(date, QUIET_UNTIL_HOUR);
+}
+
+// Nu sturen, of 's nachts bewaren tot 8:00.
+async function deliver(store, notes, list, now) {
+  for (const note of list) {
+    if (quiet(now)) notes.later.push({ ...note, notBefore: morningAfter(now) });
+    else await notify(note).catch(() => false);
+  }
+}
+
+// Wat 's nachts bleef liggen, nu het weer mag.
+async function flushLater(store, notes, now) {
+  if (!notes.later.length || quiet(now)) return false;
+  const due = notes.later.filter((note) => note.notBefore <= now);
+  if (!due.length) return false;
+  notes.later = notes.later.filter((note) => note.notBefore > now);
+  for (const { notBefore, ...note } of due) await notify(note).catch(() => false);
+  return true;
 }
 
 const voteKey = (id, name) => `battle/${id}/vote/${name.toLowerCase()}`;
@@ -223,13 +283,30 @@ async function openBattle(store, battle, people, { fromList = false } = {}) {
   await store.setJSON(`battle/${battle.id}`, full);
   await store.set("battle-current", battle.id);
   if (battle.silent) return full; // stille proef: geen melding
-  const label = monthLabel(battle.month);
-  await notify({
-    title: `Fotobattle van ${label}`,
-    message: `${full.photos.length} foto's van Pip strijden om de titel foto van de maand. Kiezen kan tot ${weekdayOf(full.closesAt)} ${localTime(full.closesAt).time}.`,
-    url: "fotobattle.html",
-  }).catch(() => false);
+  const now = battle.opensAt || Date.now();
+  const notes = await readNotes(store);
+  await deliver(store, notes, openNotes(full, people), now);
+  notes.sent[`kiezen:${full.id}`] = now;
+  await writeNotes(store, notes);
   return full;
+}
+
+// Kiezen begint: wie mag kiezen, en wiens foto meedoet hoort dat erbij.
+function openNotes(battle, people) {
+  const label = monthLabel(battle.month);
+  const until = `${weekdayOf(battle.closesAt)} ${localTime(battle.closesAt).time}`;
+  const makers = new Set(Object.values(battle.makers || {}).map((name) => String(name).toLowerCase()));
+  const can = voters(battle, people);
+  const own = can.filter((person) => makers.has(person.toLowerCase()));
+  const rest = can.filter((person) => !makers.has(person.toLowerCase()));
+  const title = `Kies de foto van ${label}`;
+  const common = { title, url: "fotobattle.html", badge: 1, tag: `fb-${battle.id}` };
+  const notes = [];
+  if (rest.length) notes.push({ ...common, to: rest, message: `${battle.photos.length} foto's van Pip, 2 minuten werk. Kiezen kan tot ${until}.` });
+  if (own.length) notes.push({ ...common, to: own, message: `Jouw foto doet mee! Kies de mooiste van de anderen. Kan tot ${until}.` });
+  // ntfy lezen we allemaal: daar één keer de gewone tekst.
+  notes.push({ title, message: `${battle.photos.length} foto's van Pip strijden om de foto van ${label}. Kiezen kan tot ${until}.`, ntfyOnly: true });
+  return notes;
 }
 
 // ---- Kiezen en tellen ----
@@ -280,10 +357,10 @@ async function closeBattle(store, battle, people, now) {
   const bytes = await battlePhoto(result.winner);
   if (bytes) await mediaStore.set(`maand/${battle.id}`, bytes);
   const label = monthLabel(battle.month);
+  let listPhoto = null;
   if (!battle.test) {
     if (result.bonus) await recordBattleWin(result.maker, label, now).catch(() => {});
     // Op de fotolijst van de Hub (als die nog niet vol is).
-    let listPhoto = null;
     const list = await photoList();
     if (bytes && !list.some((photo) => photo.id === result.winner) && list.length < MAX_LIST) {
       const meta = (battle.meta || {})[result.winner] || {};
@@ -304,12 +381,34 @@ async function closeBattle(store, battle, people, now) {
     await mediaStore.setJSON("maand-list", months);
   }
   if (battle.silent) return closed;
-  const pts = result.points[result.winner];
-  const message = result.maker
-    ? `${result.maker} maakte de foto van de maand${result.bonus ? ` en krijgt er ${result.bonus} punten voor` : ""}.`
-    : `De winnaar is bekend: ${pts} ${pts === 1 ? "punt" : "punten"}.${result.chosenBy.length ? ` ${names(result.chosenBy)} ${result.chosenBy.length === 1 ? "koos" : "kozen"} hem als leukste.` : ""}`;
-  await notify({ title: `Foto van ${label}`, message, url: "fotobattle.html" }).catch(() => false);
+  const notes = await readNotes(store);
+  await deliver(store, notes, resultNotes(battle, result, people, { onList: Boolean(listPhoto) }), now);
+  notes.sent[`uitslag:${battle.id}`] = now;
+  await writeNotes(store, notes);
   return closed;
+}
+
+// De uitslag: de maker hoort het meteen; de rest krijgt hem zonder de naam,
+// zodat je gaat kijken. Het getal op het app-icoon gaat eraf.
+function resultNotes(battle, result, people, { onList = false } = {}) {
+  const label = monthLabel(battle.month);
+  const common = { url: "fotobattle.html", badge: 0, tag: `fb-${battle.id}` };
+  const title = `De foto van ${label} is gekozen`;
+  const maker = result.maker;
+  if (!maker) {
+    return [{ ...common, title, message: "Tik om de winnaar te zien." }];
+  }
+  const rest = (people || []).filter((person) => person.toLowerCase() !== maker.toLowerCase());
+  const extra = result.bonus ? `+${result.bonus} punten.` : "Een proefronde, dus zonder punten.";
+  const notes = [{
+    ...common,
+    to: [maker],
+    title: `Jouw foto is de foto van ${label}`,
+    message: `${extra}${onList ? " Hij hangt nu in de fotolijst op de Hub." : ""}`,
+  }];
+  if (rest.length) notes.push({ ...common, to: rest, title, message: "Wie maakte hem? Tik om te kijken." });
+  notes.push({ title, message: "Wie maakte hem? Tik in de Pip-app om te kijken.", ntfyOnly: true });
+  return notes;
 }
 
 // Openen op de 1e (of de 2e, als de planner de 1e miste) en sluiten na de tijd.
@@ -318,7 +417,9 @@ export async function tickBattle(people, now = Date.now()) {
   const store = pip();
   const here = localTime(now);
   const day = Number(here.date.slice(8, 10));
-  if ((day === 1 && here.hour >= OPEN_HOUR) || day === 2) {
+  const minutes = here.hour * 60 + here.minute;
+  await remindLater(store, people, now, here, day, minutes);
+  if ((day === 1 && minutes >= OPEN_MINUTES) || day === 2) {
     const month = previousMonth(here.date);
     if (!(await readBattle(store, month))) {
       await openBattle(store, {
@@ -333,7 +434,67 @@ export async function tickBattle(people, now = Date.now()) {
   if (battle && !battle.skipped && !battle.result && now >= battle.closesAt) {
     return closeBattle(store, battle, people, now);
   }
+  if (battle && !battle.skipped && !battle.result && !battle.silent) await lastCall(store, battle, people, now, here);
   return battle;
+}
+
+function daysInMonth(date) {
+  const [y, m] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+// Wat 's nachts bleef liggen, en 3 dagen voor het einde van de maand: insturen,
+// aan wie deze maand nog niets instuurde.
+async function remindLater(store, people, now, here, day, minutes) {
+  const notes = await readNotes(store);
+  let changed = await flushLater(store, notes, now);
+  const month = here.date.slice(0, 7);
+  const key = `insturen:${month}`;
+  if (
+    day === daysInMonth(here.date) - SEND_REMIND_DAYS
+    && minutes >= SEND_REMIND_MINUTES && here.hour < EVENING_UNTIL_HOUR
+    && !notes.sent[key]
+  ) {
+    const counts = new Map();
+    for (const entry of await readEntries(month, people)) counts.set(entry.by, (counts.get(entry.by) || 0) + 1);
+    const todo = (people || []).filter((person) => !counts.get(person));
+    if (todo.length) {
+      const [top] = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+      await deliver(store, notes, [{
+        to: todo,
+        title: `Fotobattle van ${monthLabel(month)}`,
+        message: `Nog ${SEND_REMIND_DAYS} dagen om je mooiste foto van Pip in te sturen.${top ? ` ${top[0]} stuurde er al ${top[1]}.` : ""}`,
+        url: "fotobattle.html#insturen",
+      }], now);
+    }
+    notes.sent[key] = now;
+    changed = true;
+  }
+  if (changed) await writeNotes(store, notes);
+}
+
+// De dag van de uitslag om 12:00: laatste kans, alleen voor wie nog niet koos.
+async function lastCall(store, battle, people, now, here) {
+  if (here.date !== localTime(battle.closesAt).date || here.hour < LAST_CALL_HOUR || here.hour >= EVENING_UNTIL_HOUR) return;
+  const hours = Math.round((battle.closesAt - now) / (60 * 60 * 1000));
+  if (hours < 2) return;
+  const notes = await readNotes(store);
+  const key = `laatste:${battle.id}`;
+  if (notes.sent[key]) return;
+  const voted = (await readVotes(store, battle, people)).map((vote) => vote.by);
+  const todo = voters(battle, people).filter((person) => !voted.includes(person));
+  if (todo.length) {
+    await deliver(store, notes, [{
+      to: todo,
+      title: `Nog ${hours} uur: foto van ${monthLabel(battle.month)}`,
+      message: voted.length ? `${names(voted)} ${voted.length === 1 ? "koos" : "kozen"} al. Jij nog?` : `Kiezen kan tot ${localTime(battle.closesAt).time}.`,
+      url: "fotobattle.html",
+      badge: 1,
+      tag: `fb-${battle.id}`,
+    }], now);
+  }
+  notes.sent[key] = now;
+  await writeNotes(store, notes);
 }
 
 // Een proefbattle met de inzendingen van deze maand (of, zijn die er niet, de

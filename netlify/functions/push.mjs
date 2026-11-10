@@ -2,11 +2,12 @@
 // rest (PIP_ACTION_CODE). De meldingen zelf gaan via netlify/lib/push.mjs.
 //
 //   GET    /api/push   { publicKey }: de openbare sleutel voor het aanmelden
-//   PUT    /api/push   { subscription }: deze telefoon aanmelden
+//   PUT    /api/push   { subscription, name? }: deze telefoon aanmelden; name = wie
+//                      hem gebruikt (opnieuw sturen na wisselen van baasje)
 //   DELETE /api/push   { endpoint }: deze telefoon afmelden
 
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
-import { cleanSubscription, readSubscriptions, writeSubscriptions } from "../lib/push.mjs";
+import { cleanName, cleanSubscription, readSubscriptions, writeSubscriptions } from "../lib/push.mjs";
 
 export default async (request) => {
   const headers = corsHeaders(request, "GET, PUT, DELETE");
@@ -31,7 +32,8 @@ export default async (request) => {
       const subscription = cleanSubscription(body && body.subscription);
       if (!subscription) return json(400, { error: "BAD_SUBSCRIPTION" }, headers);
       const list = (await readSubscriptions()).filter((item) => item.subscription.endpoint !== subscription.endpoint);
-      list.push({ subscription, at: Date.now() });
+      const name = cleanName(body && body.name);
+      list.push({ subscription, at: Date.now(), ...(name ? { name } : {}) });
       await writeSubscriptions(list);
       return json(200, { ok: true }, headers);
     }

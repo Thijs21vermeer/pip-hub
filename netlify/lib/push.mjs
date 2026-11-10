@@ -35,19 +35,32 @@ export function cleanSubscription(value) {
   return { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } };
 }
 
-// Naar elke aangemelde telefoon. Een aanmelding die niet meer bestaat (404/410)
-// gaat uit de lijst. Geeft terug naar hoeveel telefoons het lukte.
-export async function sendPush({ title, message, url = "instellingen.html" }) {
+// Wie een telefoon gebruikt (telefoon.js, me): zo kan een melding naar één baasje.
+export function cleanName(value) {
+  const name = typeof value === "string" ? value.trim().slice(0, 20) : "";
+  return name || null;
+}
+
+// Naar elke aangemelde telefoon, of met `to` alleen naar de telefoons van die
+// baasjes (een telefoon die niet weet van wie hij is, krijgt die dan niet).
+// badge: het getal op het app-icoon (0 haalt het weg). Een aanmelding die niet
+// meer bestaat (404/410) gaat uit de lijst. Geeft terug naar hoeveel telefoons het lukte.
+export async function sendPush({ title, message, url = "instellingen.html", to, badge, tag }) {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) return 0;
   const list = await readSubscriptions();
   if (!list.length) return 0;
+  const wanted = Array.isArray(to) ? new Set(to.map((name) => String(name).toLowerCase())) : null;
   webpush.setVapidDetails(SUBJECT, publicKey, privateKey);
-  const payload = JSON.stringify({ title, body: message, url });
+  const payload = JSON.stringify({ title, body: message, url, ...(Number.isInteger(badge) ? { badge } : {}), ...(tag ? { tag } : {}) });
   const keep = [];
   let sent = 0;
   for (const item of list) {
+    if (wanted && !(item.name && wanted.has(item.name.toLowerCase()))) {
+      keep.push(item);
+      continue;
+    }
     try {
       await webpush.sendNotification(item.subscription, payload, { TTL: 6 * 60 * 60, urgency: "high" });
       sent += 1;

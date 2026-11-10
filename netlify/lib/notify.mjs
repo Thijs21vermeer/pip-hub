@@ -13,12 +13,17 @@ const RESET_HOUR = 4; // net als Pip (config.js resetHour): een nieuwe dag begin
 // Elke melding gaat naar ntfy én naar de telefoons die meldingen van de Pip-app
 // aan hebben gezet (web-push, netlify/lib/push.mjs). Geeft terug of ntfy lukte.
 // url: welke pagina de melding opent in de app (standaard Thuis).
-export async function notify({ title, message, priority = 3, url }) {
-  const [ntfy] = await Promise.all([
-    sendNtfy({ title, message, priority }),
-    sendPush({ title, message, ...(url ? { url } : {}) }).catch(() => 0),
+// to: alleen naar de telefoons van deze baasjes (geen ntfy: dat lezen we allemaal).
+// ntfyOnly: alleen ntfy (de algemene tekst naast meldingen per baasje).
+// badge: het getal op het app-icoon. tag: een nieuwere melding met dezelfde tag
+// vervangt de oude.
+export async function notify({ title, message, priority = 3, url, to, badge, tag, ntfyOnly = false }) {
+  const extra = { ...(url ? { url } : {}), ...(to ? { to } : {}), ...(Number.isInteger(badge) ? { badge } : {}), ...(tag ? { tag } : {}) };
+  const [ntfy, pushed] = await Promise.all([
+    to ? Promise.resolve(false) : sendNtfy({ title, message, priority }),
+    ntfyOnly ? Promise.resolve(0) : sendPush({ title, message, ...extra }).catch(() => 0),
   ]);
-  return ntfy;
+  return to ? pushed > 0 : ntfy;
 }
 
 async function sendNtfy({ title, message, priority }) {

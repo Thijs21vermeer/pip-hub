@@ -158,12 +158,43 @@
     const { publicKey } = await getJson(pushUrl());
     const subscription = (await registration.pushManager.getSubscription())
       || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+    const name = savedMe();
     const response = await fetch(pushUrl(), {
       method: "PUT",
       headers: auth({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ subscription: subscription.toJSON() }),
+      body: JSON.stringify({ subscription: subscription.toJSON(), ...(name ? { name } : {}) }),
     });
     if (!response.ok) throw new Error(String(response.status));
+    rememberPushName(name);
+  }
+
+  // Het servertje weet bij elke aanmelding van wie de telefoon is, zodat een
+  // melding naar één baasje kan (wie nog moet kiezen bij de fotobattle). Na
+  // wisselen van baasje (setMe) of als het nog niet gestuurd is: opnieuw melden.
+  const PUSH_NAME_KEY = "pip-push-naam";
+  function rememberPushName(name) {
+    try {
+      localStorage.setItem(PUSH_NAME_KEY, name || "");
+    } catch (error) {
+      // Geen opslag: dan de volgende keer opnieuw sturen.
+    }
+  }
+  async function syncPushName(name = savedMe()) {
+    try {
+      if (!pushSupported() || !pushUrl() || !name) return;
+      if (localStorage.getItem(PUSH_NAME_KEY) === name) return;
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = registration && await registration.pushManager.getSubscription();
+      if (!subscription) return;
+      const response = await fetch(pushUrl(), {
+        method: "PUT",
+        headers: auth({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ subscription: subscription.toJSON(), name }),
+      });
+      if (response.ok) rememberPushName(name);
+    } catch (error) {
+      // Niet erg: de volgende keer opnieuw.
+    }
   }
 
   async function disablePush() {
@@ -483,6 +514,29 @@
     } catch (error) {
       // Geen opslag: dan de volgende keer opnieuw vragen.
     }
+    syncPushName(name);
+  }
+  // Wat deze telefoon als naam bewaart (zonder te kijken of die nog bestaat).
+  function savedMe() {
+    try {
+      return localStorage.getItem(ME_KEY) || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  // Het getal op het app-icoon (iOS 16.4+ op het beginscherm, Android): 1 zolang
+  // jij nog moet kiezen bij de fotobattle, anders niets.
+  function battleBadge(summary, name) {
+    try {
+      const current = summary && summary.current;
+      const open = current && !current.result && Date.now() < current.closesAt;
+      const todo = open && name && (current.canVote || []).includes(name) && !(current.voted || []).includes(name);
+      if (todo && navigator.setAppBadge) navigator.setAppBadge(1).catch(() => {});
+      else if (!todo && navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+    } catch (error) {
+      // Geen getal op het icoon: niet erg.
+    }
   }
 
   function escapeHtml(text) {
@@ -579,6 +633,6 @@
     remember, recall, rememberHome, mediaUrl, storedMediaUrl, pruneMedia, cachedAvatars,
     paintStatusBar, topColorOf,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
-    me, setMe,
+    me, setMe, syncPushName, battleBadge,
   };
 })();
