@@ -2410,13 +2410,6 @@ body.fb-page {
   background: #fbf4e8;
   color: #241a14;
 }
-.fb-count {
-  margin: 14px 24px 0;
-  color: #f3c77a;
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
-}
 .fb-note,
 .fb-blind {
   display: flex;
@@ -2443,12 +2436,12 @@ body.fb-page {
 .fb-in {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  margin: 18px 24px 0;
-  padding-top: 14px;
-  border-top: 1px solid rgba(251, 244, 232, 0.1);
-  color: rgba(251, 244, 232, 0.7);
+  margin: 22px 24px 0;
+  color: rgba(251, 244, 232, 0.6);
   font-size: 13.5px;
+  text-align: center;
 }
 .fb-in .fb-av .avatar {
   box-shadow: 0 0 0 2.5px #2b1d15;
@@ -2570,22 +2563,81 @@ body.fb-page {
 .fb-stack .fb-av:nth-child(4) { z-index: 3; }
 .fb-stack .fb-av:nth-child(5) { z-index: 2; }
 .fb-stack .fb-av:nth-child(6) { z-index: 1; }
-.fb-as {
-  margin: 6px 24px 0;
+
+/* Jouw foto's: wie je bent rechtsboven, de stand in één regel, en de stappen. */
+.fb-top .fb-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 4px 10px 4px 4px;
+  border: 0;
+  border-radius: 99px;
+  background: #3a2618;
+  color: #fbf4e8;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.fb-me .avatar {
+  box-shadow: none;
+}
+.fb-me svg {
+  width: 16px;
+  height: 16px;
   color: rgba(251, 244, 232, 0.6);
-  font-size: 13.5px;
+}
+.fb-state {
+  margin: 24px 24px 0;
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1.1;
   text-align: center;
 }
-.fb-as b {
-  color: #fbf4e8;
-}
-.fb-as button {
+.fb-steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 24px 24px 0;
   padding: 0;
-  border: 0;
-  background: none;
-  color: #f3c77a;
-  font-size: 13.5px;
+  list-style: none;
+}
+.fb-steps::before {
+  content: "";
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  top: 6px;
+  height: 2px;
+  background: rgba(251, 244, 232, 0.15);
+}
+.fb-steps li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.fb-steps i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2f2016;
+  box-shadow: inset 0 0 0 2px rgba(251, 244, 232, 0.3);
+}
+.fb-steps li.now i {
+  background: #f3c77a;
+  box-shadow: 0 0 0 4px rgba(243, 199, 122, 0.2);
+}
+.fb-steps b {
+  margin-top: 8px;
+  font-size: 14px;
   font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+}
+.fb-steps li:not(.now) b {
+  color: rgba(251, 244, 232, 0.7);
+}
+.fb-steps span {
+  margin-top: 2px;
+  color: rgba(251, 244, 232, 0.5);
+  font-size: 12px;
 }

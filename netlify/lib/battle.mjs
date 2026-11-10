@@ -422,10 +422,10 @@ export async function battleSummary(people, me, now = Date.now()) {
   const winners = (await media().get("maand-list", { type: "json" })) || [];
   const months = winners.map((item) => ({ ...item, label: monthLabel(item.month) }));
   const entry = await entrySummary(people, me, now);
-  if (!battle || battle.skipped) return { current: null, winners: months, entry };
+  if (!battle || battle.skipped) return { current: null, winners: months, entry, people: people || [] };
   const showUntil = amsterdamMs(`${nextMonth(battle.month)}-0${SHOW_UNTIL_DAY}`, 4);
   const until = battle.test ? battle.closesAt + 24 * 60 * 60 * 1000 : showUntil;
-  if (battle.result && now >= Math.max(until, battle.result.at + 24 * 60 * 60 * 1000)) return { current: null, winners: months, entry };
+  if (battle.result && now >= Math.max(until, battle.result.at + 24 * 60 * 60 * 1000)) return { current: null, winners: months, entry, people: people || [] };
 
   const store = pip();
   const list = await photoList();
@@ -461,6 +461,7 @@ export async function battleSummary(people, me, now = Date.now()) {
     },
     winners: months,
     entry,
+    people: people || [],
   };
 }
 

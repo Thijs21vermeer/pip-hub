@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-61">
+  <link rel="stylesheet" href="stijl.css?v=20261109-62">
   <!-- Fotobattle: de hele maand je 3 mooiste foto's van Pip insturen; op de 1e
        kiezen jullie samen, blind, steeds uit twee (een toernooi). Daarna de
        uitslag: de winnaar, van wie hij is, de top 3 en wat ieder koos. De maker
@@ -46,11 +46,14 @@
         <h1 class="fb-title">Jouw foto's</h1>
         <p class="fb-lead" id="send-lead"></p>
         <div class="fb-slots" id="slots"></div>
-        <p class="fb-count" id="send-count"></p>
-        <p class="fb-as" id="send-as"></p>
-        <p class="fb-note" data-icon="eye">Niemand ziet van wie een foto is, tot de uitslag. Je eigen foto's zitten niet in jouw rondjes.</p>
-        <p class="fb-note" data-icon="clock" id="send-until"></p>
-        <div class="fb-in" id="send-in"></div>
+        <p class="fb-state" id="send-count"></p>
+        <!-- Waar je nu bent: insturen, kiezen, uitslag. -->
+        <ol class="fb-steps">
+          <li class="now"><i></i><b>Insturen</b><span id="step-send"></span></li>
+          <li><i></i><b>Kiezen</b><span id="step-pick"></span></li>
+          <li><i></i><b>Uitslag</b><span id="step-result"></span></li>
+        </ol>
+        <p class="fb-in" id="send-in"></p>
         <input type="file" id="file" accept="image/*" hidden>
       </section>
 
@@ -105,8 +108,8 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-61"></script>
-  <script src="telefoon.js?v=20261109-61"></script>
+  <script src="config.js?v=20261109-62"></script>
+  <script src="telefoon.js?v=20261109-62"></script>
   <script>
     (function () {
       "use strict";
@@ -146,7 +149,9 @@
       function names(list) {
         return list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} en ${list[list.length - 1]}`;
       }
+      // De baasjes van het servertje (ook als er geen battle loopt, tijdens het insturen).
       function people() {
+        if (summary && Array.isArray(summary.people) && summary.people.length) return summary.people;
         const current = summary && summary.current;
         return current && current.people && current.people.length ? current.people : P.people({});
       }
@@ -219,16 +224,22 @@
         }
       }
 
+      // "30 november" → "30 nov"
+      const shortDate = (text) => String(text || "").replace(/^(\d+) (\w{3})\w*$/, "$1 $2");
+
       function showSend() {
         if (!me()) return askWho(showSend);
-        back();
+        // Rechtsboven wie je bent; tik om te wisselen (een gedeelde telefoon, of testen).
+        $("top").innerHTML = '<a class="back" href="instellingen.html">‹ Thuis</a><button type="button" class="fb-me" id="send-switch" aria-label="Iemand anders"></button>';
+        $("send-switch").append(avatar(me(), 26), document.createTextNode(me()));
+        $("send-switch").insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>');
+        $("send-switch").addEventListener("click", () => askWho(showSend));
         const entry = summary.entry;
         $("send-kick").textContent = `Fotobattle · ${entry.label}`;
-        $("send-lead").textContent = `Kies je drie mooiste foto's van Pip van ${entry.label}. Op ${entry.startsText} kiezen jullie samen de foto van de maand.`;
-        $("send-until").innerHTML = `${ICON.clock}Je kunt wisselen tot en met ${P.escapeHtml(entry.untilText)}.`;
-        // Gedeelde telefoon (of testen): van naam wisselen.
-        $("send-as").innerHTML = `Je stuurt in als <b>${P.escapeHtml(me())}</b> · <button type="button" id="send-switch">Iemand anders?</button>`;
-        $("send-switch").addEventListener("click", () => askWho(showSend));
+        $("send-lead").textContent = `Kies je drie mooiste foto's van Pip van ${entry.label}.`;
+        $("step-send").textContent = `tot en met ${shortDate(entry.untilText)}`;
+        $("step-pick").textContent = `vanaf ${shortDate(entry.startsText)}, blind`;
+        $("step-result").textContent = `uiterlijk ${shortDate(String(entry.startsText).replace(/^1 /, "3 "))}`;
         renderSlots();
         show("send");
       }
@@ -249,7 +260,7 @@
           slot.addEventListener("click", () => (photo ? openSlot(photo, i) : pickFile(null)));
           box.appendChild(slot);
         }
-        $("send-count").textContent = mine.length === entry.max ? `Je doet mee met ${entry.max} foto's` : `${mine.length} van ${entry.max} gekozen`;
+        $("send-count").textContent = mine.length ? `Je doet mee met ${mine.length} ${mine.length === 1 ? "foto" : "foto's"}.` : "Nog geen foto's gekozen.";
         const senders = entry.senders || [];
         const inBox = $("send-in");
         inBox.innerHTML = "";
@@ -266,7 +277,7 @@
           text.textContent = `${entry.count} ${entry.count === 1 ? "foto" : "foto's"} binnen van ${names(senders)}`;
           inBox.append(stack, text);
         } else {
-          inBox.textContent = "Nog niemand heeft iets ingestuurd. Jij als eerste?";
+          inBox.textContent = "Nog niets binnen. Jij als eerste?";
         }
       }
 
