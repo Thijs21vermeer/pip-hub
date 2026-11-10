@@ -3,6 +3,7 @@
 //   GET  /api/fotobattle?me=Thijs     { current: { id, label, photos, voted, mine, result, … } | null, winners }
 //   POST /api/fotobattle              { id, by, wins: { fotoId: n }, final: [winnaar, tweede] }
 //   POST /api/fotobattle              { proef: true }: een proefbattle met de foto's van deze maand
+//                                     (met stil: true zonder meldingen)
 //   GET  /api/fotobattle/maand/:id    de bewaarde winnaar (JPEG)
 
 import { getStore } from "@netlify/blobs";
@@ -40,7 +41,7 @@ export default async (request, context) => {
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") return json(400, { error: "BAD_REQUEST" }, headers);
     if (body.proef === true) {
-      const result = await startProef();
+      const result = await startProef(Date.now(), { silent: body.stil === true });
       if (result.error) return json(409, { error: result.error }, headers);
       return json(201, await battleSummary(people, null), headers);
     }

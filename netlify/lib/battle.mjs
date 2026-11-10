@@ -134,6 +134,7 @@ async function openBattle(store, battle) {
   await store.setJSON(`battle/${battle.id}`, full);
   await store.set("battle-current", battle.id);
   const label = monthLabel(battle.month);
+  if (battle.silent) return full; // stille proef: geen melding
   await notify({
     title: `Fotobattle van ${label}`,
     message: `${photos.length} foto's van Pip strijden om de titel foto van de maand. Kiezen kan tot ${weekdayOf(full.closesAt)} ${localTime(full.closesAt).time}.`,
@@ -182,6 +183,7 @@ async function closeBattle(store, battle, people, now) {
     list.sort((a, b) => a.month.localeCompare(b.month));
     await mediaStore.setJSON("maand-list", list);
   }
+  if (battle.silent) return closed;
   const label = monthLabel(battle.month);
   const pts = result.points[result.winner];
   await notify({
@@ -218,7 +220,8 @@ export async function tickBattle(people, now = Date.now()) {
 
 // Een proefbattle met de foto's van deze maand tot nu toe, 48 uur open. Telt niet
 // mee voor de foto's van de maand (en de echte battle van deze maand komt gewoon).
-export async function startProef(now = Date.now()) {
+// silent: zonder meldingen (niet bij het openen, niet bij de uitslag).
+export async function startProef(now = Date.now(), { silent = false } = {}) {
   const store = pip();
   const battle = await currentBattle(store);
   if (battle && !battle.skipped && !battle.result) return { error: "ALREADY_OPEN" };
@@ -227,6 +230,7 @@ export async function startProef(now = Date.now()) {
     id: `${month}-proef`,
     month,
     test: true,
+    ...(silent ? { silent: true } : {}),
     opensAt: now,
     closesAt: now + PROEF_HOURS * 60 * 60 * 1000,
   });
