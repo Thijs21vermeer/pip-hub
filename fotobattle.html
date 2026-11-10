@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fotobattle van Pip</title>
+  <link rel="icon" href="pip.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="telefoon.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="Pip">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#241a14">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="stijl.css?v=20261109-59">
+  <!-- Fotobattle: elke maand samen de foto van de maand kiezen. Steeds twee foto's,
+       tik op de leukste (een toernooi). Daarna de uitslag: de winnaar, de top 3 en
+       wat ieder in de finale koos. Hoe het telt: netlify/lib/battle.mjs. -->
+</head>
+<body class="fb-page">
+  <main class="page">
+    <div class="fb-top" id="top"><a class="back" href="instellingen.html">‹ Thuis</a></div>
+
+    <div id="linked" hidden>
+      <section id="view-loading"><p class="fb-lead">Even laden…</p></section>
+
+      <section id="view-none" hidden>
+        <small class="fb-kick">Fotobattle</small>
+        <h1 class="fb-title">Nu even niet</h1>
+        <p class="fb-lead">Op de 1e van de maand begint er een, met de foto's die die maand ervoor op de fotolijst kwamen. Jullie krijgen dan een melding.</p>
+      </section>
+
+      <section id="view-who" hidden>
+        <small class="fb-kick" id="who-kick">Fotobattle</small>
+        <h1 class="fb-title">Wie ben jij?</h1>
+        <p class="fb-lead">Dan weet Pip wiens keuze het is. Deze telefoon onthoudt het.</p>
+        <div class="fb-people" id="people"></div>
+      </section>
+
+      <section id="view-duel" hidden>
+        <small class="fb-kick" id="round"></small>
+        <h1 class="fb-title">Welke is leuker?</h1>
+        <div class="fb-pair">
+          <button type="button" class="fb-card top" id="card-a" aria-label="Deze foto"></button>
+          <span class="fb-of" aria-hidden="true">of</span>
+          <button type="button" class="fb-card bottom" id="card-b" aria-label="Deze foto"></button>
+        </div>
+        <p class="fb-hint">Tik op de leukste</p>
+      </section>
+
+      <section id="view-done" hidden>
+        <small class="fb-kick">Jouw winnaar</small>
+        <h1 class="fb-title" id="done-title">Gekozen!</h1>
+        <div class="fb-champ"><span class="fb-crown" data-crown></span><i id="done-photo"></i></div>
+        <p class="fb-lead" id="done-text" style="text-align:center"></p>
+        <a class="fb-go wide" id="done-go" href="instellingen.html">Terug naar Thuis</a>
+        <button type="button" class="fb-link" id="done-again" hidden>Opnieuw kiezen</button>
+      </section>
+
+      <section id="view-result" hidden>
+        <small class="fb-kick" id="result-kick"></small>
+        <h1 class="fb-title">De winnaar</h1>
+        <div class="fb-champ"><span class="fb-crown" data-crown></span><i id="result-photo"></i></div>
+        <p class="fb-score" id="result-score"></p>
+        <h2 class="fb-h3" id="top3-title">Top 3</h2>
+        <div class="fb-podium" id="podium"></div>
+        <h2 class="fb-h3" id="finals-title">Ieders finale</h2>
+        <ul class="fb-finals" id="finals"></ul>
+      </section>
+
+      <p class="fb-status" id="status" role="status"></p>
+    </div>
+
+    <p class="empty" id="not-linked" hidden>Deze telefoon is nog niet gekoppeld. Tik in de ruststand op de Google Hub linksonder op het QR-knopje en scan de code met je camera.</p>
+  </main>
+
+  <script src="config.js?v=20261109-59"></script>
+  <script src="telefoon.js?v=20261109-59"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const P = window.PipPhone;
+      const { config, $, serverUrl, getJson, auth } = P;
+      const battleUrl = serverUrl("fotobattle", (config.fotobattle && config.fotobattle.url) || "");
+      const photosUrl = serverUrl("fotos", config.photos.url);
+      const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      const CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      const CROWN = '<svg viewBox="0 0 24 24" fill="#f3c77a" stroke="#8d5124" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4 4.5-7 4.5 7L21 8l-2 11H5z"/><circle cx="3" cy="7.5" r="1.6"/><circle cx="21" cy="7.5" r="1.6"/><circle cx="12" cy="4.5" r="1.6"/></svg>';
+      const VIEWS = ["loading", "none", "who", "duel", "done", "result"];
+      const status = (text) => { $("status").textContent = text || ""; };
+      document.querySelectorAll("[data-crown]").forEach((el) => { el.innerHTML = CROWN; });
+      $("done-go").insertAdjacentHTML("beforeend", ARROW);
+      P.paintStatusBar("#241a14");
+
+      let summary = null;
+      let avatars = new Map();
+      const photoSrc = new Map(); // id → blob-URL
+
+      function show(view) {
+        VIEWS.forEach((name) => { $(`view-${name}`).hidden = name !== view; });
+        window.scrollTo(0, 0);
+      }
+      function back() {
+        $("top").innerHTML = '<a class="back" href="instellingen.html">‹ Thuis</a>';
+      }
+      function names(list) {
+        return list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} en ${list[list.length - 1]}`;
+      }
+      function people() {
+        const current = summary && summary.current;
+        return current && current.people && current.people.length ? current.people : P.people({});
+      }
+      function me() {
+        return P.me({ people: people() });
+      }
+      async function src(id) {
+        if (!photoSrc.has(id)) photoSrc.set(id, await P.mediaUrl(`${photosUrl}/${id}`));
+        return photoSrc.get(id);
+      }
+      function paint(element, url) {
+        element.style.backgroundImage = url ? `url("${url}")` : "";
+      }
+
+      async function load() {
+        const who = me();
+        summary = await getJson(`${battleUrl}${who ? `?me=${encodeURIComponent(who)}` : ""}`);
+        return summary;
+      }
+
+      // ---- Wie ben jij ----
+      function askWho() {
+        back();
+        const current = summary.current;
+        $("who-kick").textContent = `Fotobattle · ${current.label}`;
+        const box = $("people");
+        box.innerHTML = "";
+        for (const person of people()) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.append(P.avatarElement(person, people(), avatars), document.createTextNode(person));
+          button.addEventListener("click", async () => {
+            P.setMe(person);
+            await load().catch(() => null);
+            route();
+          });
+          box.appendChild(button);
+        }
+        show("who");
+      }
+
+      // ---- Het toernooi ----
+      // Iedereen krijgt de foto's in een eigen volgorde. Bij een oneven aantal gaat
+      // de laatste een ronde vanzelf door.
+      let game = null;
+
+      function shuffle(list) {
+        const a = list.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      function roundName(size) {
+        if (size <= 2) return "Finale";
+        if (size <= 4) return "Halve finale";
+        if (size <= 8) return "Kwartfinale";
+        return "Achtste finale";
+      }
+
+      // Het volgende tweetal, of null als er een winnaar is.
+      function nextPair() {
+        for (;;) {
+          if (game.round.length === 1) return null;
+          if (game.pos >= game.round.length) {
+            game.round = game.next;
+            game.next = [];
+            game.pos = 0;
+            continue;
+          }
+          if (game.pos === game.round.length - 1) {
+            game.next.push(game.round[game.pos]);
+            game.pos += 1;
+            continue;
+          }
+          return [game.round[game.pos], game.round[game.pos + 1]];
+        }
+      }
+
+      async function startGame() {
+        const ids = summary.current.photos.map((p) => p.id);
+        status("Foto's laden…");
+        try {
+          await Promise.all(ids.map((id) => src(id)));
+        } catch (error) {
+          status("De foto's laden niet. Probeer het zo nog eens.");
+          return;
+        }
+        status("");
+        game = { ids, round: shuffle(ids), next: [], pos: 0, picks: 0, total: ids.length - 1, wins: Object.fromEntries(ids.map((id) => [id, 0])), final: null, busy: false };
+        $("top").innerHTML = `<span class="fb-segs" id="segs">${"<i></i>".repeat(game.total)}</span><a class="fb-x" href="instellingen.html" aria-label="Stoppen">${CLOSE}</a>`;
+        showPair();
+        show("duel");
+      }
+
+      function showPair() {
+        const pair = nextPair();
+        if (!pair) return finish();
+        game.pair = pair;
+        $("round").textContent = `${roundName(game.round.length)} · keuze ${game.picks + 1} van ${game.total}`;
+        [$("card-a"), $("card-b")].forEach((card, i) => {
+          card.classList.remove("picked", "lost");
+          paint(card, photoSrc.get(pair[i]));
+        });
+        $("segs").querySelectorAll("i").forEach((seg, i) => seg.classList.toggle("on", i < game.picks));
+      }
+
+      function pick(side) {
+        if (!game || game.busy || !game.pair) return;
+        game.busy = true;
+        const winner = game.pair[side];
+        const loser = game.pair[1 - side];
+        [$("card-a"), $("card-b")][side].classList.add("picked");
+        [$("card-a"), $("card-b")][1 - side].classList.add("lost");
+        if (game.round.length === 2) game.final = [winner, loser];
+        game.wins[winner] += 1;
+        game.picks += 1;
+        game.next.push(winner);
+        game.pos += 2;
+        setTimeout(() => {
+          game.busy = false;
+          showPair();
+        }, 280);
+      }
+      $("card-a").addEventListener("click", () => pick(0));
+      $("card-b").addEventListener("click", () => pick(1));
+
+      async function finish() {
+        const current = summary.current;
+        const champion = game.final[0];
+        $("segs").querySelectorAll("i").forEach((seg) => seg.classList.add("on"));
+        paint($("done-photo"), photoSrc.get(champion));
+        $("done-title").textContent = "Gekozen!";
+        $("done-text").textContent = "Even opslaan…";
+        $("done-again").hidden = true;
+        show("done");
+        try {
+          const response = await fetch(battleUrl, {
+            method: "POST",
+            headers: auth({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ id: current.id, by: me(), wins: game.wins, final: game.final }),
+          });
+          if (response.status === 409) {
+            await load().catch(() => null);
+            status("De battle was net gesloten; je keuze telde niet meer mee.");
+            return route();
+          }
+          if (!response.ok) throw new Error(String(response.status));
+          summary = await response.json();
+          game = null;
+          back();
+          if (summary.current && summary.current.result) {
+            $("done-text").textContent = "Je was de laatste: iedereen heeft gekozen. De uitslag is er!";
+            $("done-go").innerHTML = `Bekijk de uitslag${ARROW}`;
+            $("done-go").setAttribute("href", "#");
+            $("done-go").onclick = (event) => { event.preventDefault(); showResult(); };
+          } else {
+            $("done-text").textContent = waitingText();
+          }
+          P.remember("battle", summary);
+        } catch (error) {
+          $("done-text").textContent = "Opslaan lukte niet. Controleer je verbinding en tik dan op Opnieuw kiezen.";
+          $("done-again").hidden = false;
+        }
+      }
+
+      function waitingText() {
+        const current = summary.current;
+        const waiting = people().filter((person) => !(current.voted || []).includes(person));
+        if (!waiting.length) return `Dit is jouw foto van ${current.label}. De uitslag komt ${current.closesText}.`;
+        const moet = waiting.length === 1 ? "moet" : "moeten";
+        const koos = waiting.length === 1 ? "koos" : "kozen";
+        return `Dit is jouw foto van ${current.label}. ${names(waiting)} ${moet} nog kiezen; de uitslag komt ${current.closesText}, of meteen als ${names(waiting)} ook ${koos}.`;
+      }
+
+      // Al gekozen: je eigen winnaar, met de mogelijkheid om opnieuw te kiezen.
+      async function showChosen() {
+        back();
+        const current = summary.current;
+        $("done-title").textContent = "Al gekozen";
+        $("done-text").textContent = `${waitingText()} Wil je toch iets anders? Kies dan opnieuw; je nieuwe keuze vervangt de oude.`;
+        $("done-again").hidden = false;
+        paint($("done-photo"), current.mine ? await src(current.mine).catch(() => "") : "");
+        show("done");
+      }
+      $("done-again").addEventListener("click", () => startGame());
+
+      // ---- Uitslag ----
+      async function showResult() {
+        back();
+        const current = summary.current;
+        const r = current.result;
+        const pts = r.points[r.winner] || 0;
+        $("result-kick").textContent = `${current.test ? "Proef · " : ""}Foto van ${current.label}`;
+        const chosen = r.chosenBy || [];
+        $("result-score").textContent = `${pts} ${pts === 1 ? "punt" : "punten"}${chosen.length ? ` · ${names(chosen)} ${chosen.length === 1 ? "koos" : "kozen"} hem` : ""}`;
+        P.mediaUrl(`${battleUrl}/${r.kept}`).then((url) => paint($("result-photo"), url)).catch(() => {});
+
+        const available = new Set(current.photos.map((p) => p.id));
+        const top = (r.top || []).filter((item) => available.has(item.id) || item.id === r.winner);
+        $("podium").innerHTML = top.map((item, i) =>
+          `<figure><div data-id="${P.escapeHtml(item.id)}"><b class="${i === 0 ? "gold" : ""}">${i + 1}</b></div><small>${item.points} ${item.points === 1 ? "punt" : "punten"}</small></figure>`).join("");
+        $("top3-title").hidden = top.length < 2;
+        $("podium").hidden = top.length < 2;
+        $("podium").querySelectorAll("[data-id]").forEach((el) => {
+          const id = el.dataset.id;
+          const url = id === r.winner ? `${battleUrl}/${r.kept}` : `${photosUrl}/${id}`;
+          P.mediaUrl(url).then((u) => paint(el, u)).catch(() => {});
+        });
+
+        const finals = Object.entries(r.finals || {});
+        $("finals").innerHTML = "";
+        $("finals-title").hidden = !finals.length;
+        for (const [name, [w, l]] of finals) {
+          const li = document.createElement("li");
+          li.innerHTML = `<span class="name"></span><i data-photo="${P.escapeHtml(w)}"></i><span class="vs">tegen</span><i class="lost" data-photo="${P.escapeHtml(l)}"></i>`;
+          li.prepend(P.avatarElement(name, people(), avatars));
+          const label = li.querySelector(".name");
+          label.textContent = name;
+          const small = document.createElement("small");
+          small.textContent = w === r.winner ? "koos de winnaar" : "koos een andere";
+          label.appendChild(small);
+          li.querySelectorAll("[data-photo]").forEach((el) => {
+            const id = el.dataset.photo;
+            const url = id === r.winner ? `${battleUrl}/${r.kept}` : available.has(id) ? `${photosUrl}/${id}` : "";
+            if (url) P.mediaUrl(url).then((u) => paint(el, u)).catch(() => {});
+          });
+          $("finals").appendChild(li);
+        }
+        show("result");
+      }
+
+      function route() {
+        const current = summary && summary.current;
+        if (!current || (current.result && !current.result.winner)) {
+          back();
+          return show("none");
+        }
+        if (current.result) return showResult();
+        if (Date.now() >= current.closesAt) {
+          back();
+          $("view-none").querySelector(".fb-lead").textContent = "Kiezen is voorbij; de uitslag komt zo.";
+          return show("none");
+        }
+        if (!me()) return askWho();
+        if ((current.voted || []).includes(me())) return showChosen();
+        return startGame();
+      }
+
+      (async function start() {
+        const { linked } = await P.showLinked();
+        if (!linked || !battleUrl) return;
+        avatars = await P.cachedAvatars();
+        P.loadAvatars().then((list) => { if (list.size) avatars = list; });
+        try {
+          await load();
+        } catch (error) {
+          summary = P.recall("battle");
+          if (!summary) {
+            back();
+            $("view-none").querySelector(".fb-title").textContent = "Geen verbinding";
+            $("view-none").querySelector(".fb-lead").textContent = "Het servertje is niet bereikbaar. Probeer het zo nog eens.";
+            return show("none");
+          }
+        }
+        route();
+      })();
+    })();
+  </script>
+</body>
+</html>

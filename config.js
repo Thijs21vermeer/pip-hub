@@ -87,6 +87,9 @@ window.PIP_CONFIG = {
   // Meldingen van de Pip-app zelf (web-push), aan te zetten op Thuis in de app op
   // het beginscherm (netlify/functions/push.mjs, sw.js).
   push: { url: "https://pip-kattenbak.netlify.app/api/push" },
+  // Fotobattle: elke maand samen de foto van de maand kiezen (fotobattle.html,
+  // netlify/lib/battle.mjs). Zelfde servertje en code.
+  fotobattle: { url: "https://pip-kattenbak.netlify.app/api/fotobattle" },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is

@@ -9,11 +9,13 @@
 // Zondag vanaf 20:00 komt hier ook de melding "Held van de week" vandaan: wie
 // deze week de meeste punten haalde (zie lib/history.mjs). En een speeltimer die
 // afliep terwijl niemand keek, wordt hier alsnog een punt (lib/play.mjs).
+// De fotobattle gaat hier open en dicht (lib/battle.mjs).
 
 import { getStore } from "@netlify/blobs";
 import { readPart, recordReminder, weekScores, weekStart, yearOf } from "../lib/history.mjs";
 import { localTime, notify, pipDay } from "../lib/notify.mjs";
 import { readPlay } from "../lib/play.mjs";
+import { tickBattle } from "../lib/battle.mjs";
 
 // Liep de planner even niet, dan tot 2 uur na de tijd nog sturen.
 const LATE_MINUTES = 120;
@@ -99,6 +101,9 @@ export default async () => {
   // dicht) wordt hier een punt, met de melding "Tijd om".
   await readPlay(settings.tasks, now).catch((error) =>
     console.error(JSON.stringify({ event: "play.settle.error", code: error.code || error.name || "UNKNOWN" })));
+  // Fotobattle: op de 1e om 10:00 open, op de 3e om 20:00 de uitslag (lib/battle.mjs).
+  await tickBattle(settings.people || [], now).catch((error) =>
+    console.error(JSON.stringify({ event: "battle.error", code: error.code || error.name || "UNKNOWN" })));
 };
 
 export const config = { schedule: "*/5 * * * *" };

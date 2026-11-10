@@ -26,9 +26,13 @@ self.addEventListener("notificationclick", (event) => {
   const url = new URL((event.notification.data && event.notification.data.url) || "instellingen.html", self.registration.scope).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    // Staat Pip al open, dan die naar voren halen; anders openen.
+    // Staat Pip al open, dan die naar voren halen; anders openen. Hoort de melding
+    // bij een eigen pagina (zoals de fotobattle), dan daarheen.
+    const own = event.notification.data && event.notification.data.url && !/instellingen\.html$/.test(url);
     for (const client of windows) {
-      if ("focus" in client) return client.focus();
+      if (!("focus" in client)) continue;
+      if (own && client.url !== url && "navigate" in client) await client.navigate(url).catch(() => null);
+      return client.focus();
     }
     return self.clients.openWindow(url);
   })());

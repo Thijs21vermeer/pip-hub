@@ -149,6 +149,7 @@
     restClock: document.getElementById("rest-clock"),
     restDate: document.getElementById("rest-date"),
     restCard: document.getElementById("rest-card"),
+    restLabel: document.getElementById("rest-label"),
     restPhotos: [...document.querySelectorAll(".rest-photo")],
     restQrButton: document.getElementById("rest-qr-button"),
     restQr: document.getElementById("rest-qr"),
@@ -1080,6 +1081,7 @@
       const uploaded = [...list].reverse()
         .filter((photo) => photoUrls.has(photo.id))
         .map((photo) => ({
+          id: photo.id,
           url: photoUrls.get(photo.id),
           // "Hele foto" (gekozen op fotos.html, of vanzelf bij staande foto's):
           // helemaal tonen, met een vage achtergrond.
@@ -1116,15 +1118,25 @@
     });
   }
 
+  let shownSlide = DEFAULT_SLIDE;
+
   async function nextSlide() {
-    if (els.rest.hidden || slides.length < 2) return;
-    if (photoStyle.order === "shuffle") {
-      // Door elkaar, maar nooit twee keer dezelfde achter elkaar.
-      slideIndex = (slideIndex + 1 + Math.floor(Math.random() * (slides.length - 1))) % slides.length;
+    // De dag van de uitslag van de fotobattle blijft de winnaar in beeld.
+    const pinned = liveBattle() && battleSlide;
+    if (els.rest.hidden || (!pinned && slides.length < 2)) return;
+    let slide;
+    if (pinned) {
+      if (shownSlide === battleSlide) return;
+      slide = battleSlide;
     } else {
-      slideIndex = (slideIndex + 1) % slides.length;
+      if (photoStyle.order === "shuffle") {
+        // Door elkaar, maar nooit twee keer dezelfde achter elkaar.
+        slideIndex = (slideIndex + 1 + Math.floor(Math.random() * (slides.length - 1))) % slides.length;
+      } else {
+        slideIndex = (slideIndex + 1) % slides.length;
+      }
+      slide = slides[slideIndex];
     }
-    const slide = slides[slideIndex];
     const layer = els.restPhotos[1 - frontLayer];
     const front = layer.querySelector(".rest-fg");
     const back = layer.querySelector(".rest-bg");
@@ -1143,6 +1155,8 @@
     layer.classList.add("shown");
     els.restPhotos[frontLayer].classList.remove("shown");
     frontLayer = 1 - frontLayer;
+    shownSlide = slide;
+    renderRestLabel();
   }
 
   // ---- Geluid: voersignaal en feestje ----
@@ -1360,7 +1374,7 @@
   function renderRest() {
     const open = dueTasks().filter((task) => !currentDone(task));
     const stock = restStock();
-    let html = restScores();
+    let html = restBattle() + restScores();
     renderWrappedButton();
     const timer = activeTimer();
     if (timer) {
@@ -1621,6 +1635,87 @@
     } catch (error) {
       // Niet bereikbaar: dan de eerste letter, zoals altijd.
     }
+  }
+
+  // ---- Fotobattle: de foto van de maand (netlify/lib/battle.mjs) ----
+  // De rest van de dag van de uitslag staat de winnaar in beeld in de ruststand,
+  // met één keer confetti en bovenin het kaartje "Foto van oktober". Daarna krijgt
+  // hij een klein label onder de datum zolang hij op de fotolijst staat.
+  const BATTLE_SHOWN_KEY = "pip-hub-battle-shown";
+  let battleInfo = null; // { current, winners }
+  let battleSlide = null; // de bewaarde winnaar als foto voor de ruststand
+
+  function battleUrl() {
+    return localOverride("fotobattle") || (config.fotobattle && config.fotobattle.url);
+  }
+
+  async function refreshBattle() {
+    if (!actionCode() || !battleUrl()) return;
+    try {
+      const response = await fetch(battleUrl(), { headers: authHeader(), cache: "no-store" });
+      if (!response.ok) return;
+      battleInfo = await response.json();
+      const live = liveBattle();
+      if (live && (!battleSlide || battleSlide.battle !== live.id)) {
+        const image = await fetch(`${battleUrl()}/${live.result.kept}`, { headers: authHeader() });
+        if (image.ok) {
+          if (battleSlide) URL.revokeObjectURL(battleSlide.url);
+          battleSlide = { battle: live.id, id: live.result.winner, label: live.label, url: URL.createObjectURL(await image.blob()), tall: false, view: { zoom: 1, x: 50, y: 50 } };
+        }
+      }
+      renderRest();
+      if (live && battleSlide && !els.rest.hidden) nextSlide();
+    } catch (error) {
+      // Niet bereikbaar: later opnieuw.
+    }
+  }
+
+  // De battle met een uitslag van vandaag (dag van Pip), of null.
+  function liveBattle() {
+    const current = battleInfo && battleInfo.current;
+    if (!current || !current.result || !current.result.winner) return null;
+    return logicalDay(new Date(current.result.at)) === logicalDay(new Date()) ? current : null;
+  }
+
+  function joinNames(list) {
+    return list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} en ${list[list.length - 1]}`;
+  }
+
+  function restBattle() {
+    const live = liveBattle();
+    if (!live) return "";
+    if (readStorage(BATTLE_SHOWN_KEY) !== live.id && !els.rest.hidden) {
+      writeStorage(BATTLE_SHOWN_KEY, live.id);
+      setTimeout(() => celebrate(true), 600);
+    }
+    const result = live.result;
+    const points = result.points[result.winner] || 0;
+    const chosen = result.chosenBy || [];
+    const who = chosen.length ? ` · ${escapeHtml(joinNames(chosen))} ${chosen.length === 1 ? "koos" : "kozen"} hem` : "";
+    return `
+      <div class="rest-hero">
+        <div class="rest-title">${live.test ? "Proef · " : ""}Foto van ${escapeHtml(live.label)}</div>
+        <div class="rest-hero-row">
+          ${battleSlide ? `<img class="rest-hero-avatar rest-battle-photo" src="${escapeHtml(battleSlide.url)}" alt="">` : ""}
+          <div>
+            <div class="rest-hero-name">De winnaar</div>
+            <div class="rest-hero-points">${points} ${points === 1 ? "punt" : "punten"}${who}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Onder de datum: "Foto van oktober" als die nu in beeld is.
+  function renderRestLabel() {
+    if (!els.restLabel) return;
+    let label = "";
+    if (shownSlide === battleSlide && battleSlide) label = battleSlide.label;
+    else if (shownSlide && shownSlide.id && battleInfo) {
+      const winner = (battleInfo.winners || []).find((item) => item.photo === shownSlide.id);
+      if (winner) label = winner.label;
+    }
+    els.restLabel.hidden = !label;
+    if (label) els.restLabel.innerHTML = `${ICONS.crown}Foto van ${escapeHtml(label)}`;
   }
 
   // ---- Scores en Pip Wrapped ----
@@ -2888,6 +2983,8 @@
   refreshPhotos();
   setInterval(refreshPhotos, 5 * 60 * 1000); // wijzigingen op fotos.html binnen 5 minuten
   refreshAvatars();
+  refreshBattle();
+  setInterval(refreshBattle, 5 * 60 * 1000); // de fotobattle: uitslag binnen 5 minuten
   setInterval(refreshAvatars, 5 * 60 * 1000); // nieuwe profielfoto's binnen 5 minuten
   refreshJaarlog();
   setInterval(refreshJaarlog, ((config.jaarlog && config.jaarlog.refreshMinutes) || 30) * 60 * 1000);

@@ -465,6 +465,26 @@
     return null;
   }
 
+  // Wie deze telefoon gebruikt (voor de fotobattle): één keer gevraagd, daarna onthouden.
+  const ME_KEY = "pip-ik";
+  function me(settings) {
+    let name = "";
+    try {
+      name = localStorage.getItem(ME_KEY) || "";
+    } catch (error) {
+      name = "";
+    }
+    const list = people(settings);
+    return list.find((person) => person.toLowerCase() === name.toLowerCase()) || "";
+  }
+  function setMe(name) {
+    try {
+      localStorage.setItem(ME_KEY, name);
+    } catch (error) {
+      // Geen opslag: dan de volgende keer opnieuw vragen.
+    }
+  }
+
   function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
@@ -557,5 +577,6 @@
     remember, recall, rememberHome, mediaUrl, storedMediaUrl, pruneMedia, cachedAvatars,
     paintStatusBar, topColorOf,
     COLORS, colorFor, loadAvatars, avatarElement, longDate, clock, people, wrappedSeason, escapeHtml,
+    me, setMe,
   };
 })();

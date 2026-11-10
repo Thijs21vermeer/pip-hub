@@ -3020,3 +3020,32 @@ img.score-avatar {
 @media (prefers-reduced-motion: reduce) {
   .wr-up, .wr-pop, .wr-grow, .wr-growx, .wr-wipe, .wr-cell, .wr-inf-run { animation: none; }
 }
+
+/* Fotobattle: onder de datum welke foto van de maand er in beeld is, en de
+   winnaar in het kaartje op de dag van de uitslag (app.js, restBattle). */
+.rest-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.65rem;
+  border-radius: 99px;
+  background: rgb(26 22 18 / 0.55);
+  color: #f3c77a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.rest-label svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.rest-hero-avatar.rest-battle-photo {
+  width: 4.2rem;
+  height: 3.2rem;
+  border-radius: 0.7rem;
+}

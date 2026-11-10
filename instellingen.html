@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261109-58">
+  <link rel="stylesheet" href="stijl.css?v=20261109-59">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -87,6 +87,9 @@
         <div id="scores" style="margin-top: 14px"></div>
         <div class="card-foot"><span>Zondag 20:00: held van de week</span><a href="scores.html">Meer ›</a></div>
       </section>
+
+      <!-- Fotobattle: van de 1e tot de uitslag (en die tot de 7e). renderBattle. -->
+      <section class="fotobattle" id="fotobattle" aria-label="Fotobattle" hidden></section>
 
       <section class="section" style="margin-top: 56px" aria-labelledby="settings-title">
         <h2 class="section-title" id="settings-title">Instellen</h2>
@@ -199,10 +202,10 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261109-58"></script>
-  <script src="telefoon.js?v=20261109-58"></script>
-  <script src="taken.js?v=20261109-58"></script>
-  <script src="stats.js?v=20261109-58"></script>
+  <script src="config.js?v=20261109-59"></script>
+  <script src="telefoon.js?v=20261109-59"></script>
+  <script src="taken.js?v=20261109-59"></script>
+  <script src="stats.js?v=20261109-59"></script>
   <script>
     (function () {
       "use strict";
@@ -215,6 +218,7 @@
         jaarlog: serverUrl("jaarlog", config.jaarlog.url),
         kattenbak: serverUrl("kattenbak", config.kattenbak.url),
         photos: serverUrl("fotos", config.photos.url),
+        fotobattle: serverUrl("fotobattle", (config.fotobattle && config.fotobattle.url) || ""),
       };
       const SLIDE_MS = 6000;
       let data = { settings: {}, jaarlog: null, log: null };
@@ -1122,6 +1126,7 @@
           if (ended && Date.now() - ended.at < 15 * 60 * 1000) playDone = { session: ended, timeUp: true, until: Date.now() + 3 * 60 * 1000 };
         }
         renderAll();
+        refreshBattle();
       }
 
       function renderAll() {
@@ -1129,7 +1134,93 @@
         renderActs();
         renderWrapped();
         renderScores();
+        renderBattle();
         renderSettings();
+      }
+
+      // ---- Fotobattle: de foto van de maand (fotobattle.html, netlify/lib/battle.mjs) ----
+
+      const FB_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      const FB_CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      const FB_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+      const FB_CROWN = '<svg viewBox="0 0 24 24" fill="#f3c77a" stroke="#8d5124" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4 4.5-7 4.5 7L21 8l-2 11H5z"/><circle cx="3" cy="7.5" r="1.6"/><circle cx="21" cy="7.5" r="1.6"/><circle cx="12" cy="4.5" r="1.6"/></svg>';
+      let battle = P.recall("battle");
+
+      function names(list) {
+        return list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} en ${list[list.length - 1]}`;
+      }
+
+      async function refreshBattle() {
+        if (!urls.fotobattle) return;
+        try {
+          const me = P.me(data.settings);
+          battle = await getJson(`${urls.fotobattle}${me ? `?me=${encodeURIComponent(me)}` : ""}`);
+          P.remember("battle", battle);
+        } catch (error) {
+          return; // Niet bereikbaar: de vorige stand blijft staan.
+        }
+        renderBattle();
+      }
+
+      // Een kaartje van het stapeltje: eerst leeg, de foto zodra hij er is.
+      function battleCard(element, url) {
+        if (!url) return;
+        P.mediaUrl(url).then((src) => { element.style.backgroundImage = `url("${src}")`; }).catch(() => {});
+      }
+
+      function renderBattle() {
+        const box = $("fotobattle");
+        const current = battle && battle.current;
+        if (!current || (!current.result && Date.now() >= current.closesAt) || (current.result && !current.result.winner)) {
+          box.hidden = true;
+          return;
+        }
+        const esc = P.escapeHtml;
+        const people = current.people && current.people.length ? current.people : P.people(data.settings);
+        const me = P.me(data.settings);
+        const voted = current.voted || [];
+        const photos = current.photos || [];
+        const kick = current.test ? "Fotobattle · proef" : "Fotobattle";
+        box.classList.toggle("result", Boolean(current.result));
+        box.hidden = false;
+
+        if (current.result) {
+          const r = current.result;
+          const pts = r.points[r.winner] || 0;
+          const who = r.chosenBy && r.chosenBy.length ? `${esc(names(r.chosenBy))}<br>${r.chosenBy.length === 1 ? "koos" : "kozen"} hem.` : "Samen gekozen.";
+          box.innerHTML = `<div class="fb-win"><span class="fb-crown">${FB_CROWN}</span><i></i></div>
+            <div class="fb-text"><small class="fb-kick">Foto van ${esc(current.label)}</small><h2 class="long">De winnaar</h2>
+            <p>${pts} ${pts === 1 ? "punt" : "punten"}.<br>${who}</p></div>
+            <div class="fb-foot"><small>Ook op de Hub, in een lijst</small><a class="fb-go" href="fotobattle.html">Uitslag${FB_ARROW}</a></div>`;
+          battleCard(box.querySelector(".fb-win i"), `${urls.fotobattle}/${r.kept}`);
+          return;
+        }
+
+        const chosen = Boolean(me && voted.includes(me));
+        const waiting = people.filter((person) => !voted.includes(person));
+        const top = chosen && current.mine && photos.some((p) => p.id === current.mine) ? current.mine : photos[0] && photos[0].id;
+        const others = photos.map((p) => p.id).filter((id) => id !== top);
+        const deck = [others[1] || null, others[0] || null]; // achterste, middelste
+        const stack = people.slice(0, 6).map((person) =>
+          `<span class="fb-av" data-name="${esc(person)}">${voted.includes(person) ? `<i class="fb-chk">${FB_CHECK}</i>` : ""}</span>`).join("");
+        let whoText;
+        if (chosen) whoText = waiting.length ? `${names(waiting)} ${waiting.length === 1 ? "moet" : "moeten"} nog` : "Iedereen koos";
+        else whoText = voted.length ? `${names(voted)} ${voted.length === 1 ? "koos" : "kozen"} al` : "Nog niemand koos";
+        const title = chosen ? "Gekozen" : current.label.charAt(0).toUpperCase() + current.label.slice(1);
+        const text = chosen ? "Bovenop ligt<br>jouw winnaar." : `${photos.length} foto's,<br>één winnaar.`;
+        const due = chosen
+          ? `Uitslag ${esc(current.closesText)}${waiting.length ? `, of zodra ${esc(names(waiting))} ${waiting.length === 1 ? "koos" : "kozen"}` : ""}`
+          : `Kiezen kan tot ${esc(current.closesText)}`;
+        box.innerHTML = `<div class="fb-deck"><i></i><i></i><i></i>${chosen ? `<span class="fb-badge crown">${FB_CROWN}</span>` : `<span class="fb-badge">${photos.length}</span>`}</div>
+          <div class="fb-text"><small class="fb-kick">${kick}</small><h2${title.length > 7 ? ' class="long"' : ""}>${esc(title)}</h2><p>${text}</p></div>
+          <div class="fb-foot"><div class="fb-who"><span class="fb-stack">${stack}</span><small>${esc(whoText)}</small></div>
+          ${chosen ? "" : `<a class="fb-go" href="fotobattle.html">Kiezen${FB_ARROW}</a>`}</div>
+          <p class="fb-due">${FB_CLOCK}${due}</p>`;
+        box.querySelectorAll(".fb-av").forEach((slot) => slot.prepend(P.avatarElement(slot.dataset.name, people, avatars)));
+        const cards = box.querySelectorAll(".fb-deck i");
+        battleCard(cards[0], deck[0] && `${urls.photos}/${deck[0]}`);
+        battleCard(cards[1], deck[1] && `${urls.photos}/${deck[1]}`);
+        battleCard(cards[2], top && `${urls.photos}/${top}`);
       }
 
       // Eerste keer op deze telefoon (nog niets bewaard): lege lijstjes en regels
