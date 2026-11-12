@@ -300,15 +300,22 @@
         const doneBy = (id) => Object.keys(server).filter((name) => (server[name] || []).includes(id));
         const mine = (id) => Boolean((local.done || {})[id]) || (me && (server[me] || []).includes(id));
         list.innerHTML = "";
+        // Jouw voortgang (van het spel op deze telefoon): beste poging bij missies in één run,
+        // opgeteld bij weekmissies. Open missies eerst, waar je het dichtst bij bent bovenaan.
+        const wk = local.wk || {};
+        const value = (m) => m.scope === "run" ? (local.best || {})[m.id] || 0 : m.stat === "days" ? (wk.days || []).length : wk[m.stat] || 0;
+        const nl = (n) => Math.floor(n).toLocaleString("nl-NL");
+        const ordered = missions.slice().sort((a, b) => (mine(a.id) - mine(b.id)) || (value(b) / b.goal - value(a) / a.goal));
         let count = 0;
-        for (const mission of missions) {
+        for (const mission of ordered) {
           const done = mine(mission.id);
           if (done) count += 1;
+          const v = Math.min(value(mission), mission.goal);
           const li = document.createElement("li");
           li.className = `pr-item${done ? " done" : ""}`;
-          li.innerHTML = `<i class="pr-check" aria-hidden="true">${done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</i><span class="pr-text"><strong></strong><small></small></span><span class="pr-who"></span>`;
+          li.innerHTML = `<i class="pr-check" aria-hidden="true">${done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</i><span class="pr-text"><strong></strong><small></small>${done || !v ? "" : `<span class="pr-bar"><i style="width:${(v / mission.goal * 100).toFixed(1)}%"></i></span>`}</span><span class="pr-who"></span>`;
           li.querySelector("strong").textContent = mission.title;
-          li.querySelector("small").textContent = done ? `${mission.text} · +1 punt` : mission.text;
+          li.querySelector("small").textContent = done ? `${mission.text} · +1 punt` : v ? `${mission.text} · ${nl(v)}/${nl(mission.goal)}` : mission.text;
           const who = li.querySelector(".pr-who");
           doneBy(mission.id).filter((name) => name !== me).slice(0, 3).forEach((name) => who.appendChild(P.avatarElement(name, people, avatars)));
           li.setAttribute("aria-label", `${mission.title}: ${mission.text}${done ? ", gehaald" : ""}`);

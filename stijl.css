@@ -3378,3 +3378,17 @@ body.fb-page {
 .pr-card .card-foot {
   padding: 12px 12px 0;
 }
+.pr-bar {
+  display: block;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 99px;
+  background: var(--track);
+  overflow: hidden;
+}
+.pr-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+}
