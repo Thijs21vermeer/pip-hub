@@ -14,8 +14,8 @@
   <meta name="theme-color" content="#e6e2dc">
   <!-- Pip Run: het spel van Pip, met elke week vijf missies (missies.js). Een gehaalde missie is
        1 punt bij Scores (/api/piprun). Gebouwd uit de bron van het spel; de bestanden staan in piprun/. -->
-  <script src="config.js?v=20261112-76"></script>
-  <script src="telefoon.js?v=20261112-76"></script>
+  <script src="config.js?v=20261112-77"></script>
+  <script src="telefoon.js?v=20261112-77"></script>
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -447,7 +447,7 @@ a.round{text-decoration:none}
 <script>
   setTimeout(function () { if (!window.__pipReady) document.getElementById('fail').hidden = false; }, 12000);
 </script>
-<script src="missies.js?v=20261112-76"></script>
+<script src="missies.js?v=20261112-77"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -2662,16 +2662,16 @@ function kibbleLine(lane, z, n, y = .14, step = 1.1) { for (let i = 0; i < n; i+
 function kibbleArc(lane, zc, top) { for (let i = -3; i <= 3; i++) { const t = i / 3; place('kibble', LANES[lane], zc + i * .55, { kind: 'kibble', lane, y: .14 + (top - .14) * (1 - t * t) }); } }
 
 // De grote krabpaal is de enige muur: er kun je niet overheen springen en niet onderdoor. Hij komt vaker, zodat je
-// geregeld van baan moet wisselen. Bij het kiezen telt hij drie keer mee (TALL3).
-const TALL3 = [...TALL, ...TALL, ...TALL];
+// geregeld van baan moet wisselen. Bij het kiezen telt hij twee keer mee (TALL3: de naam is gebleven).
+const TALL3 = [...TALL, ...TALL];
 function spawnPattern(z0) {
   const d = game.dist, lanes = [0, 1, 2].sort(() => Math.random() - .5);
   let free = lanes[0], r = Math.random(), len = 2;
   // een muur in de eerste rij, precies in de baan waar je loopt, laat te weinig tijd om uit te wijken: dan iets om over te springen
   const was = game.prevFree, ob = (list, lane, z) => { let n = pick(list); if (n === 'krabpaalGroot' && lane === was) n = pick(JUMP); return obstacle(n, lane, z); };
   if (d < 100) r *= .5;
-  // vanaf 60 m af en toe een baan dicht met de grote krabpaal, later vaker (tot ongeveer één op de vier)
-  const wallP = d < 60 ? 0 : Math.min(.26, .13 + (d - 60) / 4000);
+  // vanaf 60 m af en toe een baan dicht met de grote krabpaal, later iets vaker
+  const wallP = d < 60 ? 0 : Math.min(.17, .08 + (d - 60) / 5000);
   if (Math.random() < wallP) {
     // nooit een muur in de baan waar de brokjes van het vorige stuk je naartoe leidden: daar loop je waarschijnlijk
     const open = [0, 1, 2].filter((l) => l !== game.prevFree);
@@ -2778,7 +2778,8 @@ function spawnDecor() {
 }
 
 /* ---------- Bediening ---------- */
-const jumpV = () => game.jumpT > 0 ? 6.4 : 4.7;
+// met de hengel (superspring) gaat ze tot ±2 m hoog: hoog genoeg om over de grote krabpaal heen te komen
+const jumpV = () => game.jumpT > 0 ? 7.5 : 4.7;
 // passen per seconde: draf als het rustig gaat, galop daarboven (cheeta's en windhonden zitten rond 2,5 tot 3,5; een kleine kat iets hoger)
 const topSpeed = (d) => d < 750 ? 6.5 + d * .006 : Math.min(11 + (d - 750) / 430, 13.3);
 const gaitFreq = (v) => v < 2.5 ? 1.9 * Math.pow(Math.max(v, .05), .628) : 3.2 + .15 * v;   // lopen: gemeten bij katten (Galvez-Lopez e.a. 2011)
@@ -3029,7 +3030,12 @@ function interact(dt) {
         if (game.magT > 0) misWeek('treatKib');
       } else if (!it.miss && o.z > .34 && dx < .3 && state === 'run') { it.miss = true; game.ms.streak = 0; }
     } else if (it.kind === 'block') {
-      if (!it.hit && dx < def.halfW + .1 && dz < def.halfD + .16 && game.y + H > def.yMin && game.y < def.yMax) { it.hit = true; stumble(it); }
+      // met de superspring kun je over de grote krabpaal heen: boven de 90 cm is hij smal (het holletje en het bovenste
+      // kussen), dus daar telt alleen het smalle stuk, en wie met de pootjes boven 1,42 m is, komt erover
+      const tallTop = it.name === 'krabpaalGroot' && game.jumpT > 0 && game.y > .9;
+      const hitIt = tallTop ? dx < .25 + .1 && dz < .25 + .06 && game.y < 1.42
+        : dx < def.halfW + .1 && dz < def.halfD + .16 && game.y + H > def.yMin && game.y < def.yMax;
+      if (!it.hit && hitIt) { it.hit = true; stumble(it); }
     } else if (it.kind === 'platform') {
       if (dx < def.halfW && dz < def.halfD + .14 && !it.under) {
         if (it.onTop || game.y >= def.top - .1) { it.onTop = true; ground = Math.max(ground, def.top); game.gSoft = game.gSofa = it.name === 'bank' || it.name === 'poef'; if (game.y >= def.top - .05) knockOff(it); }
@@ -3041,7 +3047,7 @@ function interact(dt) {
       if (dx < .32 && dz < .36) {
         sfx('power', { vol: .55 }); duck(.35, .6); game.ms.powers++; if (def.power === 'bal') misWeek('balls');
         if (def.power === 'bal') { game.invT = 8; toast('Bal!', 'Pip jaagt erachteraan en springt vanzelf over alles'); sfx('bell', { vol: .8, at: .06 }); }
-        else if (def.power === 'hengel') { game.jumpT = 10; toast('Hengel!', 'Pip springt twee keer zo hoog'); sfx('jump', { vol: .5, rate: 1.35, at: .04 }); sfx('bell', { vol: .3, rate: 1.2, at: .12 }); }
+        else if (def.power === 'hengel') { game.jumpT = 10; toast('Hengel!', 'Pip springt extra hoog, zelfs over de grote krabpaal'); sfx('jump', { vol: .5, rate: 1.35, at: .04 }); sfx('bell', { vol: .3, rate: 1.2, at: .12 }); }
         else { game.magT = 10; toast('Snoepjes!', 'Alle brokjes komen naar je toe'); sfx('treats', { vol: .9, at: .05 }); }
         removeItem(i);
       }
@@ -3590,7 +3596,7 @@ const realFail = () => setStatus('Het model van Pip kon niet laden, dus nu rent 
 const oldPip = () => fetch('piprun/pip-model.txt').then((r) => { if (!r.ok) throw new Error('geen tekstversie'); return r.text(); })
   .then((b64) => { const raw = atob(b64.trim()), bin = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i); loader.parse(bin.buffer, '', useRealPip, realFail); })
   .catch(() => loader.load('pip.glb', useRealPip, undefined, realFail));
-loader.load('piprun/pip-bsh.glb?v=20261112-76', useRealPip, undefined, oldPip);
+loader.load('piprun/pip-bsh.glb?v=20261112-77', useRealPip, undefined, oldPip);
 
 
 /* ---------- Thijs als echt 3D-model ---------- */
