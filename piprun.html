@@ -14,8 +14,8 @@
   <meta name="theme-color" content="#e6e2dc">
   <!-- Pip Run: het spel van Pip, met elke week vijf missies (missies.js). Een gehaalde missie is
        1 punt bij Scores (/api/piprun). Gebouwd uit de bron van het spel; de bestanden staan in piprun/. -->
-  <script src="config.js?v=20261112-77"></script>
-  <script src="telefoon.js?v=20261112-77"></script>
+  <script src="config.js?v=20261112-78"></script>
+  <script src="telefoon.js?v=20261112-78"></script>
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -447,7 +447,7 @@ a.round{text-decoration:none}
 <script>
   setTimeout(function () { if (!window.__pipReady) document.getElementById('fail').hidden = false; }, 12000);
 </script>
-<script src="missies.js?v=20261112-77"></script>
+<script src="missies.js?v=20261112-78"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -652,7 +652,7 @@ const clamp = THREE.MathUtils.clamp;
 /* ---------- Renderer, scène, camera, licht ---------- */
 const canvas = $('game');
 const coarse = matchMedia('(pointer: coarse)').matches;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, stencil: true, powerPreference: 'high-performance' });   // stencil: het glas laat de 3D-tuinspullen door
 const DPR = window.devicePixelRatio || 1;
 renderer.setPixelRatio(Math.min(DPR, 2));
 let sharpNow = Math.min(DPR, 2);
@@ -891,7 +891,8 @@ const tunnelTex = tex(256, 32, (g, w, h) => {
 // De kamer: de tuin achter het glas, plissé, eiken, cement-plantbak, klok, eigen kunst, draadlantaarns
 // Buiten: jullie achtertuin, met diepte. Geen plaatje op het glas: elk stukje raam kijkt echt naar buiten.
 // Per pixel loopt een straal vanaf de camera door het glas de tuin in en raakt de laag die het eerst in de weg
-// staat: de tegels, de stoeltjes, de heg, de schutting, de bomen, de huizen met rode daken, of de lucht.
+// staat: de tegels, de heg, de schutting, de bomen, de huizen met rode daken, of de lucht. De loungeset en de
+// plantenbakken staan er als echte 3D-vormen voor (zie gardenGeo).
 // Zo verschuift alles goed ten opzichte van elkaar als Pip langs de ramen rent (zoals op jullie foto's).
 const GARDEN = { travel: { value: 0 }, time: { value: 0 } };
 const gardenTiles = tex(512, 512, (g, w, h) => {
@@ -1009,31 +1010,167 @@ const gardenTrees = tex(1024, 512, (g, w, h) => {
     else for (let k = 0; k < 10; k++) leafBlob(g, r, x + (r() - .5) * m * 3, top + r() * m * 2.5, 12 + r() * 16, ['#c99a46', '#b8782f', '#d6b05a'], 18, .7);
   }
 }, [1, 1]);
-const gardenProps = tex(1024, 256, (g, w, h) => {
-  // tuinmeubels: grijze metalen stoeltjes, een rond wit tafeltje, een plantenbak en een hoge grijze pot (8 m breed, 2 m hoog)
-  const r = rng(227); g.clearRect(0, 0, w, h); const m = h / 2;   // m = pixels per meter
-  const chair = (x, s) => {
-    g.strokeStyle = '#3d4044'; g.fillStyle = '#4a4e53'; g.lineWidth = 3;
-    g.fillRect(x, h - m * .45, m * .45 * s, 5);                                   // zitting
-    for (const lx of [0, m * .42 * s]) { g.beginPath(); g.moveTo(x + lx, h - m * .45); g.lineTo(x + lx + (lx ? 4 : -4) * s, h); g.stroke(); }
-    const bx = s > 0 ? x : x + m * .45 * s; g.beginPath(); g.moveTo(bx, h - m * .45); g.lineTo(bx - 4 * s, h - m * .85); g.stroke();
-    g.lineWidth = 2; for (let k = 1; k < 5; k++) { g.beginPath(); g.moveTo(bx - k * s, h - m * (.47 + k * .08)); g.lineTo(bx + m * .38 * s - k * s, h - m * (.47 + k * .08)); g.stroke(); }
+for (const t of [gardenHedge, gardenHouses, gardenTrees, gardenFence]) { t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; }
+
+/* De tuinspullen zijn echt 3D (naar jullie foto's): de antraciet loungeset met touw in rug en zijkanten, het ronde witte
+   tafeltje, de lage plantenbak van gestapelde donkere steen, de saliegroene potjes, de houten kruidenbak en de hoge grijze pot.
+   Ze staan buiten, achter de muur. Het glas zet een stempel (stencil) waar je naar buiten kijkt: alleen daar worden de
+   spullen getekend, en daar laat de muur zich weg. Elke GP meter herhaalt de tuin zich, net als de lagen in de shader.
+   Afmetingen in meters; u = afstand van de muur de tuin in, v = langs de muur. */
+const GP = 24;
+const GSHAD = [   // schaduwplekken op de tegels: u, v (midden), halve maat in u en v
+  [3.91, 3.45, .36, .85], [3.51, 4.66, .76, .36], [3.3, 1.75, .38, .38], [2.85, 3.5, .2, .2],
+  [4.25, 9.6, .25, 1.0], [4.22, 11.0, .13, .13], [3.88, 11.32, .1, .1], [2.83, 15.6, .23, .6], [3.9, 19.5, .21, .21], [3.6, 20.25, .13, .13],
+];
+const gardenGeo = (() => {
+  const P = [], N = [], C = [], col = new THREE.Color(), m4 = new THREE.Matrix4(), nm = new THREE.Matrix3(), v3 = new THREE.Vector3();
+  const r = rng(229), Y = new THREE.Vector3(0, 1, 0);
+  // een stuk toevoegen: geometrie, kleur, matrix; normalFn kan de normalen vervangen (voor zachte bosjes)
+  const add = (geo, hex, m, normalFn) => {
+    const g = geo.index ? geo.toNonIndexed() : geo; g.applyMatrix4(m);
+    const p = g.attributes.position, n = g.attributes.normal; col.set(hex);
+    for (let i = 0; i < p.count; i++) {
+      P.push(p.getX(i), p.getY(i), p.getZ(i));
+      if (normalFn) { normalFn(v3.fromBufferAttribute(p, i)); N.push(v3.x, v3.y, v3.z); } else N.push(n.getX(i), n.getY(i), n.getZ(i));
+      C.push(col.r, col.g, col.b);
+    }
   };
-  const table = (x) => { g.fillStyle = '#e9e7e1'; g.beginPath(); g.ellipse(x, h - m * .5, m * .32, 7, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x - m * .3, h - m * .5 + 4, m * .6, 3); g.strokeStyle = '#2e3134'; g.lineWidth = 3; for (const d of [-.22, .22]) { g.beginPath(); g.moveTo(x, h - m * .5); g.lineTo(x + d * m, h); g.stroke(); } };
-  chair(w * .08, 1); table(w * .08 + m * .8); chair(w * .08 + m * 1.6, -1);
-  // houten plantenbak met kruiden
-  const px = w * .55; g.fillStyle = '#6e5a47'; g.fillRect(px, h - m * .5, m * 1.2, m * .5); for (let k = 0; k < 4; k++) { g.fillStyle = 'rgba(30,22,15,.4)'; g.fillRect(px, h - m * .5 + k * m * .125, m * 1.2, 1.5); }
-  for (let k = 0; k < 8; k++) leafBlob(g, r, px + r() * m * 1.2, h - m * (.55 + r() * .25), 10 + r() * 10, ['#4f6e38', '#6f9150', '#9aaa5e', '#7d5a8c'], 34);
-  // hoge grijze pot met een boompje
-  const qx = w * .84; g.fillStyle = '#8e908d'; g.beginPath(); g.moveTo(qx - m * .18, h); g.lineTo(qx - m * .22, h - m * .75); g.lineTo(qx + m * .22, h - m * .75); g.lineTo(qx + m * .18, h); g.fill();
-  g.strokeStyle = '#4a3c30'; g.lineWidth = 3; g.beginPath(); g.moveTo(qx, h - m * .75); g.lineTo(qx, h - m * 1.2); g.stroke();
-  for (let k = 0; k < 10; k++) leafBlob(g, r, qx + (r() - .5) * m * .7, h - m * (1.2 + r() * .5), 12 + r() * 12, ['#3e5a2f', '#5f8043', '#6f9150'], 40);
-}, [1, 1]);
-for (const t of [gardenHedge, gardenHouses, gardenTrees, gardenProps, gardenFence]) { t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; }
+  // een assenstelsel in de tuin: midden op (u, v), gedraaid om y (lokaal x = naar het huis toe bij ry = 0, lokaal z = +v)
+  const F = (u, v, ry = 0) => new THREE.Matrix4().makeRotationY(ry).setPosition(-1.45 - u, 0, v);
+  const at = (f, x, y, z) => f.clone().multiply(m4.makeTranslation(x, y, z));
+  const box = (f, x, y, z, w, h, d, hex) => add(new THREE.BoxGeometry(w, h, d), hex, at(f, x, y, z));
+  const cyl = (f, x, y, z, rt, rb, h, hex, seg = 18) => add(new THREE.CylinderGeometry(rt, rb, h, seg), hex, at(f, x, y, z));
+  const rod = (f, a, b, rad, hex) => {
+    const d = new THREE.Vector3().subVectors(b, a), len = d.length(), mid = a.clone().addScaledVector(d, .5);
+    const q = new THREE.Quaternion().setFromUnitVectors(Y, d.normalize());
+    add(new THREE.CylinderGeometry(rad, rad, len, 6, 1), hex, f.clone().multiply(new THREE.Matrix4().compose(mid, q, new THREE.Vector3(1, 1, 1))));
+  };
+  const leafGeo = new THREE.OctahedronGeometry(1, 0);
+  // een bosje blad: blaadjes in een halve ellips, de normalen wijzen naar buiten zodat het zacht en rond oogt
+  const leaves = (f, x, y, z, rx, ry, rz, n, cols, size = .032) => {
+    const c = new THREE.Vector3(x, y, z).applyMatrix4(f), e = new THREE.Euler(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+    for (let i = 0; i < n; i++) {
+      const a = r() * Math.PI * 2, h = Math.pow(r(), .7), d = .55 + .45 * Math.cbrt(r()), ring = Math.sqrt(1 - h * h) * d;
+      const p = new THREE.Vector3(Math.cos(a) * ring * rx, h * d * ry, Math.sin(a) * ring * rz).add(new THREE.Vector3(x, y, z));
+      const k = size * (.75 + r() * .5); s.set(k, k * .32, k * .72);
+      q.setFromEuler(e.set((r() - .5) * 1.6, r() * 6.3, (r() - .5) * 1.6));
+      add(leafGeo.clone(), cols[(r() * cols.length) | 0], f.clone().multiply(new THREE.Matrix4().compose(p, q, s)),
+        (v) => v.sub(c).divide(new THREE.Vector3(rx, ry * 1.4, rz)).add(new THREE.Vector3(0, .45, 0)).normalize());
+    }
+  };
+
+  // ---- de loungeset: antraciet aluminium, touw in rug en zijkanten, latten in de zitting met daarop een dik grijs kussen
+  const FR = '#383b3f', ROPE = '#6e7377', SLAT = '#44484c', CUSH = '#8e9295', T = .045;
+  const sofa = (f, L, D) => {   // lokaal: x langs de bank (-L/2..L/2), z van voor (-D/2) naar achter (+D/2)
+    const A = L / 2, B = D / 2;
+    for (const a of [-A + T / 2, A - T / 2]) {
+      box(f, a, .31, -B + T / 2, T, .62, T, FR); box(f, a, .39, B - T / 2, T, .78, T, FR);
+      box(f, a, .62 - T / 2, 0, T, T, D, FR); box(f, a, .05, 0, T, T, D, FR);
+      for (let k = 0; k < 5; k++) box(f, a, .41 + k * .043, 0, .014, .02, D - 2 * T, ROPE);
+    }
+    box(f, 0, .35, -B + T / 2, L - 2 * T, .05, T, FR); box(f, 0, .35, B - T / 2, L - 2 * T, .05, T, FR);
+    const n = 7, pitch = (D - 2 * T) / n; for (let k = 0; k < n; k++) box(f, 0, .385, -B + T + (k + .5) * pitch, L - 2 * T, .022, pitch * .72, SLAT);
+    // één dik grijs kussen over de hele zitting
+    add(new RoundedBoxGeometry(L - 2 * T - .01, .13, D - 2 * T - .03, 3, .045), CUSH, at(f, 0, .462, -.012));
+    box(f, 0, .78 - T / 2, B - T / 2, L - 2 * T, T, T, FR);
+    for (let k = 0; k < 8; k++) box(f, 0, .44 + k * .041, B - T / 2, L - 2 * T, .02, .012, ROPE);
+    for (let a = -A + T + .14; a < A - T - .05; a += .2) box(f, a, .6, B - T / 2, .012, .32, .014, ROPE);   // staande touwtjes: het vlechtwerk
+  };
+  sofa(F(3.91, 3.45, -Math.PI / 2), 1.7, .72);      // lange bank langs de heg
+  sofa(F(3.51, 4.66, 0), 1.52, .72);                 // hoekbank, de tuin in
+  sofa(F(3.3, 1.75, Math.PI - .4), .8, .72);         // losse stoel, schuin naar het tafeltje
+  // ---- rond wit tafeltje met dunne donkere poten, met de witte lantaarntjes en het gele vogeltje
+  { const f = F(2.85, 3.5); cyl(f, 0, .44, 0, .33, .33, .022, '#ecebe6', 32); cyl(f, 0, .427, 0, .3, .3, .008, '#bdbab4', 32);
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + .5; rod(f, new THREE.Vector3(Math.cos(a) * .2, .43, Math.sin(a) * .2), new THREE.Vector3(Math.cos(a + .7) * .3, 0, Math.sin(a + .7) * .3), .009, '#2c2e31'); }
+    cyl(f, .06, .5, -.08, .045, .05, .1, '#f2f1ec'); cyl(f, -.05, .49, -.15, .04, .045, .08, '#e8e6e0'); cyl(f, .06, .555, -.08, .035, .045, .012, '#d9d6cf');
+    add(new THREE.SphereGeometry(.03, 10, 8), '#e6cf4a', at(f, -.08, .48, .08)); add(new THREE.SphereGeometry(.018, 8, 6), '#e6cf4a', at(f, -.1, .515, .1)); }
+
+  // ---- lage plantenbak van gestapelde donkere steen, langs de heg, met heide, lavendel en een buxusbolletje
+  { const f = F(4.25, 9.6), L = 2.0, D = .5, H = .085, rows = 5;
+    const stone = () => `hsl(${195 + r() * 20}, ${3 + r() * 4}%, ${30 + r() * 13}%)`;
+    const course = (axis, len, off) => {   // één rij blokken langs x (axis 0) of z (axis 1)
+      for (let row = 0; row < rows; row++) {
+        let s = -len / 2 + (row % 2 ? -.08 : 0);
+        while (s < len / 2) {
+          const bl = .16 + r() * .18, s0 = Math.max(s, -len / 2), s1 = Math.min(s + bl, len / 2), c = (s0 + s1) / 2, w = s1 - s0 - .008, dy = row * H + H / 2, out = (r() - .5) * .012, h = H - .006 + (r() - .5) * .006;
+          if (w > .02) { if (axis) box(f, off + out, dy, c, .1, h, w, stone()); else box(f, c, dy, off + out, w, h, .1, stone()); }
+          s += bl;
+        }
+      }
+    };
+    course(1, L, D / 2 - .05); course(1, L, -D / 2 + .05); course(0, D - .2, L / 2 - .05); course(0, D - .2, -L / 2 + .05);
+    for (let z = -L / 2; z < L / 2 - .01; z += .5) { box(f, D / 2 - .06, rows * H + .018, z + .25, .13, .036, .49, `hsl(200, 4%, ${27 + r() * 6}%)`); box(f, -D / 2 + .06, rows * H + .018, z + .25, .13, .036, .49, `hsl(200, 4%, ${27 + r() * 6}%)`); }
+    box(f, 0, rows * H - .01, 0, D - .2, .02, L - .2, '#3a2f26');
+    const HEI = ['#8a5a7a', '#a06b8c', '#6f4a66', '#5e7444', '#71507a'], BUX = ['#3f5e2e', '#4f6e38', '#5e7d42'], LAV = ['#8a9b80', '#a3b096', '#7c6aa3', '#93a387'];
+    [[-.72, .16, HEI], [-.36, .19, LAV], [.02, .17, BUX], [.4, .2, HEI], [.76, .15, LAV]].forEach(([z, rad, cols]) => leaves(f, (r() - .5) * .06, rows * H - .02, z, rad * 1.25, rad * 1.45, rad * 1.2, 150, cols, .03));
+    for (const z of [-.86, -.7]) { cyl(f, D / 2 - .07, rows * H + .09, z, .04, .045, .11, '#f1f0eb'); cyl(f, D / 2 - .07, rows * H + .15, z, .03, .04, .012, '#d8d5ce'); } }
+  // ---- twee saliegroene potjes naast de stenen bak
+  for (const [u, v, s] of [[4.22, 11.0, 1], [3.88, 11.32, .78]]) { const f = F(u, v); cyl(f, 0, .13 * s, 0, .13 * s, .1 * s, .26 * s, '#90a68f', 22); cyl(f, 0, .255 * s, 0, .118 * s, .118 * s, .01, '#3b3027', 18); leaves(f, 0, .25 * s, 0, .17 * s, .24 * s, .17 * s, 70, ['#4f6e38', '#6f9150', '#87a35e'], .028); }
+
+  // ---- houten kruidenbak: verweerde planken met donkere naden, hoekpalen, kruiden met wat paarse salie
+  { const f = F(2.83, 15.6), W = .45, L = 1.2, H = .5;
+    const plank = () => `hsl(${24 + r() * 8}, ${18 + r() * 10}%, ${30 + r() * 9}%)`;
+    for (let k = 0; k < 4; k++) { const y = k * .123 + .062;
+      box(f, W / 2 - .012, y, 0, .024, .115, L - .06, plank()); box(f, -W / 2 + .012, y, 0, .024, .115, L - .06, plank());
+      box(f, 0, y, L / 2 - .012, W - .06, .115, .024, plank()); box(f, 0, y, -L / 2 + .012, W - .06, .115, .024, plank()); }
+    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) box(f, x * (W / 2 - .025), H / 2, z * (L / 2 - .025), .05, H + .01, .05, '#5e4a3a');
+    box(f, 0, H - .03, 0, W - .05, .02, L - .05, '#3b3027');
+    [[-.42, ['#4f6e38', '#6f9150']], [-.14, ['#7d5a8c', '#6b4e78', '#8a6a96']], [.14, ['#9aaa5e', '#87a35e', '#6f9150']], [.42, ['#5e7d42', '#4f6e38', '#9aaa5e']]]
+      .forEach(([z, cols]) => leaves(f, (r() - .5) * .05, H - .04, z, .22, .3, .19, 110, cols, .03)); }
+
+  // ---- hoge grijze pot met een boompje, en een klein potje ernaast
+  { const f = F(3.9, 19.5);
+    const prof = [[.001, 0], [.16, 0], [.2, .15], [.232, .45], [.24, .7], [.225, .92], [.2, .95], [.19, .93]].map(([x, y]) => new THREE.Vector2(x * .9, y * .85));
+    add(new THREE.LatheGeometry(prof, 26), '#8d8f8c', at(f, 0, 0, 0)); cyl(f, 0, .79, 0, .18, .18, .01, '#3b3027');
+    rod(f, new THREE.Vector3(0, .79, 0), new THREE.Vector3(.02, 1.35, .01), .022, '#5a4636');
+    for (const [x, y, z] of [[.18, 1.55, .08], [-.15, 1.6, -.1], [.04, 1.75, -.02]]) rod(f, new THREE.Vector3(.015, 1.25, 0), new THREE.Vector3(x, y, z), .012, '#5a4636');
+    leaves(f, .02, 1.22, 0, .42, .7, .4, 420, ['#3e5a2f', '#5f8043', '#6f9150', '#4a6b36'], .037); }
+  { const f = F(3.6, 20.25); cyl(f, 0, .11, 0, .12, .1, .22, '#7e817f', 20); leaves(f, 0, .21, 0, .17, .26, .17, 70, ['#5f8043', '#6f9150', '#87a35e'], .028); }
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); g.setAttribute('gcol', new THREE.Float32BufferAttribute(C, 3));
+  g.computeBoundingSphere(); return g;
+})();
+const gardenPropMat = new THREE.ShaderMaterial({
+  fog: true,
+  uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog]),
+  stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc, stencilWriteMask: 0,   // alleen waar glas is
+  vertexShader: `
+    attribute vec3 gcol; varying vec3 vC, vN, vW;
+    #include <fog_pars_vertex>
+    void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vC = gcol;
+      vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }`,
+  fragmentShader: `
+    varying vec3 vC, vN, vW;
+    #include <fog_pars_fragment>
+    void main() {
+      vec3 n = normalize(vN), L = normalize(vec3(.5, .78, .38));
+      vec3 amb = mix(vec3(.44, .42, .39), vec3(.8, .84, .88), .5 + .5 * n.y);       // licht van de lucht, weerkaatsing van de tegels
+      float sun = max(dot(n, L), 0.), ao = mix(.6, 1., smoothstep(0., .32, vW.y));
+      vec3 col = vC * (amb * .82 + vec3(1., .95, .88) * sun * .58) * ao;
+      // zelfde nabewerking als de rest van de tuin: verder weg wat waas, en het glas
+      float d = -1.45 - vW.x; col = mix(col, vec3(.86, .9, .92), (1. - exp(-d / 60.)) * .8);
+      vec3 rd = normalize(vW - cameraPosition); float fres = pow(1. - abs(rd.x), 4.);
+      col = mix(vec3(dot(col, vec3(.3, .59, .11))), col, 1.22);
+      col = mix(col * vec3(.96, .99, .97), vec3(.86, .83, .79), .03 + fres * .22);
+      gl_FragColor = vec4(col * .98, 1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      #include <fog_fragment>
+    }`,
+});
+const gardenSet = [0, 1, 2].map(() => { const m = new THREE.Mesh(gardenGeo, gardenPropMat); m.renderOrder = -2; scene.add(m); return m; });
+function gardenSetMove(tr) { const b = tr - GP * Math.floor((tr + 18) / GP); gardenSet.forEach((m, k) => { m.position.z = b + (k - 1) * GP; }); }
+gardenSetMove(0);
+
 const gardenMat = new THREE.ShaderMaterial({
   fog: true,
+  depthWrite: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp,   // het glas zet de stempel
   uniforms: Object.assign(THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uWX: { value: 1.45 } }]),   // (texturen niet via merge: die worden dan gekopieerd)
-    { tTile: { value: gardenTiles }, tFence: { value: gardenFence }, tHedge: { value: gardenHedge }, tHouse: { value: gardenHouses }, tTree: { value: gardenTrees }, tProp: { value: gardenProps } }),
+    { tTile: { value: gardenTiles }, tFence: { value: gardenFence }, tHedge: { value: gardenHedge }, tHouse: { value: gardenHouses }, tTree: { value: gardenTrees },
+      uShad: { value: GSHAD.map((s) => new THREE.Vector4(...s)) } }),
   vertexShader: `
     varying vec3 vW;
     #include <fog_pars_vertex>
@@ -1041,7 +1178,7 @@ const gardenMat = new THREE.ShaderMaterial({
       #include <fog_vertex>
     }`,
   fragmentShader: `
-    uniform sampler2D tTile, tFence, tHedge, tHouse, tTree, tProp; uniform float uWX, uTravel, uTime;
+    uniform sampler2D tTile, tFence, tHedge, tHouse, tTree; uniform float uWX, uTravel, uTime; uniform vec4 uShad[${GSHAD.length}];
     varying vec3 vW;
     #include <fog_pars_fragment>
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -1061,19 +1198,17 @@ const gardenMat = new THREE.ShaderMaterial({
       float tg = rd.y < -.0001 ? -ro.y / rd.y : 1e5;
       vec3 pg = ro + rd * tg; float dg = wallX - pg.x;
       // lagen van dichtbij naar ver (de canvassen staan rechtop: onderkant van het plaatje = de grond, v = hoogte / laaghoogte)
-      // 1. tuinmeubels op 2,6 m
-      float d = 2.6, t = (wallX - d - ro.x) / rd.x; vec3 p = ro + rd * t;
-      if (dg > d) { float s = (p.z - uTravel) / 8.; float cell = floor(s + .37); vec4 c = texture2D(tProp, vec2(s + .37 * hash(vec2(cell, 3.)), p.y / 2.)); c.a *= step(.35, hash(vec2(cell, 9.))) * step(0., p.y) * step(p.y, 2.); add(vec4(hazeIt(c.rgb * 1.05, d), c.a)); }
-      // 2. heg en klimmers op 4,7 m
-      d = 4.7; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
+      // (de tuinmeubels en plantenbakken zijn echte 3D-vormen, die komen er los overheen)
+      // 1. heg en klimmers op 4,7 m
+      float d = 4.7, t = (wallX - d - ro.x) / rd.x; vec3 p = ro + rd * t;
       if (dg > d && acc.a < .99) { vec4 c = texture2D(tHedge, vec2((p.z - uTravel) / 8., p.y / 2.6)); c.a *= step(0., p.y) * step(p.y, 2.6); add(vec4(hazeIt(c.rgb, d), c.a)); }
-      // 3. de schutting op 5 m (1,85 m hoog)
+      // 2. de schutting op 5 m (1,85 m hoog)
       d = 5.; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
       if (dg > d && acc.a < .99) { vec4 c = texture2D(tFence, vec2((p.z - uTravel) / 2., p.y / 2.)); c.a *= step(0., p.y) * step(p.y, 2.); add(vec4(hazeIt(c.rgb * .95, d), c.a)); }
-      // 4. bomen op 9 m
+      // 3. bomen op 9 m
       d = 9.; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
       if (acc.a < .99) { vec4 c = texture2D(tTree, vec2((p.z - uTravel) / 12. + .3, p.y / 8.)); c.a *= step(0., p.y) * step(p.y, 8.); add(vec4(hazeIt(c.rgb, d), c.a)); }
-      // 5. de huizen op 13 m
+      // 4. de huizen op 13 m
       d = 13.; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
       if (acc.a < .99) { vec4 c = texture2D(tHouse, vec2((p.z - uTravel) / 16., p.y / 8.)); c.a *= step(0., p.y) * step(p.y, 8.); add(vec4(hazeIt(c.rgb * 1.02, d), c.a)); }
       // de grond als de straal eerder de tegels raakt
@@ -1081,6 +1216,8 @@ const gardenMat = new THREE.ShaderMaterial({
         vec3 g = texture2D(tTile, vec2((pg.z - uTravel) / 2., dg / 2.)).rgb;
         g *= mix(.78, 1., smoothstep(.2, 2.2, dg));            // vlak bij het huis een beetje schaduw
         g *= mix(.85, 1., smoothstep(4.95, 4.3, dg));          // en langs de voet van de heg en schutting
+        float zz = mod(pg.z - uTravel, ${GP.toFixed(1)});          // zachte schaduw onder de tuinspullen
+        for (int i = 0; i < ${GSHAD.length}; i++) { vec4 s = uShad[i]; vec2 q = abs(vec2(dg - s.x, zz - s.y)) - s.zw; float e = length(max(q, 0.)) + min(max(q.x, q.y), 0.); g *= mix(.62, 1., smoothstep(-.06, .2, e)); }
         add(vec4(hazeIt(g, dg), 1.));
       }
       // de lucht: blauw met wolken
@@ -2021,15 +2158,15 @@ function blind(g, top, hgt) {
 for (const [name, mat, bh] of [['raam', M.gardenA, .8], ['raam2', M.gardenB, 1.05]]) {
   tpl(name, {}, (g) => {
     windowFrame(g);
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(.94, 2.36), mat); p.position.set(0, 1.24, .006); g.add(p);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(.94, 2.36), mat); p.position.set(0, 1.24, .006); p.renderOrder = -3; g.add(p);   // glas eerst: de stempel voor de tuin
     blind(g, 2.4, bh);
   });
 }
 tpl('deur', {}, (g) => {
   windowFrame(g);
   bx(g, M.frameWhite, 0, 2.02, .04, .94, .05, .07);
-  const top = new THREE.Mesh(new THREE.PlaneGeometry(.92, .38), M.gardenA); top.position.set(0, 2.24, .006); g.add(top);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(.78, 1.42), M.gardenB); glass.position.set(0, 1.27, .03); g.add(glass);
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(.92, .38), M.gardenA); top.position.set(0, 2.24, .006); top.renderOrder = -3; g.add(top);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(.78, 1.42), M.gardenB); glass.position.set(0, 1.27, .03); glass.renderOrder = -3; g.add(glass);
   bx(g, M.frameWhite, -.43, 1.03, .04, .08, 1.95, .06); bx(g, M.frameWhite, .43, 1.03, .04, .08, 1.95, .06);
   bx(g, M.frameWhite, 0, .53, .04, .94, .1, .06); bx(g, M.frameWhite, 0, .28, .03, .78, .42, .04);
   bx(g, M.white, 0, .28, .052, .66, .3, .006).castShadow = false;
@@ -2155,7 +2292,8 @@ tpl('rug', {}, (g) => {
 const WX = 1.45, RH = 2.6;
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(WX * 2, 100), new THREE.MeshStandardMaterial({ map: floorTex, roughness: .42, metalness: .05 }));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: .95, emissive: '#bdb8b0', emissiveIntensity: .3 });
+const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: .95, emissive: '#bdb8b0', emissiveIntensity: .3,
+  stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilWriteMask: 0 });   // waar glas zit wijkt de muur, dan zie je de 3D-tuin
 for (const s of [-1, 1]) {
   const wall = new THREE.Mesh(new THREE.PlaneGeometry(100, RH), wallMat);
   wall.position.set(s * WX, RH / 2, -40); wall.rotation.y = -s * Math.PI / 2; wall.receiveShadow = true; scene.add(wall);
@@ -3596,7 +3734,7 @@ const realFail = () => setStatus('Het model van Pip kon niet laden, dus nu rent 
 const oldPip = () => fetch('piprun/pip-model.txt').then((r) => { if (!r.ok) throw new Error('geen tekstversie'); return r.text(); })
   .then((b64) => { const raw = atob(b64.trim()), bin = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i); loader.parse(bin.buffer, '', useRealPip, realFail); })
   .catch(() => loader.load('pip.glb', useRealPip, undefined, realFail));
-loader.load('piprun/pip-bsh.glb?v=20261112-77', useRealPip, undefined, oldPip);
+loader.load('piprun/pip-bsh.glb?v=20261112-78', useRealPip, undefined, oldPip);
 
 
 /* ---------- Thijs als echt 3D-model ---------- */
@@ -4480,7 +4618,7 @@ function frame(now) {
   else v = shop.open ? .5 : 0;
   game.v = v;
   travel += v * dt;
-  GARDEN.travel.value = travel; GARDEN.time.value = clockT;
+  GARDEN.travel.value = travel; GARDEN.time.value = clockT; gardenSetMove(travel);
   floor.position.z = -40 + (travel % 1.2);
   spawnDecor();
 
@@ -4760,7 +4898,7 @@ function frame(now) {
 }
 refreshStart();
 window.__pipReady = true;
-window.pipTest = { OT, SITP, items, vacBlock, home, play, shop, SAVE, openShop, setKib: (n) => { totalKib = n; persist(); if (shop.open) renderShop(); }, REAL, introSet, INTRO: () => INTRO, startRun, vacuum, zet: (name, lane, z) => obstacle(name, lane, z), power: (name, lane, z) => place(name, LANES[lane], z, { kind: 'power', lane }), game, cam: camera, pip, pause, SND, sfx, MUS, MIX };
+window.pipTest = { OT, SITP, items, vacBlock, home, play, shop, SAVE, openShop, setKib: (n) => { totalKib = n; persist(); if (shop.open) renderShop(); }, REAL, introSet, INTRO: () => INTRO, startRun, vacuum, zet: (name, lane, z) => obstacle(name, lane, z), power: (name, lane, z) => place(name, LANES[lane], z, { kind: 'power', lane }), game, cam: camera, pip, pause, SND, sfx, MUS, MIX, garden: gardenSet };
 requestAnimationFrame(frame);
 </script>
 
