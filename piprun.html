@@ -14,8 +14,8 @@
   <meta name="theme-color" content="#e6e2dc">
   <!-- Pip Run: het spel van Pip, met elke week vijf missies (missies.js). Een gehaalde missie is
        1 punt bij Scores (/api/piprun). Gebouwd uit de bron van het spel; de bestanden staan in piprun/. -->
-  <script src="config.js?v=20261112-73"></script>
-  <script src="telefoon.js?v=20261112-73"></script>
+  <script src="config.js?v=20261112-75"></script>
+  <script src="telefoon.js?v=20261112-75"></script>
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -390,7 +390,7 @@ a.round{text-decoration:none}
     <p class="group">Opslag</p>
     <p class="note" id="moreSave"></p>
     <p class="group">Met dank aan</p>
-    <p class="credit">3D-basis: <a href="https://sketchfab.com/3d-models/animated-bengal-cat-30444a1c97e9411693023c75403b38d8" target="_blank" rel="noopener">animated bengal cat</a> door dinomaster, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Vacht, kop en bewegingen aangepast naar Pip. Thijs: avatar uit de <a href="https://github.com/microsoft/Microsoft-Rocketbox" target="_blank" rel="noopener">Microsoft Rocketbox</a>-bibliotheek (MIT), kleding en haar aangepast. Geluid: echte opnames van <a href="https://freesound.org" target="_blank" rel="noopener">Freesound</a> (via de <a href="https://github.com/karolpiczak/ESC-50" target="_blank" rel="noopener">ESC-50</a>-set): stofzuiger door ohrpilot, MrAuralization en Huminaatio, katten door tuberatanka, peridactyloptrix en philsapphire, deur door Bratok999, voetstappen door Mydo1, vogeltjes door keweldog, kattenbak door soundmary (alle CC0) en stofzuiger-uit door dobroide (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY</a>). Verder "Oculus Audio Pack 01" door Oculus VR, LLC (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), en <a href="https://kenney.nl" target="_blank" rel="noopener">Kenney</a> en rubberduck op OpenGameArt (CC0). Geknipt en op volume gebracht. Muziek: "New Shoes", "Happy Dance", "Love Love Love" en "Breath" door <a href="https://opengameart.org/users/holizna" target="_blank" rel="noopener">HoliznaCC0</a> (CC0), als naadloze loops.</p>
+    <p class="credit">3D-basis: <a href="https://sketchfab.com/3d-models/silver-british-shorthair-cat-e45605cdf8b64ef795643300416641c0" target="_blank" rel="noopener">Silver British Shorthair Cat</a> door 3D Creator, met het skelet en de bewegingen van <a href="https://sketchfab.com/3d-models/animated-bengal-cat-30444a1c97e9411693023c75403b38d8" target="_blank" rel="noopener">animated bengal cat</a> door dinomaster, beide <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Vorm, vacht en bewegingen aangepast naar Pip. Thijs: avatar uit de <a href="https://github.com/microsoft/Microsoft-Rocketbox" target="_blank" rel="noopener">Microsoft Rocketbox</a>-bibliotheek (MIT), kleding en haar aangepast. Geluid: echte opnames van <a href="https://freesound.org" target="_blank" rel="noopener">Freesound</a> (via de <a href="https://github.com/karolpiczak/ESC-50" target="_blank" rel="noopener">ESC-50</a>-set): stofzuiger door ohrpilot, MrAuralization en Huminaatio, katten door tuberatanka, peridactyloptrix en philsapphire, deur door Bratok999, voetstappen door Mydo1, vogeltjes door keweldog, kattenbak door soundmary (alle CC0) en stofzuiger-uit door dobroide (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY</a>). Verder "Oculus Audio Pack 01" door Oculus VR, LLC (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>), en <a href="https://kenney.nl" target="_blank" rel="noopener">Kenney</a> en rubberduck op OpenGameArt (CC0). Geknipt en op volume gebracht. Muziek: "New Shoes", "Happy Dance", "Love Love Love" en "Breath" door <a href="https://opengameart.org/users/holizna" target="_blank" rel="noopener">HoliznaCC0</a> (CC0), als naadloze loops.</p>
     <button class="secondary" id="moreBack" type="button">Terug</button>
   </section>
 
@@ -447,7 +447,7 @@ a.round{text-decoration:none}
 <script>
   setTimeout(function () { if (!window.__pipReady) document.getElementById('fail').hidden = false; }, 12000);
 </script>
-<script src="missies.js?v=20261112-73"></script>
+<script src="missies.js?v=20261112-75"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -888,23 +888,219 @@ const tunnelTex = tex(256, 32, (g, w, h) => {
   speckle(g, w, h, 1600, .25, ['#958d86', '#bbb4ad'], r);
   for (let x = 0; x < w; x += 42) { g.fillStyle = 'rgba(110,102,96,.8)'; g.fillRect(x, 0, 2, h); g.fillStyle = 'rgba(190,183,176,.8)'; g.fillRect(x + 2, 0, 1, h); }
 });
-// De kamer: tuin achter het glas, plissé, eiken, cement-plantbak, klok, eigen kunst, draadlantaarns
-function gardenTex(seed) {
-  return canvasTex(256, 600, (g, w, h) => {
-    const r = rng(seed), sky = g.createLinearGradient(0, 0, 0, h * .3); sky.addColorStop(0, '#eef2f2'); sky.addColorStop(1, '#dfe6e3');
-    g.fillStyle = sky; g.fillRect(0, 0, w, h * .32);
-    g.fillStyle = '#6f8f55'; for (let i = 0; i < 40; i++) { g.globalAlpha = .7; g.beginPath(); g.arc(r() * w, h * (.12 + r() * .2), 12 + r() * 26, 0, Math.PI * 2); g.fill(); }
+// De kamer: de tuin achter het glas, plissé, eiken, cement-plantbak, klok, eigen kunst, draadlantaarns
+// Buiten: jullie achtertuin, met diepte. Geen plaatje op het glas: elk stukje raam kijkt echt naar buiten.
+// Per pixel loopt een straal vanaf de camera door het glas de tuin in en raakt de laag die het eerst in de weg
+// staat: de tegels, de stoeltjes, de heg, de schutting, de bomen, de huizen met rode daken, of de lucht.
+// Zo verschuift alles goed ten opzichte van elkaar als Pip langs de ramen rent (zoals op jullie foto's).
+const GARDEN = { travel: { value: 0 }, time: { value: 0 } };
+const gardenTiles = tex(512, 512, (g, w, h) => {
+  // betontegels van 50 x 50 cm (dit stuk is 2 x 2 m), met wat mos in de voegen en gevallen blaadjes
+  const r = rng(211), T = w / 4;
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+    const l = 63 + (r() - .5) * 7, gr = g.createLinearGradient(i * T, j * T, i * T + T, j * T + T);
+    gr.addColorStop(0, `hsl(40, 4%, ${l + 2}%)`); gr.addColorStop(1, `hsl(40, 4%, ${l - 2}%)`);
+    g.fillStyle = gr; g.fillRect(i * T, j * T, T, T);
+    for (let k = 0; k < 3; k++) { g.globalAlpha = .06 + r() * .06; g.fillStyle = r() > .5 ? '#5c5b55' : '#d9d7d0'; g.beginPath(); g.ellipse(i * T + r() * T, j * T + r() * T, 8 + r() * 30, 6 + r() * 22, r() * 3, 0, Math.PI * 2); g.fill(); }
     g.globalAlpha = 1;
-    for (let x = 0; x < w; x += 22) { g.fillStyle = `hsl(35, 8%, ${48 + r() * 10}%)`; g.fillRect(x, h * .3, 20, h * .3); g.fillStyle = 'rgba(60,55,48,.5)'; g.fillRect(x + 20, h * .3, 2, h * .3); }
-    for (let i = 0; i < 70; i++) { g.fillStyle = r() > .5 ? '#5b7a45' : '#7e9e5e'; g.beginPath(); g.arc(r() * w, h * (.42 + r() * .2), 6 + r() * 18, 0, Math.PI * 2); g.fill(); }
-    for (let i = 0; i < 18; i++) { g.fillStyle = r() > .5 ? '#d97ea4' : '#e8a35a'; g.beginPath(); g.arc(r() * w, h * (.45 + r() * .16), 3 + r() * 4, 0, Math.PI * 2); g.fill(); }
-    g.fillStyle = '#bdbcb6'; g.fillRect(0, h * .62, w, h * .38);
-    g.strokeStyle = 'rgba(140,138,132,.7)'; g.lineWidth = 1.5;
-    for (let k = 0; k < 6; k++) { const y = h * .62 + Math.pow(k / 6, 1.6) * h * .38; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
-    for (let x = -w; x < w * 2; x += 60) { g.beginPath(); g.moveTo(w / 2 + (x - w / 2) * .4, h * .62); g.lineTo(x, h); g.stroke(); }
-    speckle(g, w, h, 900, .25, ['#d8d7d2', '#9c9b96'], r);
-  });
+  }
+  speckle(g, w, h, 9000, .35, ['#8d8c86', '#c3c2bc', '#77766f', '#d2d1cb'], r);
+  for (let i = 0; i <= 4; i++) for (const [x, y, ww, hh] of [[i * T - 1.5, 0, 3, h], [0, i * T - 1.5, w, 3]]) { g.fillStyle = '#6c6b64'; g.fillRect(x, y, ww, hh); }
+  for (let k = 0; k < 160; k++) { const i = (r() * 5) | 0, y = r() * h; g.globalAlpha = .5; g.fillStyle = r() > .5 ? '#5d6b3c' : '#4a5634'; g.fillRect(i * T - 1.5 + (r() - .5) * 2, y, 2 + r() * 2, 2 + r() * 5); }
+  g.globalAlpha = 1;
+  const leafC = ['#b8742f', '#c9973f', '#8f4a26', '#a8622c', '#d1a24a', '#7c5a2c'];
+  for (let k = 0; k < 26; k++) { g.save(); g.translate(r() * w, r() * h); g.rotate(r() * 6.3); g.fillStyle = leafC[(r() * leafC.length) | 0]; g.beginPath(); g.ellipse(0, 0, 4 + r() * 5, 2 + r() * 2.5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(60,40,20,.35)'; g.fillRect(-4, -.4, 8, .8); g.restore(); }
+}, [1, 1]);
+const gardenFence = tex(512, 512, (g, w, h) => {
+  // houten schutting met verticale planken (2 m breed, 2 m hoog; de schutting zelf is 1,85 m), grijs verweerd
+  const r = rng(213), top = h * (1 - 1.85 / 2), slat = w / 22;
+  g.clearRect(0, 0, w, h);
+  for (let i = 0; i < 22; i++) {
+    const x = i * slat, l = 47 + (r() - .5) * 12, hue = 30 + (r() - .5) * 8;
+    const gr = g.createLinearGradient(0, top, 0, h); gr.addColorStop(0, `hsl(${hue}, 16%, ${l + 6}%)`); gr.addColorStop(.85, `hsl(${hue}, 14%, ${l - 3}%)`); gr.addColorStop(1, `hsl(${hue + 20}, 18%, ${l - 14}%)`);
+    g.fillStyle = gr; g.fillRect(x, top + (r() - .5) * 3, slat - 1.4, h - top);
+    for (let k = 0; k < 9; k++) { const gx = x + r() * (slat - 2); g.strokeStyle = r() > .5 ? 'rgba(80,70,58,.22)' : 'rgba(230,222,206,.2)'; g.lineWidth = .6 + r(); g.beginPath(); g.moveTo(gx, top); g.bezierCurveTo(gx + (r() - .5) * 3, top + (h - top) * .3, gx + (r() - .5) * 3, top + (h - top) * .7, gx + (r() - .5) * 2, h); g.stroke(); }
+    if (r() > .7) { g.fillStyle = 'rgba(70,55,40,.45)'; g.beginPath(); g.ellipse(x + slat * .5, top + r() * (h - top), 2, 3, 0, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = 'rgba(25,20,16,.7)'; g.fillRect(x + slat - 1.6, top, 1.6, h - top); g.fillStyle = 'rgba(255,245,225,.12)'; g.fillRect(x, top, 1.2, h - top);
+  }
+  // groene aanslag onderaan, een bovenregel en een betonpaal
+  const al = g.createLinearGradient(0, h * .82, 0, h); al.addColorStop(0, 'rgba(70,90,50,0)'); al.addColorStop(1, 'rgba(70,90,50,.4)'); g.fillStyle = al; g.fillRect(0, h * .82, w, h * .18);
+  g.fillStyle = '#857a6b'; g.fillRect(0, top - 6, w, 12); g.fillStyle = 'rgba(30,26,22,.45)'; g.fillRect(0, top + 6, w, 4);
+  g.fillStyle = '#9b9a94'; g.fillRect(w - 18, top - 10, 18, h - top + 10); g.fillStyle = 'rgba(40,40,38,.35)'; g.fillRect(w - 18, top - 10, 3, h - top + 10);
+  speckle(g, w, h - top, 2500, .12, ['#3b342c', '#e9e1d0'], r);
+}, [1, 1]);
+function leafBlob(g, r, x, y, rad, cols, n, alpha = .9) {
+  for (let i = 0; i < n; i++) {
+    const a = r() * 6.283, d = Math.sqrt(r()) * rad, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * .8;
+    g.globalAlpha = alpha * (.6 + r() * .4); g.fillStyle = cols[(r() * cols.length) | 0];
+    g.beginPath(); g.ellipse(px, py, 2.5 + r() * 4, 1.6 + r() * 2.6, r() * 3, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
 }
+const gardenHedge = tex(1024, 512, (g, w, h) => {
+  // struiken en klimmers langs de schutting (8 m breed, 2,6 m hoog): dichte, ronde bossen, met hier en daar
+  // herfstkleur of rood blad, en open stukken waar je de schutting ziet
+  const r = rng(217); g.clearRect(0, 0, w, h);
+  const pal = [
+    { dark: '#22361b', mid: ['#36522a', '#456636', '#557a3f'], light: ['#6f9450', '#87a85f'] },
+    { dark: '#2b3a1c', mid: ['#4a5e2c', '#5f7334'], light: ['#8c9a45', '#b29a46'] },
+    { dark: '#3a1d18', mid: ['#6e2a24', '#83352b', '#5a2a22'], light: ['#a5473a', '#b8604a'] },
+    { dark: '#3b2a16', mid: ['#8a5a2a', '#9b6a2e', '#6e5a2c'], light: ['#c49241', '#d6ad52'] },
+  ];
+  const shrub = (x, bw, bh, p) => {
+    const blobs = []; for (let k = 0; k < Math.ceil(bw / 26) + 3; k++) { const rad = 18 + r() * (bh * .42); blobs.push([x + rad * .6 + r() * Math.max(1, bw - rad * 1.2), h - rad * .7 - r() * Math.max(1, bh - rad * 1.4), rad]); }
+    g.save(); g.beginPath(); for (const [bx, by, br] of blobs) { g.moveTo(bx + br, by); g.arc(bx, by, br, 0, Math.PI * 2); } g.clip();
+    const gr = g.createLinearGradient(0, h - bh, 0, h); gr.addColorStop(0, p.mid[0]); gr.addColorStop(1, p.dark); g.fillStyle = gr; g.fillRect(x - 60, h - bh - 60, bw + 120, bh + 60);
+    for (let k = 0; k < bw * bh / 90; k++) { const px = x - 30 + r() * (bw + 60), py = h - r() * (bh + 30), up = 1 - (h - py) / (bh + 30); const cols = r() < .35 - up * .25 ? p.light : p.mid; g.globalAlpha = .55 + r() * .45; g.fillStyle = up > .75 && r() > .5 ? p.dark : cols[(r() * cols.length) | 0]; g.beginPath(); g.ellipse(px, py, 3 + r() * 5, 2 + r() * 3, r() * 3, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1; g.restore();
+    // rand: losse blaadjes buiten de vorm, zodat het geen plakplaatje is
+    for (const [bx, by, br] of blobs) for (let k = 0; k < br * .9; k++) { const a = r() * 6.283, d = br * (.9 + r() * .25); g.globalAlpha = .8; g.fillStyle = (r() > .5 ? p.mid : p.light)[(r() * 2) | 0]; g.beginPath(); g.ellipse(bx + Math.cos(a) * d, by + Math.sin(a) * d, 2.5 + r() * 3.5, 1.8 + r() * 2, r() * 3, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
+  };
+  let x = r() * 30;
+  while (x < w + 40) {
+    const bw = 70 + r() * 170, bh = h * (.28 + r() * .5), k = r();
+    if (k < .16) { x += 40 + r() * 80; continue; }
+    shrub(x, bw, bh, pal[k > .9 ? 2 : k > .8 ? 3 : k > .62 ? 1 : 0]);
+    x += bw * (.75 + r() * .4);
+  }
+  // klimop over de schutting
+  for (let k = 0; k < 2; k++) shrub(r() * w, 90 + r() * 80, h * .75, pal[0]);
+}, [1, 1]);
+const gardenHouses = tex(1024, 512, (g, w, h) => {
+  // de rij huizen achter de tuin: bakstenen gevels, witte kozijnen, oranjerode pannendaken (16 m breed, 8 m hoog)
+  const r = rng(219), m = h / 8; g.clearRect(0, 0, w, h);
+  let x = 0;
+  while (x < w) {
+    const hw = 150 + r() * 120, eave = h - m * (4.1 + r() * .8), ridge = eave - m * (1.9 + r() * 1.1), brick = `hsl(${10 + r() * 10}, ${40 + r() * 14}%, ${33 + r() * 7}%)`;
+    g.fillStyle = brick; g.fillRect(x, eave, hw + 1, h - eave);
+    for (let y = eave; y < h; y += 4) { g.fillStyle = 'rgba(220,205,190,.16)'; g.fillRect(x, y, hw, 1); }
+    speckle(g, hw, h - eave, 1, 0, ['#000'], r);
+    for (let k = 0; k < 700; k++) { g.globalAlpha = .18; g.fillStyle = r() > .5 ? '#5a2a1e' : '#c27a5c'; g.fillRect(x + r() * hw, eave + r() * (h - eave), 4, 2); } g.globalAlpha = 1;
+    // ramen
+    for (let row = 0; row < 2; row++) for (let c = 0; c < 2; c++) {
+      const wx = x + hw * (.18 + c * .42), wy = eave + m * (.45 + row * 1.9), ww = hw * .26, wh = m * 1.1;
+      g.fillStyle = '#f0eee8'; g.fillRect(wx - 3, wy - 3, ww + 6, wh + 6);
+      const gl = g.createLinearGradient(wx, wy, wx + ww, wy + wh); gl.addColorStop(0, '#6f7f8c'); gl.addColorStop(1, '#3b4650'); g.fillStyle = gl; g.fillRect(wx, wy, ww, wh);
+      g.fillStyle = '#f0eee8'; g.fillRect(wx + ww / 2 - 1.5, wy, 3, wh); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(wx + 2, wy + 2, ww * .3, wh * .4);
+    }
+    // dak: schuin naar achteren (je ziet de dakvlakken), soms een dakkapel of een schoorsteen
+    const roof = g.createLinearGradient(0, ridge, 0, eave); roof.addColorStop(0, '#8e3d26'); roof.addColorStop(1, '#b8532f');
+    g.fillStyle = roof; g.beginPath(); g.moveTo(x - 6, eave + 4); g.lineTo(x + hw * .08, ridge); g.lineTo(x + hw * .92, ridge); g.lineTo(x + hw + 6, eave + 4); g.closePath(); g.fill();
+    for (let y = ridge + 5; y < eave; y += 6) { g.fillStyle = 'rgba(70,25,15,.28)'; g.fillRect(x, y, hw, 1.4); }
+    for (let k = 0; k < 400; k++) { g.globalAlpha = .12; g.fillStyle = r() > .5 ? '#6b2c1c' : '#d88a62'; const ty = ridge + r() * (eave - ridge); g.fillRect(x + r() * hw, ty, 5, 2); } g.globalAlpha = 1;
+    g.fillStyle = '#7d3a28'; g.fillRect(x + hw * .08, ridge - 3, hw * .84, 5);
+    if (r() > .5) { const dx = x + hw * (.3 + r() * .3); g.fillStyle = '#efece6'; g.fillRect(dx, eave - m * 1.1, hw * .25, m * .9); g.fillStyle = '#4a5560'; g.fillRect(dx + 4, eave - m * 1.0, hw * .25 - 8, m * .65); g.fillStyle = '#8f4330'; g.fillRect(dx - 4, eave - m * 1.18, hw * .25 + 8, 6); }
+    if (r() > .55) { const cx = x + hw * (.2 + r() * .6); g.fillStyle = '#7a4434'; g.fillRect(cx, ridge - m * .9, m * .35, m * 1.1); g.fillStyle = '#4b2a20'; g.fillRect(cx - 2, ridge - m * .95, m * .35 + 4, 5); }
+    g.fillStyle = '#e8e4dc'; g.fillRect(x, eave, hw, 5);   // witte goot
+    g.fillStyle = 'rgba(20,15,12,.5)'; g.fillRect(x + hw - 2, eave, 3, h - eave);   // naad tussen twee huizen
+    x += hw;
+  }
+}, [1, 1]);
+const gardenTrees = tex(1024, 512, (g, w, h) => {
+  // een paar bomen tussen de tuinen, half kaal en in herfstkleuren (12 m breed, 8 m hoog)
+  const r = rng(223); g.clearRect(0, 0, w, h); const m = h / 8;
+  for (let t = 0; t < 4; t++) {
+    const x = w * (t + .2 + r() * .6) / 4, top = h - m * (5 + r() * 2.5), bare = r() > .55;
+    g.strokeStyle = '#4a3c30'; g.lineCap = 'round';
+    const branch = (x0, y0, a, len, wd, d) => { const x1 = x0 + Math.sin(a) * len, y1 = y0 - Math.cos(a) * len; g.lineWidth = wd; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); if (d > 0) { branch(x1, y1, a - .35 - r() * .3, len * .72, wd * .68, d - 1); branch(x1, y1, a + .35 + r() * .3, len * .72, wd * .68, d - 1); if (r() > .5) branch(x1, y1, a + (r() - .5) * .3, len * .65, wd * .6, d - 1); } };
+    branch(x, h, (r() - .5) * .1, (h - top) * .38, 9 + r() * 4, bare ? 6 : 4);
+    if (!bare) { const cols = r() > .5 ? ['#c58a2e', '#d9a842', '#b06a2a', '#8f9a3e', '#a0782c'] : ['#5f7a3a', '#71904a', '#8aa152', '#c9a043', '#4f6a30']; for (let k = 0; k < 26; k++) leafBlob(g, r, x + (r() - .5) * m * 3.2, top + r() * m * 3, 20 + r() * 30, cols, 60, .85); }
+    else for (let k = 0; k < 10; k++) leafBlob(g, r, x + (r() - .5) * m * 3, top + r() * m * 2.5, 12 + r() * 16, ['#c99a46', '#b8782f', '#d6b05a'], 18, .7);
+  }
+}, [1, 1]);
+const gardenProps = tex(1024, 256, (g, w, h) => {
+  // tuinmeubels: grijze metalen stoeltjes, een rond wit tafeltje, een plantenbak en een hoge grijze pot (8 m breed, 2 m hoog)
+  const r = rng(227); g.clearRect(0, 0, w, h); const m = h / 2;   // m = pixels per meter
+  const chair = (x, s) => {
+    g.strokeStyle = '#3d4044'; g.fillStyle = '#4a4e53'; g.lineWidth = 3;
+    g.fillRect(x, h - m * .45, m * .45 * s, 5);                                   // zitting
+    for (const lx of [0, m * .42 * s]) { g.beginPath(); g.moveTo(x + lx, h - m * .45); g.lineTo(x + lx + (lx ? 4 : -4) * s, h); g.stroke(); }
+    const bx = s > 0 ? x : x + m * .45 * s; g.beginPath(); g.moveTo(bx, h - m * .45); g.lineTo(bx - 4 * s, h - m * .85); g.stroke();
+    g.lineWidth = 2; for (let k = 1; k < 5; k++) { g.beginPath(); g.moveTo(bx - k * s, h - m * (.47 + k * .08)); g.lineTo(bx + m * .38 * s - k * s, h - m * (.47 + k * .08)); g.stroke(); }
+  };
+  const table = (x) => { g.fillStyle = '#e9e7e1'; g.beginPath(); g.ellipse(x, h - m * .5, m * .32, 7, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x - m * .3, h - m * .5 + 4, m * .6, 3); g.strokeStyle = '#2e3134'; g.lineWidth = 3; for (const d of [-.22, .22]) { g.beginPath(); g.moveTo(x, h - m * .5); g.lineTo(x + d * m, h); g.stroke(); } };
+  chair(w * .08, 1); table(w * .08 + m * .8); chair(w * .08 + m * 1.6, -1);
+  // houten plantenbak met kruiden
+  const px = w * .55; g.fillStyle = '#6e5a47'; g.fillRect(px, h - m * .5, m * 1.2, m * .5); for (let k = 0; k < 4; k++) { g.fillStyle = 'rgba(30,22,15,.4)'; g.fillRect(px, h - m * .5 + k * m * .125, m * 1.2, 1.5); }
+  for (let k = 0; k < 8; k++) leafBlob(g, r, px + r() * m * 1.2, h - m * (.55 + r() * .25), 10 + r() * 10, ['#4f6e38', '#6f9150', '#9aaa5e', '#7d5a8c'], 34);
+  // hoge grijze pot met een boompje
+  const qx = w * .84; g.fillStyle = '#8e908d'; g.beginPath(); g.moveTo(qx - m * .18, h); g.lineTo(qx - m * .22, h - m * .75); g.lineTo(qx + m * .22, h - m * .75); g.lineTo(qx + m * .18, h); g.fill();
+  g.strokeStyle = '#4a3c30'; g.lineWidth = 3; g.beginPath(); g.moveTo(qx, h - m * .75); g.lineTo(qx, h - m * 1.2); g.stroke();
+  for (let k = 0; k < 10; k++) leafBlob(g, r, qx + (r() - .5) * m * .7, h - m * (1.2 + r() * .5), 12 + r() * 12, ['#3e5a2f', '#5f8043', '#6f9150'], 40);
+}, [1, 1]);
+for (const t of [gardenHedge, gardenHouses, gardenTrees, gardenProps, gardenFence]) { t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; }
+const gardenMat = new THREE.ShaderMaterial({
+  fog: true,
+  uniforms: Object.assign(THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uWX: { value: 1.45 } }]),   // (texturen niet via merge: die worden dan gekopieerd)
+    { tTile: { value: gardenTiles }, tFence: { value: gardenFence }, tHedge: { value: gardenHedge }, tHouse: { value: gardenHouses }, tTree: { value: gardenTrees }, tProp: { value: gardenProps } }),
+  vertexShader: `
+    varying vec3 vW;
+    #include <fog_pars_vertex>
+    void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }`,
+  fragmentShader: `
+    uniform sampler2D tTile, tFence, tHedge, tHouse, tTree, tProp; uniform float uWX, uTravel, uTime;
+    varying vec3 vW;
+    #include <fog_pars_fragment>
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3. - 2. * f); return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y); }
+    float fbm(vec2 p) { float s = 0., a = .5; for (int i = 0; i < 5; i++) { s += a * noise(p); p = p * 2.03 + 17.1; a *= .5; } return s; }
+    vec3 SKYH = vec3(.86, .9, .92);
+    vec4 acc; vec3 col;
+    void add(vec4 c) { col += (1. - acc.a) * c.a * c.rgb; acc.a += (1. - acc.a) * c.a; }
+    // afstand d van de muur: verder weg iets vager en blauwiger
+    vec3 hazeIt(vec3 c, float d) { return mix(c, SKYH, (1. - exp(-d / 60.)) * .8); }
+    void main() {
+      vec3 ro = cameraPosition, rd = normalize(vW - cameraPosition);
+      col = vec3(0); acc = vec4(0);
+      if (rd.x > -.0005) { gl_FragColor = vec4(SKYH, 1.); return; }
+      float wallX = -uWX;
+      // de tegels: y = 0; waar raakt de straal ze, en hoe ver van de muur is dat
+      float tg = rd.y < -.0001 ? -ro.y / rd.y : 1e5;
+      vec3 pg = ro + rd * tg; float dg = wallX - pg.x;
+      // lagen van dichtbij naar ver (de canvassen staan rechtop: onderkant van het plaatje = de grond, v = hoogte / laaghoogte)
+      // 1. tuinmeubels op 2,6 m
+      float d = 2.6, t = (wallX - d - ro.x) / rd.x; vec3 p = ro + rd * t;
+      if (dg > d) { float s = (p.z - uTravel) / 8.; float cell = floor(s + .37); vec4 c = texture2D(tProp, vec2(s + .37 * hash(vec2(cell, 3.)), p.y / 2.)); c.a *= step(.35, hash(vec2(cell, 9.))) * step(0., p.y) * step(p.y, 2.); add(vec4(hazeIt(c.rgb * 1.05, d), c.a)); }
+      // 2. heg en klimmers op 4,7 m
+      d = 4.7; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
+      if (dg > d && acc.a < .99) { vec4 c = texture2D(tHedge, vec2((p.z - uTravel) / 8., p.y / 2.6)); c.a *= step(0., p.y) * step(p.y, 2.6); add(vec4(hazeIt(c.rgb, d), c.a)); }
+      // 3. de schutting op 5 m (1,85 m hoog)
+      d = 5.; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
+      if (dg > d && acc.a < .99) { vec4 c = texture2D(tFence, vec2((p.z - uTravel) / 2., p.y / 2.)); c.a *= step(0., p.y) * step(p.y, 2.); add(vec4(hazeIt(c.rgb * .95, d), c.a)); }
+      // 4. bomen op 9 m
+      d = 9.; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
+      if (acc.a < .99) { vec4 c = texture2D(tTree, vec2((p.z - uTravel) / 12. + .3, p.y / 8.)); c.a *= step(0., p.y) * step(p.y, 8.); add(vec4(hazeIt(c.rgb, d), c.a)); }
+      // 5. de huizen op 13 m
+      d = 13.; t = (wallX - d - ro.x) / rd.x; p = ro + rd * t;
+      if (acc.a < .99) { vec4 c = texture2D(tHouse, vec2((p.z - uTravel) / 16., p.y / 8.)); c.a *= step(0., p.y) * step(p.y, 8.); add(vec4(hazeIt(c.rgb * 1.02, d), c.a)); }
+      // de grond als de straal eerder de tegels raakt
+      if (acc.a < .99 && rd.y < 0. && dg < 13.) {
+        vec3 g = texture2D(tTile, vec2((pg.z - uTravel) / 2., dg / 2.)).rgb;
+        g *= mix(.78, 1., smoothstep(.2, 2.2, dg));            // vlak bij het huis een beetje schaduw
+        g *= mix(.85, 1., smoothstep(4.95, 4.3, dg));          // en langs de voet van de heg en schutting
+        add(vec4(hazeIt(g, dg), 1.));
+      }
+      // de lucht: blauw met wolken
+      if (acc.a < .999) {
+        float up = max(rd.y, 0.); vec3 sky = mix(SKYH, vec3(.5, .67, .87), pow(smoothstep(0., .6, up), .8));
+        vec2 cp = rd.zx / max(rd.y, .06) * 1.6 + vec2(uTravel * .02 + uTime * .01, 0.);
+        float cl = smoothstep(.48, .78, fbm(cp)); sky = mix(sky, vec3(.97, .97, .96), cl * .85 * smoothstep(0., .12, up));
+        add(vec4(sky, 1.));
+      }
+      // het glas: een zweem groen en een beetje spiegeling van de kamer als je er schuin langs kijkt
+      float fres = pow(1. - abs(rd.x), 4.);
+      col = mix(vec3(dot(col, vec3(.3, .59, .11))), col, 1.22);          // buiten is het kleuriger dan in een vale foto
+      col = mix(col * vec3(.96, .99, .97), vec3(.86, .83, .79), .03 + fres * .22);
+      gl_FragColor = vec4(col * .98, 1.);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      #include <fog_fragment>
+    }`,
+});
+gardenMat.uniforms.uTravel = GARDEN.travel; gardenMat.uniforms.uTime = GARDEN.time;
 const pleatTex = tex(64, 128, (g, w, h) => { g.fillStyle = '#d7d2ca'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 4) { g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(0, y, w, 1.5); g.fillStyle = 'rgba(150,143,133,.35)'; g.fillRect(0, y + 2.5, w, 1); } }, [1, 8]);
 const oakTex = tex(128, 256, (g, w, h) => {
   const r = rng(111); g.fillStyle = '#c78d52'; g.fillRect(0, 0, w, h);
@@ -1177,8 +1373,8 @@ const M = {
   kastOak: new THREE.MeshStandardMaterial({ map: kastOakTex, roughness: .5 }),
   frameWhite: std('#f1f0ec', .5),
   pleat: new THREE.MeshStandardMaterial({ map: pleatTex, roughness: 1, side: THREE.DoubleSide, emissive: '#d9d3ca', emissiveIntensity: .55 }),
-  gardenA: new THREE.MeshBasicMaterial({ map: gardenTex(121) }),
-  gardenB: new THREE.MeshBasicMaterial({ map: gardenTex(127) }),
+  gardenA: gardenMat,
+  gardenB: gardenMat,
   anthracite: std('#3b3d40', .45, .35),
   lampBlack: std('#1c1c1d', .6, .2),
   cement: new THREE.MeshStandardMaterial({ map: cementTex, roughness: .95 }),
@@ -2850,7 +3046,7 @@ resize();
 /* ---------- Pip: het echte model met skelet ---------- */
 // Procedurele bewegingen voor het echte kattenskelet (Advanced-Skeleton-namen: Hip_R, Knee_R, Shoulder_L, Spine1_M ...)
 const SITP = { hip: 1.2, knee: -1.9, ankle: 1.25, toe: .3, scap: -.2, shoulder: -.55, elbow: .05, wrist: .05, neck: -.35, neck1: -.2, chest: .1, spine3: .05, tail0: -.5, tailN: -.05, curl: .22, rump: .15 };
-function makeRig(model, clip, baseTime = 9.4) {
+function makeRig(model, clip, baseTime = 9.4, { tailDrop = 1 } = {}) {
   const bones = {};
   model.traverse((o) => { if (o.isBone) { const k = o.name.replace(/_\d+(_\d+)*$/, ''); if (!bones[k]) bones[k] = o; } });
   const mixer = new THREE.AnimationMixer(model);
@@ -3008,7 +3204,7 @@ function makeRig(model, clip, baseTime = 9.4) {
       set('Neck1_M', look * .25);
       set('Head_M', .06 * run + duck * .2 - stum * .2 + caught * .2 + look * .2);
       // staart: naar achteren, golvend
-      set('Tail0_M', -.9 * run - .3 * duck + .15 * caught + tail);
+      set('Tail0_M', (-.9 * run - .3 * duck) * tailDrop + .15 * caught + tail);   // tailDrop: hoe ver de staart zakt bij het rennen
       ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k, i) => set(k, (-.18 + .1 * S(ph * .5 - i * .7)) * run + .08 * S(ph * .5 - i * .7) - tail * .09));
       if (sit > 0) {
         for (const s of ['R', 'L']) {
@@ -3086,6 +3282,21 @@ function makeRig(model, clip, baseTime = 9.4) {
 }
 
 // Vachtlagen om het bewegende model: dezelfde vorm iets groter, met haartjes die naar buiten toe dunner worden
+// Licht van onderen op Pip: de vloer kaatst licht terug op haar kin, keel en buik. Het licht van de
+// kamer van onderen is donker (de vloer is zwart), waardoor alles wat naar beneden kijkt grijs werd:
+// haar witte kin leek een grijze zak onder de snuit. Alleen voor Pip, niet voor de kamer.
+const PIP_BOUNCE = { value: .55 };
+// Zachte vacht: aan de randen (waar je langs de haren kijkt) vangt vacht licht, net als fluweel.
+// Alleen voor het BSH-model; dat heeft geen losse vachtlagen.
+const PIP_FUZZ = { value: 0 };
+// Met het pakje aan: de vacht die helemaal onder de stof zit niet tekenen, dan prikt er geen plukje doorheen
+const PIP_SUIT_ON = { value: 0 };
+function pipBounce(sh) {
+  sh.uniforms.uBounce = PIP_BOUNCE; sh.uniforms.uFuzz = PIP_FUZZ; sh.uniforms.uSuitOn = PIP_SUIT_ON;
+  sh.vertexShader = 'attribute float aSuit;\nvarying float vSuit;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSuit = aSuit;');
+  sh.fragmentShader = 'uniform float uSuitOn;\nvarying float vSuit;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n  if (uSuitOn > .5 && vSuit > .85) discard;');
+  sh.fragmentShader = 'uniform float uBounce;\nuniform float uFuzz;\n' + sh.fragmentShader.replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n  { vec3 wN = inverseTransformDirection(normal, viewMatrix); reflectedLight.indirectDiffuse += uBounce * smoothstep(-.1, .8, -wN.y) * BRDF_Lambert(material.diffuseColor);\n    float rim = 1.0 - clamp(dot(normal, geometryViewDir), 0.0, 1.0); reflectedLight.indirectDiffuse += uFuzz * rim * rim * material.diffuseColor * (.55 + .45 * smoothstep(-.2, .6, wN.y)); }');
+}
 function furShells(mesh, mask, count, worldDepth) {
   const ws = mesh.getWorldScale(new THREE.Vector3()).x || 1;
   for (let i = 1; i <= count; i++) {
@@ -3093,6 +3304,7 @@ function furShells(mesh, mask, count, worldDepth) {
     const mat = new THREE.MeshStandardMaterial({ map: mesh.material.map, alphaMap: mask, alphaTest: .5 + .42 * k, roughness: 1, metalness: 0 });
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uShell = { value: worldDepth * k / ws }; sh.uniforms.uK = { value: k };
+      pipBounce(sh);
       sh.vertexShader = 'uniform float uShell;\n' + sh.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n  transformed += normalize(objectNormal) * uShell;');
       sh.fragmentShader = 'uniform float uK;\n' + sh.fragmentShader.replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n  { vec2 c = floor(vAlphaMapUv * 1500.0); float h = fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.5453); diffuseColor.a *= h; diffuseColor.rgb *= 1.0 + .16 * uK; }');
     };
@@ -3103,26 +3315,169 @@ function furShells(mesh, mask, count, worldDepth) {
     mesh.parent.add(shell);
   }
 }
+// Pips gezicht. Het model is een bengaal; Pip is een British Shorthair-kitten: een brede ronde kop
+// (zo breed als hoog), volle wangen net onder de ogen, een klein kinnetje, een rond voorhoofd dat niet wijkt, een kort
+// breed neusje met bolle snorhaarkussens, grote ronde ogen, oren met een brede basis op de hoeken
+// van de kop, en een korte dikke nek. Vergeleken met haar foto's van voren, schuin en bijna opzij,
+// met de ogen van foto en model op dezelfde plek.
+// Niet de hele kop groter maken: dan groeien ogen en neus mee en wordt de kop een bal. Alleen wat
+// buiten ogen, neus en snoet ligt wordt breder en hoger (warpPipHead); de rest doen de botjes,
+// vóór het rig de rusthouding vastlegt (makeRig). Alle maten zijn verhoudingen (oogafstanden).
+const PIP_FACE = { head: 1, eyes: 1.06, lids: .04, snout: -.03, padsFwd: .09, jawSize: .85, lipsUp: .1, pads: 1.12, ears: 1, earLen: .85, earsOut: .2,
+  wide: .06, cheeks: .22, cheekAt: .35, jowls: -.3, dome: .26, fore: .16, earsUp: .2, earsWide: .06, chinUp: .2, chinBack: .12 };
+function shapePipFace(model, face = PIP_FACE) {
+  const B = {};
+  if (face.wide || face.cheeks || face.jowls || face.dome || face.fore || face.earsUp || face.earsWide || face.chinUp || face.chinBack) model.traverse((o) => { if (o.isSkinnedMesh) warpPipHead(o, face); });
+  model.traverse((o) => { if (o.isBone) { const k = o.name.replace(/_\d+(_\d+)*$/, ''); if (!B[k]) B[k] = o; } });
+  const head = B.Head_M, lip = B.LipUp_M_M;
+  if (!head || !lip || !B.Eye_L || !B.Eye_R) return;
+  model.updateMatrixWorld(true);
+  const W = (b) => b.getWorldPosition(new THREE.Vector3());
+  const moveWorld = (b, d) => { if (!b) return; const to = W(b).add(d); b.position.copy(b.parent.worldToLocal(to)); b.updateMatrixWorld(true); };
+  const H = W(head), L = W(lip), eyeL = W(B.Eye_L), eyeR = W(B.Eye_R);
+  const back = H.clone().sub(L), snoutLen = back.length(); back.normalize();
+  const side = eyeL.clone().sub(eyeR), eyeGap = side.length(); side.normalize();
+  const up = new THREE.Vector3().crossVectors(back, side).normalize();
+  if (up.y < 0) up.negate();
+  // Het snoetje: de lippen en de snorhaarkussens (snout: deel van de snuitlengte; negatief = naar voren)
+  const snout = ['LipUp_M_M', 'LipDn_M_M', 'LipIn_R_R', 'LipIn_R_L'];
+  for (const s of ['R', 'L']) for (const n of ['LipUp1', 'LipUp2', 'LipUp3', 'LipDn1', 'LipDn2', 'LipDn3', 'Mouthfurroot']) snout.push(`${n}_R_${s}`);
+  for (const k of snout) moveWorld(B[k], back.clone().multiplyScalar(face.snout * snoutLen));
+  // Een kleine kin: de bengaal heeft een hangende onderkaak, Pip een klein rond kinnetje.
+  // De kaak kleiner en de onderlip iets omhoog en naar achteren (lipsUp: deel van de oogafstand).
+  if (B.Jaw_M && face.jawSize !== 1) { B.Jaw_M.scale.multiplyScalar(face.jawSize); B.Jaw_M.updateMatrixWorld(true); }
+  if (face.lipsUp) {
+    const lift = up.clone().multiplyScalar(face.lipsUp * eyeGap).addScaledVector(back, face.lipsUp * eyeGap * .6);
+    for (const k of ['LipDn_M_M', 'LipDn1_R_R', 'LipDn2_R_R', 'LipDn3_R_R', 'LipDn1_R_L', 'LipDn2_R_L', 'LipDn3_R_L']) moveWorld(B[k], lift);
+  }
+  // Een duidelijk snoetje: de snorhaarkussens iets naar voren (padsFwd: deel van de snuitlengte)
+  if (face.padsFwd) for (const s of ['R', 'L']) moveWorld(B[`Mouthfurroot_R_${s}`], back.clone().multiplyScalar(-face.padsFwd * snoutLen));
+  // Bolle wangen: de snorhaarkussens wat voller (in pip_furmask.jpg staat er nu ook vacht op:
+  // bij de bengaal was dat een kale, grijze bult onder de neus, bij Pip zijn het witte bolletjes)
+  for (const s of ['R', 'L']) { const b = B[`Mouthfurroot_R_${s}`]; if (b) b.scale.multiplyScalar(face.pads); }
+  // Grote, ronde ogen: grotere oogbollen, de oogleden verder open
+  for (const k of ['Eye_L', 'Eye_R']) B[k].scale.multiplyScalar(face.eyes);
+  for (const s of ['R', 'L']) {
+    for (const n of ['EyeLidUp1', 'EyeLidUp2']) moveWorld(B[`${n}_R_${s}`], up.clone().multiplyScalar(face.lids * eyeGap * .5));
+    for (const n of ['EyeLidDn1', 'EyeLidDn2']) moveWorld(B[`${n}_R_${s}`], up.clone().multiplyScalar(-face.lids * eyeGap * .35));
+  }
+  // Kleine oren, wijd uit elkaar
+  for (const s of ['R', 'L']) {
+    const ear = B[`Ear1_R_${s}`]; if (!ear) continue;
+    ear.scale.multiplyScalar(face.ears); ear.scale.x *= face.earLen;
+    const out = (s === 'L' ? 1 : -1) * Math.sign(W(ear).sub(H).dot(side) || 1);
+    const pw = ear.parent.getWorldQuaternion(new THREE.Quaternion());
+    ear.quaternion.premultiply(pw.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(back.clone().negate(), out * face.earsOut)).multiply(pw));
+  }
+  // Een ronde kop: alles van de kop iets groter
+  head.scale.multiplyScalar(face.head);
+  model.updateMatrixWorld(true);
+}
+
+// De vorm van de kop. Het gezicht van het model heeft alleen botjes voor ogen, lippen, kaak en oren:
+// geen wangen, voorhoofd of kin. Daarom vervormen we hier het gaas van de kop zelf, in de rusthouding
+// (zachte overgangen, alles in oogafstanden). Wat een bengaal anders maakt dan een British Shorthair:
+// smaller en langer, een grote ronde onderkaak die naar voren steekt, en een dunne, lange nek.
+// Een BSH-kitten: brede ronde wangen onder de ogen, een klein kinnetje vlak onder het snoetje,
+// een hoog rond voorhoofd en oren op de hoeken van de kop.
+function warpPipHead(mesh, face) {
+  const sk = mesh.skeleton, geo = mesh.geometry;
+  const idx = {}; sk.bones.forEach((b, i) => { const k = b.name.replace(/_\d+(_\d+)*$/, ''); if (!(k in idx)) idx[k] = i; });
+  if (idx.Head_M == null || idx.Eye_L == null || idx.Eye_R == null) return;
+  // van het gaas naar het assenstelsel van de kop: x omhoog, y naar voren, z opzij
+  const toHead = new THREE.Matrix4().multiplyMatrices(sk.boneInverses[idx.Head_M], mesh.bindMatrix);
+  const fromHead = toHead.clone().invert();
+  const at = (k) => new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(sk.boneInverses[idx[k]]).invert().premultiply(sk.boneInverses[idx.Head_M]));
+  // het midden van de zichtbare oogbollen (de botjes van de ogen zitten dichter bij de neus)
+  const pos = geo.attributes.position, nor = geo.attributes.normal, tan = geo.attributes.tangent;
+  const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  const ball = (b) => { const c = new THREE.Vector3(), v = new THREE.Vector3(); let n = 0;
+    for (let i = 0; i < pos.count; i++) for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === b && sw.getComponent(i, k) > .5) { c.add(v.fromBufferAttribute(pos, i).applyMatrix4(toHead)); n++; }
+    return n ? c.divideScalar(n) : at(sk.bones[b].name.replace(/_\d+(_\d+)*$/, '')); };
+  const eL = ball(idx.Eye_L), eR = ball(idx.Eye_R), g = eL.distanceTo(eR), e = eL.clone().add(eR).multiplyScalar(.5);
+  const inHead = new Set(); sk.bones[idx.Head_M].traverse((o) => { const i = sk.bones.indexOf(o); if (i >= 0) inHead.add(i); });
+  const neckShare = {}; for (const [k, w] of [['Neck2_M', .8], ['Neck1_M', .45], ['Neck_M', .15]]) if (idx[k] != null) neckShare[idx[k]] = w;
+  const sm = (a, b, t) => { const u = Math.min(1, Math.max(0, (t - a) / (b - a))); return u * u * (3 - 2 * u); };
+  const bump = (t, s) => Math.exp(-t * t / (2 * s * s));
+  // verschuiving (in oogafstanden) voor een punt q = (omhoog, voor, opzij) ten opzichte van het midden tussen de ogen
+  const raw = (x, y, z, o) => {
+    const az = Math.abs(z), sz = Math.sign(z), back = sm(-2.6, -1.6, y);
+    // breder: de zijkant van de kop naar buiten, het meest bij de wangen (onder de ogen). Ogen, neus
+    // en snorhaarkussens (binnen ±0,6) blijven op hun plek.
+    const out = (face.wide * sm(1.1, .3, x) + face.cheeks * bump(x + face.cheekAt, .45)) * sm(.6, 1.25, az) * back;
+    // onder de mond loopt de kaak naar een klein kinnetje (negatief = smaller): de bengaal heeft
+    // een brede ronde onderkaak die als een zak onder de snuit hangt
+    const jowl = face.jowls * bump(x + 1, .3) * sm(.35, .9, az) * sm(-1.4, -.4, y);
+    o.set(0, 0, sz * (out + jowl));
+    // een hoger, rond voorhoofd en een bredere schedel tussen de oren
+    o.x += face.dome * sm(.2, .8, x) * bump(z, .75) * back;
+    // het voorhoofd niet laten wijken (bengaal: schuin naar achteren; BSH: rond en recht)
+    o.y += face.fore * sm(.15, .55, x) * bump(z, .7) * sm(-1, -.2, y);
+    // de oren hoger en verder uit elkaar, met de schedel eromheen mee
+    const ear = sm(.3, .9, x) * sm(.45, .9, az) * back;
+    o.x += face.earsUp * ear; o.z += sz * face.earsWide * ear;
+    // korte kin: alles onder de mond omhoog en iets naar achteren (vooraan, niet bij de nek)
+    const under = Math.max(0, -.75 - x), front = sm(-1.2, -.2, y);
+    o.x += face.chinUp * under * front;
+    o.y -= face.chinBack * sm(0, .5, under) * front;
+    return o;
+  };
+  // de ogen blijven rond: rond elk oog schuift alles mee als één geheel
+  const dEye = [eL, eR].map((p) => { const q = p.clone().sub(e).divideScalar(g); return { q, d: raw(q.x, q.y, q.z, new THREE.Vector3()) }; });
+  const field = (q, o) => {
+    raw(q.x, q.y, q.z, o);
+    for (const { q: c, d } of dEye) { const t = sm(.72, .46, q.distanceTo(c)); if (t > 0) o.lerp(d, t); }
+    return o;
+  };
+  const P = new Float32Array(pos.count * 3), N = nor && new Float32Array(nor.count * 3), Tg = tan && new Float32Array(tan.count * 4);
+  const v = new THREE.Vector3(), q = new THREE.Vector3(), d = new THREE.Vector3(), d2 = new THREE.Vector3(), n = new THREE.Vector3();
+  const J = new THREE.Matrix3(), Jn = new THREE.Matrix3(), eps = .01, warp = (src, dst) => { q.copy(src).sub(e).divideScalar(g); return dst.copy(src).addScaledVector(field(q, d2), g); };
+  const R = new THREE.Matrix3().setFromMatrix4(toHead), Ri = new THREE.Matrix3().setFromMatrix4(fromHead);
+  const p0 = new THREE.Vector3(), w0 = new THREE.Vector3(), wi = new THREE.Vector3(), c = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  for (let i = 0; i < pos.count; i++) {
+    let m = 0;
+    for (let k = 0; k < 4; k++) { const b = si.getComponent(i, k), w = sw.getComponent(i, k); m += inHead.has(b) ? w : (neckShare[b] || 0) * w; }
+    m = Math.min(1, m);
+    v.fromBufferAttribute(pos, i);
+    if (m < .001) { v.toArray(P, i * 3); if (N) n.fromBufferAttribute(nor, i).toArray(N, i * 3); if (Tg) { Tg.set([tan.getX(i), tan.getY(i), tan.getZ(i), tan.getW(i)], i * 4); } continue; }
+    p0.copy(v).applyMatrix4(toHead); warp(p0, w0);
+    // de vervorming lokaal (Jacobiaan), voor de normalen en raaklijnen
+    for (let a = 0; a < 3; a++) { wi.copy(p0); wi.setComponent(a, wi.getComponent(a) + eps * g); warp(wi, c[a]).sub(w0).divideScalar(eps * g).sub(new THREE.Vector3().setComponent(a, 1)).multiplyScalar(m).add(new THREE.Vector3().setComponent(a, 1)); }
+    J.set(c[0].x, c[1].x, c[2].x, c[0].y, c[1].y, c[2].y, c[0].z, c[1].z, c[2].z);
+    w0.sub(p0).multiplyScalar(m).add(p0).applyMatrix4(fromHead).toArray(P, i * 3);
+    if (N) { Jn.copy(J).invert().transpose(); n.fromBufferAttribute(nor, i).applyMatrix3(R).applyMatrix3(Jn).applyMatrix3(Ri).normalize().toArray(N, i * 3); }
+    if (Tg) { n.set(tan.getX(i), tan.getY(i), tan.getZ(i)).applyMatrix3(R).applyMatrix3(J).applyMatrix3(Ri).normalize(); Tg.set([n.x, n.y, n.z, tan.getW(i)], i * 4); }
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  if (N) geo.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  if (Tg) geo.setAttribute('tangent', new THREE.BufferAttribute(Tg, 4));
+  geo.computeBoundingBox(); geo.computeBoundingSphere();
+}
+
 const REAL = { holder: null };
 function useRealPip(gltf) {
   const model = gltf.scene;
+  const isBSH = !!model.getObjectByName('PipBSH');   // het nieuwe British Shorthair-model heeft zijn eigen kop
+  PIP_FUZZ.value = isBSH ? .4 : 0;
+  if (!isBSH) shapePipFace(model);
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
-  model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; if (o.material) { o.material.roughness = 1; o.material.metalness = 0;
+  model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; if (o.material) { o.material.roughness = 1; o.material.metalness = 0; o.material.onBeforeCompile = pipBounce;
     for (const k of ['map', 'normalMap', 'roughnessMap', 'aoMap']) { const tx = o.material[k]; if (tx) { tx.anisotropy = maxAniso; tx.needsUpdate = true; } } } } });
-  const rig = makeRig(model, null);   // rusthouding van het model: rechte rug; de kop zet makeRig recht
+  // het BSH-model heeft een lagere staartaanzet: de staart zakt bij het rennen minder ver, anders raakt hij de vloer
+  const rig = makeRig(model, null, 9.4, { tailDrop: isBSH ? .7 : 1 });   // rusthouding van het model: rechte rug; de kop zet makeRig recht
   const holder = new THREE.Group(), inner = new THREE.Group(); holder.add(inner); inner.add(model);
   inner.quaternion.setFromUnitVectors(rig.fwd, new THREE.Vector3(0, 0, -1));
   holder.updateMatrixWorld(true);
   const W = (b) => b.getWorldPosition(new THREE.Vector3());
   const back = W(rig.bones.Spine2_M), toe = W(rig.bones.MiddleToe2_R), rootW = W(rig.bones.Root_M);
-  const k = .235 / Math.max(.01, back.y - toe.y);   // rughoogte ±23 cm, zoals een kitten van 7 maanden naast jullie meubels
+  const k = (isBSH ? .215 : .235) / Math.max(.01, back.y - toe.y);   // rughoogte ±22 cm, zoals een kitten van 7 maanden naast jullie meubels
   inner.scale.setScalar(k); holder.updateMatrixWorld(true);
   const toe2 = W(rig.bones.MiddleToe2_R), root2 = W(rig.bones.Root_M), chest2 = W(rig.bones.Chest_M);
   inner.position.set(-(root2.x + chest2.x) / 2, .012 - toe2.y, -(root2.z + chest2.z) / 2);
   holder.updateMatrixWorld(true);
   const mask = new THREE.TextureLoader().load('piprun/pip_furmask.jpg');
   const meshes = []; model.traverse((o) => { if (o.isSkinnedMesh) meshes.push(o); });
-  for (const m of meshes) furShells(m, mask, coarse ? 4 : 6, .0055);
+  if (!isBSH) for (const m of meshes) furShells(m, mask, coarse ? 4 : 6, .0055);
   REAL.suit = meshes.map((m) => buildSuit(m, holder)).filter(Boolean);
   REAL.holder = holder; REAL.rig = rig; REAL.k = k;
   showReal();
@@ -3186,11 +3541,13 @@ function useModel(gltf, name) {
 }
 $('turnBtn').addEventListener('click', () => { if (pip.custom) pip.custom.rotation.y += Math.PI / 2; });
 $('resetModel').addEventListener('click', () => { dropCustom(); $('modelTools').hidden = true; if (REAL.holder) showReal(); else setStatus('Nu rent de getekende Pip.'); });
-// Het model staat naast de game: als pip.glb (in jullie eigen app) of als tekstbestand (hier, in de artifact)
 const realFail = () => setStatus('Het model van Pip kon niet laden, dus nu rent de getekende Pip. Laad de pagina opnieuw om het nog eens te proberen.', true);
-fetch('piprun/pip-model.txt').then((r) => { if (!r.ok) throw new Error('geen tekstversie'); return r.text(); })
+// Pip is een British Shorthair: piprun/pip-bsh.glb (de BSH op het skelet van de bengaal, slanker gemaakt en met
+// Pips eigen vacht). Lukt dat niet, dan het oude bengaalmodel als reserve.
+const oldPip = () => fetch('piprun/pip-model.txt').then((r) => { if (!r.ok) throw new Error('geen tekstversie'); return r.text(); })
   .then((b64) => { const raw = atob(b64.trim()), bin = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i); loader.parse(bin.buffer, '', useRealPip, realFail); })
   .catch(() => loader.load('pip.glb', useRealPip, undefined, realFail));
+loader.load('piprun/pip-bsh.glb?v=20261112-75', useRealPip, undefined, oldPip);
 
 
 /* ---------- Thijs als echt 3D-model ---------- */
@@ -3309,12 +3666,61 @@ function buildSuit(mesh, holder) {
   const n = P.count, mask = new Float32Array(n), rest = new Float32Array(n * 3), restN = new Float32Array(n * 3);
   const v = new THREE.Vector3(), nv = new THREE.Vector3(), acc = new THREE.Vector3(), tmp = new THREE.Vector3();
   const sstep = (a, b, x) => { const u = clamp((x - a) / (b - a), 0, 1); return u * u * (3 - 2 * u); };
+  // Het BSH-model: het pakje loopt van een nette kraag om de nek tot vlak voor de heupen, met korte
+  // mouwtjes om de voorpoten, en achter over de billen tot vlak voor de staart (de achterpoten komen er
+  // onderuit). De randen zijn vlakken door de botjes (geen botgewichten), dus strak en recht.
+  let bshObj = false; holder.traverse((o) => { if (o.name === 'PipBSH') bshObj = true; });
+  const bsh = bshObj, SB = Object.assign({ collar: .15, collarUp: .7, rear: .12, rearLift: .03, sleeve: .5, legR: .03, mid: .04, hind: .55, hindR: .034, tailR: .035, ramp: .1, smooth: 20 });
+  let L = null;
+  if (bsh) {
+    const hInv = holder.matrixWorld.clone().invert(), at = (nm) => { const k = names.indexOf(nm); return k < 0 ? null : bones[k].getWorldPosition(new THREE.Vector3()).applyMatrix4(hInv); };
+    const chest = at('Chest_M'), neck = at('Neck_M'), neck1 = at('Neck1_M'), root = at('Root_M'), spine2 = at('Spine2_M');
+    const fwd = chest.clone().sub(root).setY(0).normalize(), up = new THREE.Vector3(0, 1, 0);
+    const sh = ['L', 'R'].map((s) => at('Shoulder_' + s)), el = ['L', 'R'].map((s) => at('Elbow_' + s)), wr = ['L', 'R'].map((s) => at('Wrist_' + s));
+    L = { fwd,
+      // kraag: een ring om de nek. De nek van het model staat vrij plat; een kraag haaks daarop zakt voor op de borst
+      // diep weg (een v-hals). Iets meer naar boven gekanteld zit hij netjes rond de hals.
+      cP: neck.clone().lerp(chest, SB.collar), cN: neck1.clone().sub(chest).normalize().addScaledVector(up, SB.collarUp).normalize(),
+      // achterrand: over de billen tot vlak voor de staart, zoals haar echte herstelpakje
+      rP: at('Tail0_M').lerp(root, SB.rear),
+      sleeveY: (el[0].y + el[1].y) / 2 + ((sh[0].y + sh[1].y) / 2 - (el[0].y + el[1].y) / 2) * SB.sleeve,
+      legs: [0, 1].flatMap((k) => [[sh[k], el[k]], [el[k], wr[k]]]),
+      // achterpoten komen er onderuit; de staart blijft vrij
+      hindLegs: ['L', 'R'].flatMap((s) => [[at('Hip_' + s), at('Knee_' + s)], [at('Knee_' + s), at('Ankle_' + s)]]),
+      hindY: ['L', 'R'].reduce((a, s) => a + at('Knee_' + s).y + (at('Hip_' + s).y - at('Knee_' + s).y) * SB.hind, 0) / 2,
+      hipZ: ['L', 'R'].reduce((a, s) => a + at('Hip_' + s).z, 0) / 2,
+      tail: [[at('Tail0_M'), at('Tail16_M')], [at('Tail16_M'), at('Tail17_M')]], tailY: at('Tail0_M').y,
+      holeC: root.clone().lerp(chest, .5), decalC: spine2.clone().lerp(chest, .15) };
+    // laagste punt van borst en buik (midden), uit het gaas zelf
+    const limb = (i) => { let w = 0; for (let k = 0; k < 4; k++) { const g = grp[SI.getComponent(i, k)]; if (g === 'paw' || g === 'arm' || g === 'hind') w += SW.getComponent(i, k); } return w; };
+    const low = (zc) => { let m = 9; for (let i = 0; i < n; i++) { if (limb(i) > .25) continue; mesh.getVertexPosition(i, v); v.applyMatrix4(toH); if (Math.abs(v.x - chest.x) < .015 && Math.abs(v.z - zc) < .015) m = Math.min(m, v.y); } return m; };
+    L.chestZ = chest.z; L.chestBot = low(chest.z); L.bellyZ = (chest.z + L.hipZ) / 2 + (L.hipZ - chest.z) * .2; L.bellyBot = low(L.bellyZ); L.midX = chest.x;
+  }
+  // Randen van het pakje als afstanden (lineair, dus binnen elke driehoek een rechte snijlijn):
+  // kraag om de nek, achterrand haaks op de rug (recht dwars over de rug), onderkant van het lijf, mouwtjes.
+  const maskL = (p) => {
+    const dF = -tmp.copy(p).sub(L.cP).dot(L.cN);
+    const dB = tmp.copy(p).sub(L.rP).dot(L.fwd);
+    // onderkant: borst → buik, en achter de buik loopt de onderrand omhoog naar net onder de staart (de achterpoten en het kontje blijven vrij)
+    const z1 = (p.z - L.chestZ) / (L.bellyZ - L.chestZ), z2 = (p.z - L.bellyZ) / (L.rP.z - L.bellyZ);
+    const bottom = z2 <= 0 ? L.chestBot + (L.bellyBot - L.chestBot) * clamp(z1, 0, 1) : L.bellyBot + (L.tailY - SB.rearLift - L.bellyBot) * clamp(z2, 0, 1) * clamp(z2, 0, 1);
+    const dT = p.y - (bottom - .004);
+    let dH = 9;   // achterpootjes: onder de dij-lijn rond de poot vrij
+    for (const g of L.hindLegs) { const ab = tmp.copy(g[1]).sub(g[0]), u = clamp(p.clone().sub(g[0]).dot(ab) / ab.lengthSq(), 0, 1), dl = p.distanceTo(g[0].clone().addScaledVector(ab, u)); dH = Math.min(dH, Math.max(p.y - L.hindY, dl - SB.hindR)); }
+    let dTl = 9;  // staart
+    for (const g of L.tail) { const ab = tmp.copy(g[1]).sub(g[0]), u = clamp(p.clone().sub(g[0]).dot(ab) / ab.lengthSq(), 0, 1); dTl = Math.min(dTl, p.distanceTo(g[0].clone().addScaledVector(ab, u)) - SB.tailR); }
+    let dS = 9;   // mouwtjes: onder de mouwlijn alleen de poot zelf vrij laten (het midden van de borst is nooit poot)
+    for (const g of L.legs) { const ab = tmp.copy(g[1]).sub(g[0]), u = clamp(p.clone().sub(g[0]).dot(ab) / ab.lengthSq(), 0, 1), dl = p.distanceTo(g[0].clone().addScaledVector(ab, u)); dS = Math.min(dS, Math.max(p.y - L.sleeveY, dl - SB.legR, SB.mid - Math.abs(p.x - L.midX))); }
+    // niet afkappen bij 0 en 1: dan blijft het verloop binnen elke driehoek recht
+    return clamp(.5 + Math.min(dF, dB, dS, dT, dH, dTl) / SB.ramp, -2, 3);
+  };
   for (let i = 0; i < n; i++) {
     mesh.getVertexPosition(i, v); v.applyMatrix4(toH); rest.set([v.x, v.y, v.z], i * 3);
     nv.fromBufferAttribute(N, i).transformDirection(mesh.bindMatrix); acc.set(0, 0, 0);
     const W = { head: 0, tail: 0, hind: 0, paw: 0, arm: 0, body: 0 };
     for (let k = 0; k < 4; k++) { const w = SW.getComponent(i, k); if (!w) continue; const j = SI.getComponent(i, k); W[grp[j]] += w; acc.addScaledVector(tmp.copy(nv).transformDirection(boneM[j]), w); }
     acc.transformDirection(mesh.bindMatrixInverse).transformDirection(toH); restN.set([acc.x, acc.y, acc.z], i * 3);
+    if (L) { mask[i] = maskL(v); continue; }
     // achteraan houdt het pakje op net voor de heupen; onder de buik loopt het iets verder door
     const zCut = .085 + .05 * clamp((.24 - v.y) / .12, 0, 1);
     const m0 = 1 - (W.head + W.tail + W.hind + W.paw + .45 * W.arm);
@@ -3322,7 +3728,14 @@ function buildSuit(mesh, holder) {
   }
   // gaatje in de linkerflank, halverwege, zoals op de foto
   let hole = null, best = 1e9;
-  for (let i = 0; i < n; i++) if (mask[i] > .95 && restN[i * 3] < -.8) { const d = Math.abs(rest[i * 3 + 2] - .01) * 2 + Math.abs(rest[i * 3 + 1] - .17); if (d < best) { best = d; hole = [rest[i * 3], rest[i * 3 + 1], rest[i * 3 + 2]]; } }
+  const holeZ = L ? L.holeC.z : .01, holeY = L ? L.holeC.y * .72 : .17;
+  for (let i = 0; i < n; i++) if (mask[i] > .95 && restN[i * 3] < -.8) { const d = Math.abs(rest[i * 3 + 2] - holeZ) * 2 + Math.abs(rest[i * 3 + 1] - holeY); if (d < best) { best = d; hole = [rest[i * 3], rest[i * 3 + 1], rest[i * 3 + 2]]; } }
+  if (L) {
+    // waar de vacht ver onder de stof zit (niet bij de randen en niet bij het gaatje, daar moet ze juist te zien zijn)
+    const cover = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const dh = hole ? Math.hypot(rest[i * 3] - hole[0], rest[i * 3 + 1] - hole[1], rest[i * 3 + 2] - hole[2]) : 9; cover[i] = dh < .035 ? 0 : clamp(mask[i], 0, 1); }
+    geo.setAttribute('aSuit', new THREE.BufferAttribute(cover, 1));
+  }
   const src = geo.index ? geo.index.array : null, idx = [];
   for (let t = 0; t < (src ? src.length : n); t += 3) {
     const a = src ? src[t] : t, b = src ? src[t + 1] : t + 1, c = src ? src[t + 2] : t + 2;
@@ -3331,15 +3744,40 @@ function buildSuit(mesh, holder) {
   if (!idx.length) return null;
   const sg = new THREE.BufferGeometry();
   for (const k of ['position', 'normal', 'skinIndex', 'skinWeight']) sg.setAttribute(k, geo.attributes[k]);
+  // Bij het BSH-model ligt de stof als een glad laagje over de vacht: de plukjes van de borst en de
+  // plooien van het gaas eronder strijken we glad (alleen voor het pakje, de kat zelf blijft hetzelfde).
+  if (L && src) {
+    const pa = P.array, Q = Float32Array.from(pa), canon = new Int32Array(n), seen = new Map();
+    for (let i = 0; i < n; i++) { const kk = Math.round(pa[i * 3] * 1e5) + ',' + Math.round(pa[i * 3 + 1] * 1e5) + ',' + Math.round(pa[i * 3 + 2] * 1e5); if (seen.has(kk)) canon[i] = seen.get(kk); else { seen.set(kk, i); canon[i] = i; } }
+    const nb = new Map();
+    // alle buren tellen mee (ook buiten het pakje), maar alleen punten van het pakje schuiven: zo blijven de randen op hun plek
+    const inS = new Uint8Array(n); for (let i = 0; i < n; i++) if (mask[i] > 0) inS[canon[i]] = 1;
+    for (let t = 0; t < src.length; t += 3) { const tv = [canon[src[t]], canon[src[t + 1]], canon[src[t + 2]]]; for (let a = 0; a < 3; a++) { if (!inS[tv[a]]) continue; if (!nb.has(tv[a])) nb.set(tv[a], new Set()); for (let b = 0; b < 3; b++) if (a !== b) nb.get(tv[a]).add(tv[b]); } }
+    const step = (lam) => { const upd = []; for (const [vv, S] of nb) { let x = 0, y = 0, z = 0; for (const u of S) { x += Q[u * 3]; y += Q[u * 3 + 1]; z += Q[u * 3 + 2]; } const m = S.size; upd.push([vv, Q[vv * 3] + (x / m - Q[vv * 3]) * lam, Q[vv * 3 + 1] + (y / m - Q[vv * 3 + 1]) * lam, Q[vv * 3 + 2] + (z / m - Q[vv * 3 + 2]) * lam]); } for (const [vv, x, y, z] of upd) { Q[vv * 3] = x; Q[vv * 3 + 1] = y; Q[vv * 3 + 2] = z; } };
+    for (let it = 0; it < SB.smooth; it++) { step(.55); step(-.57); }
+    for (let i = 0; i < n; i++) { const c = canon[i]; if (c !== i) { Q[i * 3] = Q[c * 3]; Q[i * 3 + 1] = Q[c * 3 + 1]; Q[i * 3 + 2] = Q[c * 3 + 2]; } }
+    // normalen van het gladde laagje (over de naden heen)
+    const acc2 = new Float32Array(n * 3);
+    for (let t = 0; t < src.length; t += 3) { const a = src[t], b = src[t + 1], c = src[t + 2]; const ux = Q[b * 3] - Q[a * 3], uy = Q[b * 3 + 1] - Q[a * 3 + 1], uz = Q[b * 3 + 2] - Q[a * 3 + 2], vx = Q[c * 3] - Q[a * 3], vy = Q[c * 3 + 1] - Q[a * 3 + 1], vz = Q[c * 3 + 2] - Q[a * 3 + 2]; const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; for (const w of [a, b, c]) { const k = canon[w]; acc2[k * 3] += nx; acc2[k * 3 + 1] += ny; acc2[k * 3 + 2] += nz; } }
+    const NQ = Float32Array.from(N.array);
+    for (let i = 0; i < n; i++) { const k = canon[i], l = Math.hypot(acc2[k * 3], acc2[k * 3 + 1], acc2[k * 3 + 2]); if (!l || !nb.has(k)) continue; let x = acc2[k * 3] / l, y = acc2[k * 3 + 1] / l, z = acc2[k * 3 + 2] / l; if (x * NQ[i * 3] + y * NQ[i * 3 + 1] + z * NQ[i * 3 + 2] < 0) { x = -x; y = -y; z = -z; } NQ[i * 3] = x; NQ[i * 3 + 1] = y; NQ[i * 3 + 2] = z; }
+    sg.setAttribute('position', new THREE.BufferAttribute(Q, 3)); sg.setAttribute('normal', new THREE.BufferAttribute(NQ, 3));
+    // de randen opnieuw bepalen op de gladde stof, anders worden de rechte lijnen door het gladstrijken weer scheef
+    const keepPos = geo.attributes.position; geo.setAttribute('position', new THREE.BufferAttribute(Q, 3));
+    for (let i = 0; i < n; i++) { mesh.getVertexPosition(i, v); v.applyMatrix4(toH); mask[i] = maskL(v); }
+    geo.setAttribute('position', keepPos);
+    idx.length = 0;
+    for (let t = 0; t < src.length; t += 3) if (Math.max(mask[src[t]], mask[src[t + 1]], mask[src[t + 2]]) > .3) idx.push(src[t], src[t + 1], src[t + 2]);
+  }
   sg.setAttribute('aMask', new THREE.BufferAttribute(mask, 1)); sg.setAttribute('aRest', new THREE.BufferAttribute(rest, 3)); sg.setAttribute('aRestN', new THREE.BufferAttribute(restN, 3));
   sg.setIndex(idx);
   const ws = mesh.getWorldScale(new THREE.Vector3()).x / holder.getWorldScale(new THREE.Vector3()).x || 1;
   const mat = new THREE.MeshPhysicalMaterial({ color: '#86101f', roughness: .82, sheen: .45, sheenRoughness: .55, sheenColor: new THREE.Color('#e0505a') });
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { uOff: { value: .0072 / ws }, uHair: { value: suitHairTex }, uDecal: { value: suitDecalTex },
-      uHole: { value: new THREE.Vector3(...(hole || [9, 9, 9])) }, uDecalC: { value: new THREE.Vector3(-.006, .25, .02) } });
-    sh.vertexShader = 'uniform float uOff;\nattribute float aMask;\nattribute vec3 aRest;\nattribute vec3 aRestN;\nvarying float vMask;\nvarying vec3 vRest;\nvarying vec3 vRestN;\n' +
-      sh.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n  transformed += normalize(objectNormal) * uOff;\n  vMask = aMask; vRest = aRest; vRestN = aRestN;');
+    Object.assign(sh.uniforms, { uHugOn: { value: L ? 1 : 0 }, uOff: { value: (L ? .011 : .0072) / ws }, uHair: { value: suitHairTex }, uDecal: { value: suitDecalTex },
+      uHole: { value: new THREE.Vector3(...(hole || [9, 9, 9])) }, uDecalC: { value: L ? new THREE.Vector3(L.decalC.x, .25, L.decalC.z) : new THREE.Vector3(-.006, .25, .02) } });
+    sh.vertexShader = 'uniform float uOff;\nuniform float uHugOn;\nfloat uHug(float m) { return mix(1.0, clamp((m - .5) * 3.0, .3, 1.0), uHugOn); }\nattribute float aMask;\nattribute vec3 aRest;\nattribute vec3 aRestN;\nvarying float vMask;\nvarying vec3 vRest;\nvarying vec3 vRestN;\n' +
+      sh.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n  transformed += normalize(objectNormal) * uOff * uHug(aMask);\n  vMask = aMask; vRest = aRest; vRestN = aRestN;');
     sh.fragmentShader = 'uniform sampler2D uHair;\nuniform sampler2D uDecal;\nuniform vec3 uHole;\nuniform vec3 uDecalC;\nvarying float vMask;\nvarying vec3 vRest;\nvarying vec3 vRestN;\n' +
       sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
   if (vMask < .5) discard;
@@ -3717,7 +4155,7 @@ const kibIcon = '<svg viewBox="0 0 60 60" width="18" height="18" aria-hidden="tr
 const checkIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const lockIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 function shownSkin() { return shop.open ? shop.sel : SAVE.skin; }
-function applySkin() { const on = shownSkin() === 'pak'; if (REAL.suit) for (const s of REAL.suit) s.visible = on && pip.custom === REAL.holder; }
+function applySkin() { const on = shownSkin() === 'pak'; if (REAL.suit) for (const s of REAL.suit) s.visible = on && pip.custom === REAL.holder; PIP_SUIT_ON.value = on && REAL.suit && REAL.suit.length && pip.custom === REAL.holder ? 1 : 0; }
 function openShop() { shop.open = true; shop.sel = SAVE.skin === 'gewoon' ? 'pak' : SAVE.skin; shop.confirm = false; showSheet('shop'); renderShop(); applySkin(); $('shopBack').focus(); }
 function closeShop() { shop.open = false; shop.confirm = false; applySkin(); showSheet('start'); refreshStart(); }
 // echte foto's van Pip in elke outfit, één keer gemaakt met de 3D-camera
@@ -3731,6 +4169,7 @@ function renderThumbs() {
   renderer.setScissorTest(true); renderer.setViewport(0, 0, Wt, Ht); renderer.setScissor(0, 0, Wt, Ht);
   for (const s of SKINS) {
     for (const m of REAL.suit) m.visible = s.id === 'pak';
+    PIP_SUIT_ON.value = s.id === 'pak' ? 1 : 0;
     renderer.render(scene, cam);
     g.drawImage(cv, 0, cv.height - Ht * pr, Wt * pr, Ht * pr, 0, 0, 480, 360);
     try { thumbs.url[s.id] = out.toDataURL('image/jpeg', .86); } catch (e) {}
@@ -3989,6 +4428,7 @@ function frame(now) {
   else v = shop.open ? .5 : 0;
   game.v = v;
   travel += v * dt;
+  GARDEN.travel.value = travel; GARDEN.time.value = clockT;
   floor.position.z = -40 + (travel % 1.2);
   spawnDecor();
 

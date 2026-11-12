@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261112-73">
+  <link rel="stylesheet" href="stijl.css?v=20261112-75">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -59,6 +59,17 @@
               </div>
             </section>
             <section class="fotobattle" id="fotobattle" aria-label="Fotobattle" hidden></section>
+            <!-- Pip Run: het spel als poster (Pip met de stofzuiger), de missies van deze
+                 week (missies.js) en Rennen. Een gehaalde week is 1 punt (/api/piprun). -->
+            <section class="piprun" id="piprun" aria-labelledby="pr-title" hidden>
+              <div class="pr-poster" aria-hidden="true"></div>
+              <div class="pr-text"><small class="pr-kick">Het spel van Pip</small><h2 id="pr-title">Pip Run</h2><p>Ren weg voor<br>de stofzuiger.</p></div>
+              <div class="pr-foot">
+                <span class="pr-missions"><span class="pr-dots" id="pr-dots" aria-hidden="true"></span><b id="pr-count"></b></span>
+                <a class="pr-go" href="piprun.html"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Rennen</a>
+              </div>
+              <p class="pr-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span id="pr-foot"></span></p>
+            </section>
             <section class="wrapped" id="wrapped" aria-labelledby="wrapped-title" hidden>
               <div class="wr-deck" aria-hidden="true"><i></i><i></i><i><b id="wrapped-stat"></b><small id="wrapped-stat-label"></small></i></div>
               <div class="wr-text"><small class="wr-kick">Pip Wrapped</small><h2 id="wrapped-title"></h2><p>Het jaar van Pip<br>in schermen.</p></div>
@@ -113,20 +124,6 @@
         <div id="scores" style="margin-top: 14px"></div>
         <div class="card-foot"><span>Zondag 20:00: held van de week</span><a href="scores.html">Meer ›</a></div>
       </section>
-
-      <!-- Pip Run: het spel, met elke week vijf missies (missies.js). Een gehaalde
-           missie is 1 punt bij Scores (/api/piprun). Jouw voortgang komt van het spel
-           op deze telefoon; wie wat haalde komt van het servertje. -->
-      <section class="card pr-card" aria-labelledby="pr-title">
-        <a class="pr-hero" href="piprun.html">
-          <span class="pr-hero-text"><small>Het spel van Pip</small><strong id="pr-title">Pip Run</strong><span>Ren weg voor de stofzuiger</span></span>
-          <span class="pr-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></span>
-        </a>
-        <div class="tasks-head pr-head"><h3>Missies deze week</h3><span id="pr-count"></span></div>
-        <ol class="pr-list" id="pr-list"></ol>
-        <div class="card-foot"><span id="pr-foot">Haal alle vijf voor 1 punt</span><a href="piprun.html">Spelen ›</a></div>
-      </section>
-
 
       <section class="section" style="margin-top: 56px" aria-labelledby="settings-title">
         <h2 class="section-title" id="settings-title">Instellen</h2>
@@ -256,11 +253,11 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261112-73"></script>
-  <script src="telefoon.js?v=20261112-73"></script>
-  <script src="taken.js?v=20261112-73"></script>
-  <script src="stats.js?v=20261112-73"></script>
-  <script src="missies.js?v=20261112-73"></script>
+  <script src="config.js?v=20261112-75"></script>
+  <script src="telefoon.js?v=20261112-75"></script>
+  <script src="taken.js?v=20261112-75"></script>
+  <script src="stats.js?v=20261112-75"></script>
+  <script src="missies.js?v=20261112-75"></script>
   <script>
     (function () {
       "use strict";
@@ -285,49 +282,36 @@
           // Nog geen servertje voor Pip Run of geen netwerk: dan alleen wat deze telefoon weet.
         }
         renderPipRun();
+        renderEvents();
       }
-      function renderPipRun() {
+      // Hoeveel missies jij deze week haalde: wat het spel op deze telefoon weet,
+      // of wat het servertje van jou weet.
+      function pipRunWeek() {
         const M = window.PipMissions;
-        const list = $("pr-list");
-        if (!M || !list) return;
+        if (!M || !config.piprun) return null;
         const now = Date.now();
         const week = M.weekKey(now);
         const missions = M.forWeek(week);
         const local = pipRunLocal(week);
         const me = P.me(data.settings);
         const server = pipRun && pipRun.week === week ? pipRun.done || {} : {};
-        const people = P.people(data.settings);
-        const doneBy = (id) => Object.keys(server).filter((name) => (server[name] || []).includes(id));
-        const mine = (id) => Boolean((local.done || {})[id]) || (me && (server[me] || []).includes(id));
-        list.innerHTML = "";
-        // Jouw voortgang (van het spel op deze telefoon): beste poging bij missies in één run,
-        // opgeteld bij weekmissies. Open missies eerst, waar je het dichtst bij bent bovenaan.
-        const wk = local.wk || {};
-        const value = (m) => m.scope === "run" ? (local.best || {})[m.id] || 0 : m.stat === "days" ? (wk.days || []).length : wk[m.stat] || 0;
-        const nl = (n) => Math.floor(n).toLocaleString("nl-NL");
-        const ordered = missions.slice().sort((a, b) => (mine(a.id) - mine(b.id)) || (value(b) / b.goal - value(a) / a.goal));
-        let count = 0;
-        for (const mission of ordered) {
-          const done = mine(mission.id);
-          if (done) count += 1;
-          const v = Math.min(value(mission), mission.goal);
-          const li = document.createElement("li");
-          li.className = `pr-item${done ? " done" : ""}`;
-          li.innerHTML = `<i class="pr-check" aria-hidden="true">${done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</i><span class="pr-text"><strong></strong><small></small>${done || !v ? "" : `<span class="pr-bar"><i style="width:${(v / mission.goal * 100).toFixed(1)}%"></i></span>`}</span><span class="pr-who"></span>`;
-          li.querySelector("strong").textContent = mission.title;
-          li.querySelector("small").textContent = !done && v ? `${mission.text} · ${nl(v)}/${nl(mission.goal)}` : mission.text;
-          const who = li.querySelector(".pr-who");
-          doneBy(mission.id).filter((name) => name !== me).slice(0, 3).forEach((name) => who.appendChild(P.avatarElement(name, people, avatars)));
-          li.setAttribute("aria-label", `${mission.title}: ${mission.text}${done ? ", gehaald" : ""}`);
-          list.appendChild(li);
-        }
-        // Eén punt voor alle vijf samen: laat zien hoeveel er nog moeten.
-        const open = missions.length - count;
-        const days = M.daysLeft(now);
-        $("pr-count").textContent = `${count} van ${missions.length}`;
-        $("pr-foot").textContent = !open
-          ? `Alle ${missions.length} gehaald: +${M.POINTS} punt`
-          : `${open === 1 ? "Nog 1 missie" : `Nog ${open} missies`} voor ${M.POINTS} punt` + (days <= 1 ? ", maandag nieuwe" : `, nog ${days} dagen`);
+        const mine = (id) => Boolean((local.done || {})[id]) || Boolean(me && (server[me] || []).includes(id));
+        const done = missions.filter((mission) => mine(mission.id)).length;
+        // Deze week nog niet gespeeld op deze telefoon: dan zijn de missies nieuw voor jou.
+        const played = Boolean(local.wk && (local.wk.runs || (local.wk.days || []).length)) || done > 0;
+        return { week, done, total: missions.length, open: missions.length - done, days: M.daysLeft(now), points: M.POINTS, played };
+      }
+
+      function renderPipRun() {
+        const box = $("piprun");
+        const run = pipRunWeek();
+        box.hidden = !run;
+        if (!run) return;
+        $("pr-dots").innerHTML = Array.from({ length: run.total }, (_, i) => `<i${i < run.done ? ' class="on"' : ""}></i>`).join("");
+        $("pr-count").textContent = `${run.done} van ${run.total} missies`;
+        $("pr-foot").textContent = !run.open
+          ? `Alle ${run.total} gehaald: +${run.points} punt`
+          : `${run.open === 1 ? "Nog 1 missie" : `Nog ${run.open} missies`} voor ${run.points} punt · ${run.days <= 1 ? "maandag nieuwe" : `nog ${run.days} dagen`}`;
       }
 
       const urls = {
@@ -1787,11 +1771,14 @@
           const year = season || new Date().getFullYear();
           list.push({ key: "wrapped", label: "Wrapped", hot: false, seenKey: season ? `wrapped:${season}` : null, wrapped: String(year).slice(2), fresh: Boolean(season) });
         }
+        // Pip Run achteraan; een gouden ring zolang je deze week nog niet speelde (nieuwe missies).
+        const run = !$("piprun").hidden && pipRunWeek();
+        if (run) list.push({ key: "piprun", label: "Pip Run", hot: !run.played, seenKey: null, piprun: run });
         return list;
       }
 
       function eventBlock(key) {
-        return key === "wrapped" ? $("wrapped") : key === "fotobattle" ? $("fotobattle") : key === "held" ? $("held") : null;
+        return { wrapped: $("wrapped"), fotobattle: $("fotobattle"), held: $("held"), piprun: $("piprun") }[key] || null;
       }
 
       function renderEvents() {
@@ -1803,12 +1790,15 @@
         }
         const row = $("event-row");
         row.innerHTML = "";
+        row.classList.toggle("many", list.length >= 4);
         for (const event of list) {
           const button = document.createElement("button");
           button.type = "button";
           button.dataset.key = event.key;
           button.className = `ev${event.hot ? " hot" : ""}`;
-          button.innerHTML = event.held
+          button.innerHTML = event.piprun
+            ? `<span class="ev-ring run"><i style="background-image:url('piprun/thuis-rondje.jpg')"></i><span class="ev-dots">${Array.from({ length: event.piprun.total }, (_, i) => `<i${i < event.piprun.done ? ' class="on"' : ""}></i>`).join("")}</span></span><b>${event.label}</b>`
+            : event.held
             ? `<span class="ev-ring gold"><span class="ev-crown">${FB_CROWN}</span></span><b>${event.label}</b>`
             : event.wrapped
             ? `<span class="ev-ring purple"><i class="wr">${P.escapeHtml(event.wrapped)}</i></span><b>${event.label}</b>`
@@ -1832,7 +1822,7 @@
 
       // Welk blok zichtbaar is en hoe de rondjes erbij staan.
       function updateEvents() {
-        for (const key of ["held", "fotobattle", "wrapped"]) eventBlock(key).classList.toggle("ev-off", key !== eventOpen);
+        for (const key of ["held", "fotobattle", "wrapped", "piprun"]) eventBlock(key).classList.toggle("ev-off", key !== eventOpen);
         const showing = eventPhase === "open" || eventPhase === "opening" ? eventOpen : null;
         $("event-row").querySelectorAll(".ev").forEach((button) => {
           const on = button.dataset.key === showing;
