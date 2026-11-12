@@ -204,87 +204,43 @@ a.round{text-decoration:none}
 .soft.icon{width:48px;padding:0}
 .mis-btn .pill{margin-left:2px;padding:2px 8px;border-radius:99px;background:var(--paper);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 .mis-btn.all .pill{background:#3f5a33;color:#fff}
-.mis-sheet{gap:12px;max-height:calc(100% - 4px);padding-bottom:0}
-.mis-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mis-sheet{gap:16px;max-height:calc(100% - 4px);padding:20px 18px 0}
+.mis-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .mis-head h2{margin:0}
-.mis-time{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;background:var(--cream);font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap}
-.mis-time svg{color:var(--clay)}
-.mis-week{display:flex;flex-direction:column;gap:8px}
+.mis-time{font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap}
+.mis-week{display:flex;flex-direction:column;gap:10px}
 .mis-segs{display:flex;align-items:center;gap:5px}
-.mis-segs i{flex:1;height:10px;border-radius:99px;background:var(--cream)}
+.mis-segs i{flex:1;height:8px;border-radius:99px;background:var(--cream)}
 .mis-segs i.on{background:#3f5a33}
 .mis-segs i.fresh{animation:segpop .7s cubic-bezier(.3,1.6,.5,1) .15s both}
 @keyframes segpop{0%{transform:scaleY(.4);background:var(--clay)}100%{transform:none}}
-.mis-segs .medal{display:grid;place-items:center;flex:none;width:36px;height:36px;margin-left:4px;border-radius:50%;border:2px dashed #cdbca9;color:#9c8b7b;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
-.mis-segs .medal.on{border:0;background:#d99a3e;color:#fff;box-shadow:0 4px 12px rgba(217,154,62,.45)}
+.mis-segs .medal{display:grid;place-items:center;flex:none;width:30px;height:30px;margin-left:4px;border-radius:50%;border:1.5px dashed #cdbca9;color:#9c8b7b;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.mis-segs .medal.on{border:0;background:#d99a3e;color:#fff}
 .mis-segs .medal.fresh{animation:medalpop .8s cubic-bezier(.3,1.7,.5,1) .5s both}
 @keyframes medalpop{0%{transform:scale(.3) rotate(-30deg)}100%{transform:none}}
-.mis-week-txt{display:flex;justify-content:space-between;gap:10px;margin:0;font-size:14px;color:var(--muted)}
-.mis-week-txt b{color:var(--ink);font-weight:700}
-.mis-next{display:flex;flex-direction:column;gap:12px;padding:16px 16px 14px;border-radius:24px;color:#fff5ea;background:radial-gradient(120% 140% at 100% 0%,rgba(200,105,58,.55),transparent 60%),linear-gradient(150deg,#3a2a20,#1d1510);box-shadow:0 10px 26px rgba(43,32,25,.22)}
-.mn-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.mn-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,238,220,.75)}
-.mis-next.near .mn-kicker,.mis-next.last .mn-kicker{color:#ffc58e}
-.mis-next.last .mn-pt{background:#d99a3e;color:#fff}
-.mn-pt{padding:4px 10px;border-radius:99px;background:rgba(255,245,234,.14);font-size:13px;font-weight:700}
-.mn-main{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:14px}
-.mn-main h3{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.02}
-.mn-main p{margin:3px 0 0;font-size:15px;line-height:1.3;color:rgba(255,238,220,.82)}
-.mn-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--clay);color:#fff;font-style:normal}
-.mn-pt-ic{border-radius:50%;font-size:20px;font-weight:800}
-.mn-ic svg{width:26px;height:26px}
-.mn-prog{display:flex;flex-direction:column;gap:7px}
-.mis-bar.big{height:12px;margin:0;background:rgba(255,245,234,.16)}
-.mis-next .mis-bar i{background:linear-gradient(90deg,#d0703f,#f0a35e)}
-.mn-nums{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:rgba(255,238,220,.75);font-variant-numeric:tabular-nums}
-.mn-nums b{color:#fff5ea;font-size:15px}
-.mn-tip{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;margin:0;padding:10px 12px;border-radius:14px;background:rgba(255,245,234,.08);font-size:14px;line-height:1.35;color:rgba(255,238,220,.9)}
-.mn-tip svg{width:18px;height:18px;color:#f0a35e}
-.mn-tags{display:flex;gap:6px;flex-wrap:wrap}
-.mn-tags>span{padding:3px 9px;border-radius:99px;border:1px solid rgba(255,245,234,.22);font-size:12px;font-weight:600;color:rgba(255,238,220,.8)}
-.mn-tags .mn-who{display:inline-flex;align-items:center;gap:6px;padding-left:3px;border-color:transparent;background:rgba(255,245,234,.1)}
-.mn-who .mis-av{width:18px;height:18px;border:0;font-size:10px}
-.mis-next.all{background:linear-gradient(150deg,#4b6a3d,#2f4526)}
-.mis-next.all .mn-ic{background:#d99a3e}
-.mis-group{margin:6px 2px -4px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.mis-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
-.mis{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 14px 11px 11px;border-radius:18px;background:var(--cream)}
-.mis-ic{position:relative;display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--paper);color:var(--clay)}
-.mis-ic svg{width:22px;height:22px}
-.mis.done{background:transparent;border:1.5px solid var(--line);padding:9px 12px 9px 9px}
-.mis.done .mis-ic{background:#e3ead9;color:#3f5a33}
-.mis-ok{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:20px;height:20px;border:2px solid var(--paper);border-radius:50%;background:#3f5a33;color:#fff}
-.mis-ok svg{width:12px;height:12px}
-.mis.fresh .mis-ok{animation:okpop .6s cubic-bezier(.3,1.7,.5,1) .3s both}
-@keyframes okpop{0%{transform:scale(0)}100%{transform:none}}
+.mis-week-txt{margin:0;font-size:15px;font-weight:600}
+.mis-list{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.mis+.mis{border-top:1px solid var(--line)}
+.mis-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:0;margin:0;padding:12px 0;border:0;border-radius:0;background:none;box-shadow:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.mis-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--cream);color:var(--muted)}
+.mis-ic svg{width:18px;height:18px}
 .mis-txt{display:flex;flex-direction:column;gap:1px;min-width:0}
-.mis-txt b{font-size:16px;font-weight:700}
+.mis-txt b{font-size:15.5px;font-weight:600}
 .mis-txt small{font-size:13.5px;line-height:1.3;color:var(--muted)}
-.mis-bar{display:block;height:6px;margin-top:7px;border-radius:99px;background:var(--paper);overflow:hidden}
+.mis-bar{display:block;height:4px;margin-top:8px;border-radius:99px;background:var(--cream);overflow:hidden}
 .mis-bar i{display:block;height:100%;border-radius:99px;background:var(--clay);transition:width .5s ease}
-.mis-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.mis-side b{font-size:15px;font-weight:700}
-.mis-side b small{font-size:12px;font-weight:600;color:var(--muted)}
-.mis-side>small{font-size:12px;font-weight:600;color:var(--muted)}
-.mis.done .mis-side b{color:#3f5a33}
-.mis.done .mis-side>small{color:var(--muted);font-weight:600}
-.mis-who{display:flex;align-items:center;margin-top:6px}
-.mis-who em{margin-left:6px;font-style:normal;font-size:12px;font-weight:600;color:var(--muted)}
-.mis-av{display:inline-grid;place-items:center;flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--paper);background:#8a7a6b;color:#fff;font-size:11px;font-weight:700;object-fit:cover}
-.mis-who .mis-av+.mis-av{margin-left:-6px}
-.mis-house{display:flex;flex-direction:column;gap:8px}
-.mis-people{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
-.mis-people li{display:grid;grid-template-columns:30px minmax(0,1fr) auto 26px;align-items:center;gap:10px;min-height:42px;padding:0 4px}
-.mis-people .mis-av{width:30px;height:30px;font-size:13px}
-.mis-people li>span:nth-child(2){font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mis-people small{font-size:12px;font-weight:600;color:var(--muted)}
-.mis-people b{text-align:right;font-variant-numeric:tabular-nums}
-.mis-people b.pt{display:grid;place-items:center;justify-self:end;width:26px;height:26px;border-radius:50%;background:#d99a3e;color:#fff;font-size:12px}
-.mp-segs{display:flex;gap:3px}
-.mp-segs i{width:14px;height:7px;border-radius:99px;background:var(--cream)}
-.mp-segs i.on{background:#3f5a33}
-.mis-actions{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;margin:0 -16px;padding:12px 16px 18px;background:linear-gradient(rgba(255,250,244,0),var(--paper) 22%)}
-@media (prefers-reduced-motion: reduce){.mis-segs i.fresh,.mis-segs .medal.fresh,.mis.fresh .mis-ok{animation:none}.mis-bar i{transition:none}}
+.mis-num{min-width:4.8em;font-size:14px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.mis-tip{margin:-4px 0 12px 46px;font-size:13.5px;line-height:1.4;color:var(--muted)}
+.mis.done .mis-row{padding:8px 0;cursor:default}
+.mis.done .mis-ic{background:#e3ead9;color:#3f5a33}
+.mis.done .mis-txt b{font-weight:500;color:var(--muted)}
+.mis.fresh .mis-ic{animation:okpop .6s cubic-bezier(.3,1.7,.5,1) .3s both}
+@keyframes okpop{0%{transform:scale(0)}100%{transform:none}}
+.mis-house{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin:0;font-size:13.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.mis-house>span{display:inline-flex;align-items:center;gap:6px}
+.mis-av{display:inline-grid;place-items:center;flex:none;width:22px;height:22px;border-radius:50%;background:#8a7a6b;color:#fff;font-size:11px;font-weight:700;object-fit:cover}
+.mis-actions{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;margin:0 -18px;padding:12px 18px 18px;background:linear-gradient(rgba(255,250,244,0),var(--paper) 22%)}
+@media (prefers-reduced-motion: reduce){.mis-segs i.fresh,.mis-segs .medal.fresh,.mis.fresh .mis-ic{animation:none}.mis-bar i{transition:none}}
 .over-mis{display:flex;flex-direction:column;gap:6px;padding:11px 14px;border-radius:18px;background:var(--cream)}
 .over-mis b{font-size:15px}
 .mo-row{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;font-size:15px;font-weight:600}
@@ -374,22 +330,15 @@ a.round{text-decoration:none}
   <section class="sheet mis-sheet" id="misSheet" hidden aria-labelledby="misTitle">
     <header class="mis-head">
       <h2 id="misTitle">Missies</h2>
-      <span class="mis-time" id="misTime"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2.5h6"/></svg><span id="misTimeTxt"></span></span>
+      <span class="mis-time" id="misTimeTxt"></span>
     </header>
-    <div class="mis-week" id="misWeek">
+    <div class="mis-week" id="misWeek" role="group">
       <div class="mis-segs" id="misSegs" aria-hidden="true"></div>
-      <p class="mis-week-txt" id="misWeekTxt"></p>
+      <p class="mis-week-txt" id="misWeekTxt" aria-hidden="true"></p>
     </div>
-    <article class="mis-next" id="misNext" aria-live="polite"></article>
-    <p class="mis-group" id="misOpenLbl">Ook deze week</p>
     <ol class="mis-list" id="misList"></ol>
-    <p class="mis-group" id="misDoneLbl">Gehaald</p>
-    <ol class="mis-list" id="misDoneList"></ol>
-    <section class="mis-house" id="misHouse" hidden aria-labelledby="misHouseLbl">
-      <p class="mis-group" id="misHouseLbl">In huis deze week</p>
-      <ol class="mis-people" id="misPeople"></ol>
-    </section>
-    <p class="note" id="misNote"></p>
+    <p class="mis-house" id="misHouse" hidden></p>
+    <p class="note" id="misNote" hidden></p>
     <div class="mis-actions">
       <button class="primary" id="misPlay" type="button"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>Rennen</button>
       <button class="secondary" id="misBack" type="button">Terug</button>
@@ -3574,7 +3523,6 @@ function misBadge() {
   $('misBtn').setAttribute('aria-label', `Missies van deze week, ${n} van ${MIS.list.length} gehaald`);
   $('misBtn').classList.toggle('all', n === MIS.list.length);
 }
-const TIER = { 1: 'Makkelijk', 2: 'Gemiddeld', 3: 'Moeilijk' };
 // Een icoon per soort missie, zodat je de lijst in één oogopslag leest (zoals Duolingo bij elke quest doet).
 const MIS_IC = (() => {
   const s = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -3600,7 +3548,6 @@ const MIS_IC = (() => {
   };
 })();
 const misIcon = (m) => MIS_IC[m.stat === 'kib' && m.scope === 'week' ? 'kib' : m.stat] || MIS_IC.dist;
-const misLeft = (m, v) => `${nlNum(Math.max(0, m.goal - v))}${m.unit ? ' ' + m.unit : ''}`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let misAvatars = null;
 function misAvatar(name, people) {
@@ -3614,82 +3561,54 @@ function misTimeLeft() {
   const M = window.PipMissions, ms = M.nextWeekAt(Date.now()) - Date.now(), h = Math.max(1, Math.round(ms / 3600e3));
   return h < 24 ? `Nog ${h} uur` : `Nog ${Math.ceil(ms / 86400e3)} dagen`;
 }
-// De volgende missie: waar je het dichtst bij bent (dicht bij het doel zet je het meest door, Kivetz e.a. 2006);
-// heb je nog niets, dan de makkelijkste.
-function misNextOf(open) {
-  return open.slice().sort((a, b) => (misValue(b) / b.goal) - (misValue(a) / a.goal) || a.tier - b.tier)[0];
-}
+// Rustig gehouden: één lijst, dichtst bij het doel bovenaan, gehaald onderaan. De tip zie je pas als je op een missie tikt.
+let misOpenId = null;
 function misRender() {
   if (!misLoad()) return;
-  const st = MIS.st, list = MIS.list, done = list.filter((m) => st.done[m.id]).sort((a, b) => st.done[a.id] - st.done[b.id]);
-  const open = list.filter((m) => !st.done[m.id]), fresh = done.filter((m) => !st.seen || !st.seen[m.id]);
-  // kop: hoe lang nog, en de week als vijf vakjes met een medaille aan het eind
+  const st = MIS.st, list = MIS.list, n = list.length;
+  const done = list.filter((m) => st.done[m.id]).sort((a, b) => st.done[a.id] - st.done[b.id]);
+  const open = list.filter((m) => !st.done[m.id]).sort((a, b) => (misValue(b) / b.goal) - (misValue(a) / a.goal) || a.tier - b.tier);
+  const fresh = done.filter((m) => !st.seen || !st.seen[m.id]), left = open.length, P1 = `${misPts()} punt`;
   $('misTimeTxt').textContent = misTimeLeft();
-  const segs = $('misSegs');
-  segs.innerHTML = list.map((m, i) => `<i class="${i < done.length ? 'on' : ''}${i < done.length && fresh.includes(done[i]) ? ' fresh' : ''}"></i>`).join('') +
-    `<b class="medal${done.length === list.length ? ' on' : ''}${done.length === list.length && fresh.length ? ' fresh' : ''}">+${misPts()}</b>`;
-  // één punt voor alle vijf samen: laat zien hoeveel er nog moeten (hoe dichter bij, hoe meer je doorzet)
-  const left = open.length, P1 = `${misPts()} punt`;
-  $('misWeekTxt').innerHTML = `<b>${done.length} van ${list.length} gehaald</b><span>${left ? `nog ${left === 1 ? '1 missie' : left + ' missies'} voor ${P1}` : `${P1} binnen`}</span>`;
-  $('misWeek').setAttribute('aria-label', `${done.length} van ${list.length} missies gehaald. ${left ? `Haal alle ${list.length} voor ${P1}.` : `${P1} verdiend.`}`);
-  // de volgende missie, groot, met wat er nog moet en een tip (één duidelijke volgende stap)
-  const nx = misNextOf(open), card = $('misNext');
-  if (nx) {
-    const v = misValue(nx), pct = Math.min(1, v / nx.goal), near = pct >= .75;
-    card.className = 'mis-next' + (near ? ' near' : '');
-    const last = open.length === 1;
-    card.className += last ? ' last' : '';
-    card.innerHTML = `<div class="mn-top"><span class="mn-kicker">${last ? 'De laatste' : v > 0 ? (near ? 'Bijna!' : 'Hier ben je het dichtst bij') : 'Begin hiermee'}</span>${last ? `<span class="mn-pt">Haal hem: +${P1}</span>` : ''}</div>
-      <div class="mn-main"><i class="mn-ic">${misIcon(nx)}</i><div><h3>${esc(nx.title)}</h3><p>${esc(nx.text)}</p></div></div>
-      <div class="mn-prog"><span class="mis-bar big"><i style="width:${(pct * 100).toFixed(1)}%"></i></span>
-        <div class="mn-nums"><b>${misFmt(nx, v)}</b><span>${v > 0 ? `nog ${misLeft(nx, v)}` : ''}${nx.scope === 'run' && v > 0 ? ' · beste poging' : ''}</span></div></div>
-      <p class="mn-tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2h5c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/></svg><span>${esc(nx.tip || '')}</span></p>
-      <div class="mn-tags"><span>${nx.scope === 'run' ? 'In één run' : 'Opgeteld deze week'}</span><span>${TIER[nx.tier]}</span>${(() => {
-        const sv = MIS.server && MIS.server.week === MIS.week ? MIS.server : null;
-        const who = sv ? Object.entries(sv.done || {}).filter(([n, l]) => l.includes(nx.id) && n !== misMe()).map(([n]) => n) : [];
-        return who.length ? `<span class="mn-who">${who.slice(0, 3).map((n) => misAvatar(n, sv.people || [])).join('')}${esc(who.length === 1 ? who[0] + ' haalde hem al' : who.length + ' anderen haalden hem al')}</span>` : '';
-      })()}</div>`;
-  } else {
-    card.className = 'mis-next all';
-    card.innerHTML = `<div class="mn-main"><i class="mn-ic mn-pt-ic">+${misPts()}</i><div><h3>Alle ${list.length} gehaald</h3><p>${PIP ? 'Je punt staat bij Scores.' : 'Knap gedaan.'} Maandag om 4:00 komen er ${list.length} nieuwe.</p></div></div>`;
-  }
-  // de rest: compacte rijen met icoon, voortgang en beloning; gehaalde missies onderaan
+  // de week als vijf vakjes, met het punt aan het eind
+  $('misSegs').innerHTML = list.map((m, i) => `<i class="${i < done.length ? 'on' : ''}${i < done.length && fresh.includes(done[i]) ? ' fresh' : ''}"></i>`).join('') +
+    `<b class="medal${left ? '' : ' on'}${!left && fresh.length ? ' fresh' : ''}">+${misPts()}</b>`;
+  const txt = !left ? (PIP ? `Alle ${n} gehaald, je punt is binnen` : `Alle ${n} gehaald`) : left === n ? `Haal alle ${n} missies voor ${P1}` : left === 1 ? 'Nog 1, dan heb je je punt' : `Nog ${left} voor ${P1}`;
+  $('misWeekTxt').textContent = txt;
+  $('misWeek').setAttribute('aria-label', `${done.length} van ${n} gehaald. ${txt}.`);
   const row = (m) => {
-    const isDone = Boolean(st.done[m.id]), v = isDone ? m.goal : misValue(m), pct = Math.min(1, v / m.goal);
-    const others = MIS.server && MIS.server.week === MIS.week ? Object.entries(MIS.server.done || {}).filter(([n, l]) => l.includes(m.id) && n !== misMe()).map(([n]) => n) : [];
-    const ppl = (MIS.server && MIS.server.people) || [];
-    const day = isDone ? new Date(st.done[m.id]).toLocaleDateString('nl-NL', { weekday: 'long' }) : '';
-    return `<li class="mis${isDone ? ' done' : ''}${isDone && fresh.includes(m) ? ' fresh' : ''}" aria-label="${esc(`${m.title}: ${m.text}. ${isDone ? 'Gehaald' : misFmt(m, v)}.`)}">
-      <i class="mis-ic">${misIcon(m)}${isDone ? `<span class="mis-ok">${checkIcon}</span>` : ''}</i>
-      <span class="mis-txt"><b>${esc(m.title)}</b><small>${esc(m.text)}</small>
-        ${isDone ? '' : `<span class="mis-bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></span>`}
-        ${others.length ? `<span class="mis-who">${others.slice(0, 3).map((n) => misAvatar(n, ppl)).join('')}<em>ook gehaald</em></span>` : ''}</span>
-      <span class="mis-side">${isDone ? `<small>${esc(day)}</small>` : `<b>${nlNum(Math.min(v, m.goal))}<small>/${nlNum(m.goal)}</small></b><small>${TIER[m.tier].toLowerCase()}</small>`}</span></li>`;
+    if (st.done[m.id]) return `<li class="mis done${fresh.includes(m) ? ' fresh' : ''}"><div class="mis-row"><i class="mis-ic">${checkIcon}</i><span class="mis-txt"><b>${esc(m.title)}</b></span></div></li>`;
+    const v = misValue(m), pct = Math.min(1, v / m.goal), on = misOpenId === m.id && m.tip;
+    return `<li class="mis${on ? ' open' : ''}"><button class="mis-row" type="button" data-id="${m.id}" aria-expanded="${on ? 'true' : 'false'}">
+      <i class="mis-ic">${misIcon(m)}</i>
+      <span class="mis-txt"><b>${esc(m.title)}</b><small>${esc(m.text)}</small>${v > 0 ? `<span class="mis-bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></span>` : ''}</span>
+      <span class="mis-num">${nlNum(Math.min(v, m.goal))}/${nlNum(m.goal)}</span></button>${on ? `<p class="mis-tip">${esc(m.tip)}</p>` : ''}</li>`;
   };
-  const rest = open.filter((m) => m !== nx);
-  $('misList').innerHTML = rest.map(row).join(''); $('misOpenLbl').hidden = !rest.length; $('misList').hidden = !rest.length;
-  $('misDoneList').innerHTML = done.map(row).join(''); $('misDoneLbl').hidden = !done.length; $('misDoneList').hidden = !done.length;
-  // wie in huis hoeveel haalde (zoals de avatars bij Friends Quests): een beetje onderlinge strijd
+  $('misList').innerHTML = open.concat(done).map(row).join('');
+  // in huis: alleen gezichtjes en hoeveel, op één regel
   const sv = MIS.server && MIS.server.week === MIS.week ? MIS.server : null, me = misMe();
-  const people = sv ? (sv.people || []).map((n) => ({ n, c: ((sv.done || {})[n] || []).length })) : [];
-  if (me && sv) { const mine = people.find((p) => p.n === me); if (mine) mine.c = Math.max(mine.c, done.length); }
+  const people = sv ? (sv.people || []).map((p) => ({ p, c: Math.min(n, ((sv.done || {})[p] || []).length) })) : [];
+  if (me) { const mine = people.find((x) => x.p === me); if (mine) mine.c = Math.max(mine.c, done.length); }
   $('misHouse').hidden = people.length < 2;
-  $('misPeople').innerHTML = people.sort((a, b) => b.c - a.c || a.n.localeCompare(b.n)).map((p) => `<li${p.n === me ? ' class="me"' : ''}>${misAvatar(p.n, sv.people)}<span>${esc(p.n)}${p.n === me ? ' <small>jij</small>' : ''}</span><span class="mp-segs">${list.map((_, i) => `<i${i < p.c ? ' class="on"' : ''}></i>`).join('')}</span>${p.c >= list.length ? `<b class="pt" aria-label="${P1}">+${misPts()}</b>` : `<b>${p.c}</b>`}</li>`).join('');
-  // waar de punten heen gaan
-  const pend = misPending();
-  let note;
-  if (!PIP) note = `Speel Pip Run in de Pip-app: haal je alle ${list.length} missies, dan krijg je ${P1} bij Scores.`;
-  else if (!PIP.code()) note = `Koppel deze telefoon met de Hub (op Thuis): haal je alle ${list.length} missies, dan krijg je ${P1} bij Scores.`;
+  $('misHouse').innerHTML = 'In huis' + people.sort((a, b) => b.c - a.c || a.p.localeCompare(b.p)).map((x) => `<span aria-label="${esc(`${x.p}: ${x.c} van ${n}`)}">${misAvatar(x.p, sv.people)}${x.c}/${n}</span>`).join('');
+  // alleen iets zeggen als er iets te doen is
+  let note = '';
+  if (!PIP) note = 'Punten krijg je als je Pip Run in de Pip-app speelt.';
+  else if (!PIP.code()) note = 'Koppel deze telefoon op Thuis, dan krijg je het punt.';
   else if (MIS.server && !me) note = 'Kies op Thuis wie je bent, dan krijg jij het punt.';
-  else if (!left) note = pend ? 'Je punt gaat naar Scores zodra er netwerk is.' : `${me || 'Jij'} kreeg ${P1} bij Scores. Dat telt ook mee voor de held van de week.`;
-  else note = `Haal alle ${list.length} missies, dan krijg${me ? 't ' + me : ' je'} ${P1} bij Scores. Dat telt ook mee voor de held van de week.`;
-  $('misNote').textContent = note;
+  else if (misPending()) note = 'Je punt gaat naar Scores zodra er netwerk is.';
+  $('misNote').textContent = note; $('misNote').hidden = !note;
   // nieuw gehaald sinds je hier keek: even vieren, daarna onthouden
   if (fresh.length && !$('misSheet').hidden) {
     setTimeout(() => { burst($('misSegs')); sfx('hide', { vol: .45 }); }, 250);
     st.seen = Object.assign(st.seen || {}, Object.fromEntries(fresh.map((m) => [m.id, true]))); misSave();
   }
 }
+$('misList').addEventListener('click', (e) => {
+  const b = e.target.closest('.mis-row[data-id]'); if (!b) return;
+  const id = b.dataset.id; misOpenId = misOpenId === id ? null : id; misRender();
+  const again = $('misList').querySelector(`.mis-row[data-id="${id}"]`); if (again) again.focus();
+});
 function openMissions() { showSheet('misSheet'); misRender(); $('misBack').focus(); misSync(); if (PIP && !misAvatars && PIP.cachedAvatars) PIP.cachedAvatars().then((a) => { misAvatars = a; if (!$('misSheet').hidden) misRender(); }).catch(() => {}); }
 if (PIP) $('homeBack').hidden = false;
 misLoad(); misBadge();
