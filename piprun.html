@@ -14,8 +14,8 @@
   <meta name="theme-color" content="#e6e2dc">
   <!-- Pip Run: het spel van Pip, met elke week vijf missies (missies.js). Een gehaalde missie is
        1 punt bij Scores (/api/piprun). Gebouwd uit de bron van het spel; de bestanden staan in piprun/. -->
-  <script src="config.js?v=20261112-72"></script>
-  <script src="telefoon.js?v=20261112-72"></script>
+  <script src="config.js?v=20261112-73"></script>
+  <script src="telefoon.js?v=20261112-73"></script>
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -215,20 +215,23 @@ a.round{text-decoration:none}
 .mis-segs i.on{background:#3f5a33}
 .mis-segs i.fresh{animation:segpop .7s cubic-bezier(.3,1.6,.5,1) .15s both}
 @keyframes segpop{0%{transform:scaleY(.4);background:var(--clay)}100%{transform:none}}
-.mis-segs .medal{display:grid;place-items:center;flex:none;width:34px;height:34px;margin-left:4px;border-radius:50%;background:var(--cream);color:#a5978a}
-.mis-segs .medal svg{width:20px;height:20px}
-.mis-segs .medal.on{background:#d99a3e;color:#fff;box-shadow:0 4px 12px rgba(217,154,62,.45)}
+.mis-segs .medal{display:grid;place-items:center;flex:none;width:36px;height:36px;margin-left:4px;border-radius:50%;border:2px dashed #cdbca9;color:#9c8b7b;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.mis-segs .medal.on{border:0;background:#d99a3e;color:#fff;box-shadow:0 4px 12px rgba(217,154,62,.45)}
+.mis-segs .medal.fresh{animation:medalpop .8s cubic-bezier(.3,1.7,.5,1) .5s both}
+@keyframes medalpop{0%{transform:scale(.3) rotate(-30deg)}100%{transform:none}}
 .mis-week-txt{display:flex;justify-content:space-between;gap:10px;margin:0;font-size:14px;color:var(--muted)}
 .mis-week-txt b{color:var(--ink);font-weight:700}
 .mis-next{display:flex;flex-direction:column;gap:12px;padding:16px 16px 14px;border-radius:24px;color:#fff5ea;background:radial-gradient(120% 140% at 100% 0%,rgba(200,105,58,.55),transparent 60%),linear-gradient(150deg,#3a2a20,#1d1510);box-shadow:0 10px 26px rgba(43,32,25,.22)}
 .mn-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mn-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,238,220,.75)}
-.mis-next.near .mn-kicker{color:#ffc58e}
+.mis-next.near .mn-kicker,.mis-next.last .mn-kicker{color:#ffc58e}
+.mis-next.last .mn-pt{background:#d99a3e;color:#fff}
 .mn-pt{padding:4px 10px;border-radius:99px;background:rgba(255,245,234,.14);font-size:13px;font-weight:700}
 .mn-main{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:14px}
 .mn-main h3{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.02}
 .mn-main p{margin:3px 0 0;font-size:15px;line-height:1.3;color:rgba(255,238,220,.82)}
-.mn-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--clay);color:#fff}
+.mn-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:var(--clay);color:#fff;font-style:normal}
+.mn-pt-ic{border-radius:50%;font-size:20px;font-weight:800}
 .mn-ic svg{width:26px;height:26px}
 .mn-prog{display:flex;flex-direction:column;gap:7px}
 .mis-bar.big{height:12px;margin:0;background:rgba(255,245,234,.16)}
@@ -262,7 +265,7 @@ a.round{text-decoration:none}
 .mis-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mis-side b{font-size:15px;font-weight:700}
 .mis-side b small{font-size:12px;font-weight:600;color:var(--muted)}
-.mis-side>small{font-size:12px;font-weight:700;color:var(--clay)}
+.mis-side>small{font-size:12px;font-weight:600;color:var(--muted)}
 .mis.done .mis-side b{color:#3f5a33}
 .mis.done .mis-side>small{color:var(--muted);font-weight:600}
 .mis-who{display:flex;align-items:center;margin-top:6px}
@@ -271,22 +274,25 @@ a.round{text-decoration:none}
 .mis-who .mis-av+.mis-av{margin-left:-6px}
 .mis-house{display:flex;flex-direction:column;gap:8px}
 .mis-people{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
-.mis-people li{display:grid;grid-template-columns:30px minmax(0,1fr) auto 20px;align-items:center;gap:10px;min-height:42px;padding:0 4px}
+.mis-people li{display:grid;grid-template-columns:30px minmax(0,1fr) auto 26px;align-items:center;gap:10px;min-height:42px;padding:0 4px}
 .mis-people .mis-av{width:30px;height:30px;font-size:13px}
 .mis-people li>span:nth-child(2){font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mis-people small{font-size:12px;font-weight:600;color:var(--muted)}
 .mis-people b{text-align:right;font-variant-numeric:tabular-nums}
+.mis-people b.pt{display:grid;place-items:center;justify-self:end;width:26px;height:26px;border-radius:50%;background:#d99a3e;color:#fff;font-size:12px}
 .mp-segs{display:flex;gap:3px}
 .mp-segs i{width:14px;height:7px;border-radius:99px;background:var(--cream)}
 .mp-segs i.on{background:#3f5a33}
 .mis-actions{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;margin:0 -16px;padding:12px 16px 18px;background:linear-gradient(rgba(255,250,244,0),var(--paper) 22%)}
-@media (prefers-reduced-motion: reduce){.mis-segs i.fresh,.mis.fresh .mis-ok{animation:none}.mis-bar i{transition:none}}
+@media (prefers-reduced-motion: reduce){.mis-segs i.fresh,.mis-segs .medal.fresh,.mis.fresh .mis-ok{animation:none}.mis-bar i{transition:none}}
 .over-mis{display:flex;flex-direction:column;gap:6px;padding:11px 14px;border-radius:18px;background:var(--cream)}
 .over-mis b{font-size:15px}
 .mo-row{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;font-size:15px;font-weight:600}
 .mo-row svg{color:#3f5a33}
 .mo-row i{font-style:normal;font-weight:700;color:#3f5a33}
 .mo-sub{font-size:13.5px;line-height:1.35;color:var(--muted)}
+.mo-row.pt{grid-template-columns:24px minmax(0,1fr);margin-top:2px}
+.mo-row.pt i{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#d99a3e;color:#fff;font-size:12px}
 .over-mis .mis-bar{background:var(--paper)}
 .soft{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:99px;background:var(--cream);color:var(--ink);font:inherit;font-size:16px;font-weight:600;cursor:pointer}
 .soft:active,.goal:active{transform:scale(.98)}
@@ -492,7 +498,7 @@ a.round{text-decoration:none}
 <script>
   setTimeout(function () { if (!window.__pipReady) document.getElementById('fail').hidden = false; }, 12000);
 </script>
-<script src="missies.js?v=20261112-72"></script>
+<script src="missies.js?v=20261112-73"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -3465,9 +3471,9 @@ function bankRun() {
 
 
 /* ---------- Missies van de week ---------- */
-// Elke maandag om 04:00 vijf nieuwe missies (missies.js, dezelfde voor iedereen in huis). In de Pip-app is een gehaalde
-// missie 1 punt: het spel stuurt hem naar het servertje van Pip (/api/piprun) met de code en de naam van deze telefoon.
-// Lukt dat even niet (geen netwerk), dan blijft hij klaarstaan en gaat hij later alsnog.
+// Elke maandag om 04:00 vijf nieuwe missies (missies.js, dezelfde voor iedereen in huis). In de Pip-app is alle vijf halen
+// 1 punt: het spel stuurt elke gehaalde missie naar het servertje van Pip (/api/piprun) met de code en de naam van deze
+// telefoon, en dat geeft het punt zodra de vijfde binnen is. Lukt het even niet (geen netwerk), dan gaat het later alsnog.
 const PIP = window.PipPhone || null;
 const MIS = { week: null, list: [], st: null, runNew: [], server: null, busy: false };
 function newRunStats() { return { jumps: 0, tunnels: 0, knocked: 0, lanes: 0, sofa: 0, powers: 0, bumps: 0, lastBump: null, cleanEnd: null, dietEnd: null, streak: 0, streakMax: 0 }; }
@@ -3510,10 +3516,16 @@ function misCheck() {
   if (!MIS.st) return;
   for (const m of MIS.list) if (!MIS.st.done[m.id] && misValue(m) >= m.goal) misComplete(m);
 }
+const misPts = () => (window.PipMissions && window.PipMissions.POINTS) || 1;
+const misOpen = () => MIS.list.filter((m) => !MIS.st.done[m.id]).length;
+const misAll = () => MIS.st && MIS.list.length > 0 && misOpen() === 0;
 function misComplete(m) {
   MIS.st.done[m.id] = Date.now(); misSave(); MIS.runNew.push(m.id);
-  toast('Missie klaar!', `${m.title} · +${m.points || 1} punt`, 2400);
-  sfx('hide', { vol: .55 });
+  const left = misOpen();
+  if (left) toast('Missie klaar!', `${m.title} · nog ${left === 1 ? '1 missie' : left + ' missies'} voor ${misPts()} punt`, 2400);
+  else toast(`Alle ${MIS.list.length} gehaald!`, PIP ? `+${misPts()} punt bij Scores` : 'Alle missies van deze week', 3400);
+  sfx('hide', { vol: left ? .55 : .7 });
+  if (!left) setTimeout(() => sfx('hide', { vol: .5, rate: 1.25 }), 160);
   misBadge(); misSync();
 }
 // bij elke run: de weektellers bijwerken en de beste poging per missie onthouden
@@ -3527,7 +3539,7 @@ function misBank() {
 }
 const misWeek = (stat, n = 1) => { if (MIS.st) MIS.st.wk[stat] = (MIS.st.wk[stat] || 0) + n; };
 function misMe() { return PIP && MIS.server ? PIP.me({ people: MIS.server.people || [] }) : ''; }
-function misPending() { return MIS.st ? Object.keys(MIS.st.done).filter((id) => !MIS.st.sent[id]).length : 0; }
+function misPending() { return misAll() && MIS.list.some((m) => !MIS.st.sent[m.id]); }
 async function misSync() {
   if (!PIP || !MIS.st || MIS.busy || !PIP.code() || !PIP.config.piprun) return;
   MIS.busy = true;
@@ -3615,16 +3627,19 @@ function misRender() {
   $('misTimeTxt').textContent = misTimeLeft();
   const segs = $('misSegs');
   segs.innerHTML = list.map((m, i) => `<i class="${i < done.length ? 'on' : ''}${i < done.length && fresh.includes(done[i]) ? ' fresh' : ''}"></i>`).join('') +
-    `<b class="medal${done.length === list.length ? ' on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M8.5 3h7l-2 6.3M8.5 3l2 6.3"/><path d="m12 11.5.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z" fill="currentColor" stroke="none"/></svg></b>`;
-  const pts = done.reduce((n, m) => n + (m.points || 1), 0), all = list.reduce((n, m) => n + (m.points || 1), 0);
-  $('misWeekTxt').innerHTML = `<b>${done.length} van ${list.length} gehaald</b><span>${pts} van ${all} punten</span>`;
-  $('misWeek').setAttribute('aria-label', `${done.length} van ${list.length} missies gehaald, ${pts} van ${all} punten`);
+    `<b class="medal${done.length === list.length ? ' on' : ''}${done.length === list.length && fresh.length ? ' fresh' : ''}">+${misPts()}</b>`;
+  // één punt voor alle vijf samen: laat zien hoeveel er nog moeten (hoe dichter bij, hoe meer je doorzet)
+  const left = open.length, P1 = `${misPts()} punt`;
+  $('misWeekTxt').innerHTML = `<b>${done.length} van ${list.length} gehaald</b><span>${left ? `nog ${left === 1 ? '1 missie' : left + ' missies'} voor ${P1}` : `${P1} binnen`}</span>`;
+  $('misWeek').setAttribute('aria-label', `${done.length} van ${list.length} missies gehaald. ${left ? `Haal alle ${list.length} voor ${P1}.` : `${P1} verdiend.`}`);
   // de volgende missie, groot, met wat er nog moet en een tip (één duidelijke volgende stap)
   const nx = misNextOf(open), card = $('misNext');
   if (nx) {
     const v = misValue(nx), pct = Math.min(1, v / nx.goal), near = pct >= .75;
     card.className = 'mis-next' + (near ? ' near' : '');
-    card.innerHTML = `<div class="mn-top"><span class="mn-kicker">${v > 0 ? (near ? 'Bijna!' : 'Hier ben je het dichtst bij') : 'Begin hiermee'}</span><span class="mn-pt">+${nx.points || 1} punt</span></div>
+    const last = open.length === 1;
+    card.className += last ? ' last' : '';
+    card.innerHTML = `<div class="mn-top"><span class="mn-kicker">${last ? 'De laatste' : v > 0 ? (near ? 'Bijna!' : 'Hier ben je het dichtst bij') : 'Begin hiermee'}</span>${last ? `<span class="mn-pt">Haal hem: +${P1}</span>` : ''}</div>
       <div class="mn-main"><i class="mn-ic">${misIcon(nx)}</i><div><h3>${esc(nx.title)}</h3><p>${esc(nx.text)}</p></div></div>
       <div class="mn-prog"><span class="mis-bar big"><i style="width:${(pct * 100).toFixed(1)}%"></i></span>
         <div class="mn-nums"><b>${misFmt(nx, v)}</b><span>${v > 0 ? `nog ${misLeft(nx, v)}` : ''}${nx.scope === 'run' && v > 0 ? ' · beste poging' : ''}</span></div></div>
@@ -3636,7 +3651,7 @@ function misRender() {
       })()}</div>`;
   } else {
     card.className = 'mis-next all';
-    card.innerHTML = `<div class="mn-main"><i class="mn-ic">${MIS_IC.powers}</i><div><h3>Alle missies gehaald</h3><p>${pts} punten deze week. Maandag om 4:00 komen er vijf nieuwe.</p></div></div>`;
+    card.innerHTML = `<div class="mn-main"><i class="mn-ic mn-pt-ic">+${misPts()}</i><div><h3>Alle ${list.length} gehaald</h3><p>${PIP ? 'Je punt staat bij Scores.' : 'Knap gedaan.'} Maandag om 4:00 komen er ${list.length} nieuwe.</p></div></div>`;
   }
   // de rest: compacte rijen met icoon, voortgang en beloning; gehaalde missies onderaan
   const row = (m) => {
@@ -3644,12 +3659,12 @@ function misRender() {
     const others = MIS.server && MIS.server.week === MIS.week ? Object.entries(MIS.server.done || {}).filter(([n, l]) => l.includes(m.id) && n !== misMe()).map(([n]) => n) : [];
     const ppl = (MIS.server && MIS.server.people) || [];
     const day = isDone ? new Date(st.done[m.id]).toLocaleDateString('nl-NL', { weekday: 'long' }) : '';
-    return `<li class="mis${isDone ? ' done' : ''}${isDone && fresh.includes(m) ? ' fresh' : ''}" aria-label="${esc(`${m.title}: ${m.text}. ${isDone ? 'Gehaald' : misFmt(m, v)}. ${m.points || 1} punt.`)}">
+    return `<li class="mis${isDone ? ' done' : ''}${isDone && fresh.includes(m) ? ' fresh' : ''}" aria-label="${esc(`${m.title}: ${m.text}. ${isDone ? 'Gehaald' : misFmt(m, v)}.`)}">
       <i class="mis-ic">${misIcon(m)}${isDone ? `<span class="mis-ok">${checkIcon}</span>` : ''}</i>
       <span class="mis-txt"><b>${esc(m.title)}</b><small>${esc(m.text)}</small>
         ${isDone ? '' : `<span class="mis-bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></span>`}
         ${others.length ? `<span class="mis-who">${others.slice(0, 3).map((n) => misAvatar(n, ppl)).join('')}<em>ook gehaald</em></span>` : ''}</span>
-      <span class="mis-side">${isDone ? `<b>+${m.points || 1}</b><small>${esc(day)}</small>` : `<b>${nlNum(Math.min(v, m.goal))}<small>/${nlNum(m.goal)}</small></b><small>+${m.points || 1} pt</small>`}</span></li>`;
+      <span class="mis-side">${isDone ? `<small>${esc(day)}</small>` : `<b>${nlNum(Math.min(v, m.goal))}<small>/${nlNum(m.goal)}</small></b><small>${TIER[m.tier].toLowerCase()}</small>`}</span></li>`;
   };
   const rest = open.filter((m) => m !== nx);
   $('misList').innerHTML = rest.map(row).join(''); $('misOpenLbl').hidden = !rest.length; $('misList').hidden = !rest.length;
@@ -3659,14 +3674,15 @@ function misRender() {
   const people = sv ? (sv.people || []).map((n) => ({ n, c: ((sv.done || {})[n] || []).length })) : [];
   if (me && sv) { const mine = people.find((p) => p.n === me); if (mine) mine.c = Math.max(mine.c, done.length); }
   $('misHouse').hidden = people.length < 2;
-  $('misPeople').innerHTML = people.sort((a, b) => b.c - a.c || a.n.localeCompare(b.n)).map((p) => `<li${p.n === me ? ' class="me"' : ''}>${misAvatar(p.n, sv.people)}<span>${esc(p.n)}${p.n === me ? ' <small>jij</small>' : ''}</span><span class="mp-segs">${list.map((_, i) => `<i${i < p.c ? ' class="on"' : ''}></i>`).join('')}</span><b>${p.c}</b></li>`).join('');
+  $('misPeople').innerHTML = people.sort((a, b) => b.c - a.c || a.n.localeCompare(b.n)).map((p) => `<li${p.n === me ? ' class="me"' : ''}>${misAvatar(p.n, sv.people)}<span>${esc(p.n)}${p.n === me ? ' <small>jij</small>' : ''}</span><span class="mp-segs">${list.map((_, i) => `<i${i < p.c ? ' class="on"' : ''}></i>`).join('')}</span>${p.c >= list.length ? `<b class="pt" aria-label="${P1}">+${misPts()}</b>` : `<b>${p.c}</b>`}</li>`).join('');
   // waar de punten heen gaan
   const pend = misPending();
   let note;
-  if (!PIP) note = 'Speel Pip Run in de Pip-app, dan is elke missie 1 punt bij Scores.';
-  else if (!PIP.code()) note = 'Koppel deze telefoon met de Hub (op Thuis), dan is elke missie 1 punt bij Scores.';
-  else if (MIS.server && !me) note = 'Kies op Thuis wie je bent, dan krijg jij de punten.';
-  else note = `Elke missie is 1 punt${me ? ' voor ' + me : ''} bij Scores, en telt mee voor de held van de week.` + (pend ? ` ${pend === 1 ? '1 punt gaat' : pend + ' punten gaan'} nog naar het servertje.` : '');
+  if (!PIP) note = `Speel Pip Run in de Pip-app: haal je alle ${list.length} missies, dan krijg je ${P1} bij Scores.`;
+  else if (!PIP.code()) note = `Koppel deze telefoon met de Hub (op Thuis): haal je alle ${list.length} missies, dan krijg je ${P1} bij Scores.`;
+  else if (MIS.server && !me) note = 'Kies op Thuis wie je bent, dan krijg jij het punt.';
+  else if (!left) note = pend ? 'Je punt gaat naar Scores zodra er netwerk is.' : `${me || 'Jij'} kreeg ${P1} bij Scores. Dat telt ook mee voor de held van de week.`;
+  else note = `Haal alle ${list.length} missies, dan krijg${me ? 't ' + me : ' je'} ${P1} bij Scores. Dat telt ook mee voor de held van de week.`;
   $('misNote').textContent = note;
   // nieuw gehaald sinds je hier keek: even vieren, daarna onthouden
   if (fresh.length && !$('misSheet').hidden) {
@@ -3682,18 +3698,20 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { if
 // eindscherm: wat je deze run haalde, anders de missie waar je het dichtst bij bent
 function misOver() {
   const box = $('overMis'); if (!MIS.st) { box.hidden = true; return; }
-  const got = MIS.list.filter((m) => MIS.runNew.includes(m.id));
+  const got = MIS.list.filter((m) => MIS.runNew.includes(m.id)), nOpen = misOpen(), P1 = `${misPts()} punt`;
+  const toGo = nOpen === 1 ? 'Nog 1 missie' : `Nog ${nOpen} missies`;
   if (got.length) {
-    box.innerHTML = `<b>${got.length === 1 ? 'Missie gehaald' : got.length + ' missies gehaald'}</b>` + got.map((m) => `<span class="mo-row done">${checkIcon}<span></span><i>+${m.points || 1} punt</i></span>`).join('');
-    box.querySelectorAll('.mo-row span').forEach((s, i) => { s.textContent = got[i].title; });
+    box.innerHTML = `<b>${got.length === 1 ? 'Missie gehaald' : got.length + ' missies gehaald'}</b>` + got.map((m) => `<span class="mo-row done">${checkIcon}<span></span></span>`).join('') +
+      (nOpen ? `<span class="mo-sub">${toGo} voor ${P1}.</span>` : `<span class="mo-row pt"><i>+${misPts()}</i><span>Alle ${MIS.list.length} gehaald${PIP ? `: ${P1} bij Scores` : ''}</span></span>`);
+    box.querySelectorAll('.mo-row.done span').forEach((s, i) => { s.textContent = got[i].title; });
   } else {
     const open = MIS.list.filter((m) => !MIS.st.done[m.id]).map((m) => ({ m, p: misValue(m) / m.goal })).sort((a, b) => b.p - a.p)[0];
-    if (!open) { box.innerHTML = '<b>Alle missies van deze week gehaald</b><span class="mo-sub">Maandag om 4:00 komen er nieuwe.</span>'; }
+    if (!open) { box.innerHTML = `<b>Alle missies van deze week gehaald</b><span class="mo-sub">${PIP ? 'Je punt staat bij Scores. ' : ''}Maandag om 4:00 komen er nieuwe.</span>`; }
     else {
       const m = open.m, left = m.goal - misValue(m);
       box.innerHTML = `<b>Bijna: </b><span class="mo-sub"></span><span class="mis-bar" aria-hidden="true"><i style="width:${(Math.min(1, open.p) * 100).toFixed(1)}%"></i></span>`;
       box.querySelector('b').textContent = `Bijna: ${m.title}`;
-      box.querySelector('.mo-sub').textContent = `${m.text}. Nog ${nlNum(left)}${m.unit ? ' ' + m.unit : ''}${m.scope === 'run' ? ' in één run' : ' deze week'}.`;
+      box.querySelector('.mo-sub').textContent = `${m.text}. Nog ${nlNum(left)}${m.unit ? ' ' + m.unit : ''}${m.scope === 'run' ? ' in één run' : ' deze week'}. ${toGo} voor ${P1}.`;
     }
   }
   box.hidden = false;

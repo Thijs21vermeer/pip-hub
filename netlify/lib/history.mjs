@@ -3,7 +3,7 @@
 //
 //   history-2026-ticks      elk vinkje: { id, title, icon, repeat, by, at, pts }
 //                           (geschreven door pip-settings.mjs; ook de foto van de
-//                           maand en de missies van Pip Run, zie hieronder)
+//                           maand en het punt voor alle missies van Pip Run)
 //   history-2026-days       per dag: kattenbakbezoeken, gewicht, uren, voeren en
 //                           draaien (geschreven door jaarlog.mjs, elke 3 uur)
 //   history-2026-reminders  wanneer de herinnering van een taak ging
@@ -151,33 +151,19 @@ export async function recordBattleWin(by, label, at = Date.now(), points = 5) {
 
 // ---- Pip Run ----
 
-// Een gehaalde missie in Pip Run is 1 punt: een vinkje met game: true, zodat het
-// scoreboard de punten telt maar het niet als taak voor Pip meetelt (net als de
-// foto van de maand). Elke missie telt één keer per persoon per week.
-export async function recordMission(by, mission, week, at = Date.now()) {
-  const tick = { id: "piprun", title: `Pip Run: ${mission.title}`, icon: "paw", repeat: "weekly", by, at, pts: mission.points || 1, game: true, mission: mission.id, week };
+// Alle missies van een week gehaald in Pip Run: 1 punt, als vinkje met game: true,
+// zodat het scoreboard het punt telt maar het niet als taak voor Pip meetelt (net
+// als de foto van de maand). Eén keer per persoon per week. Welke losse missies er
+// gehaald zijn staat niet hier maar in piprun-<week> (zie functions/piprun.mjs).
+export async function recordGameWeek(by, week, at = Date.now(), points = 1) {
+  const tick = { id: "piprun", title: "Pip Run: alle missies", icon: "paw", repeat: "weekly", by, at, pts: points, game: true, week };
   const year = yearOf(at);
   const part = (await readPart(year, "ticks")) || { startedAt: at, list: [] };
-  const same = (t) => t.game && t.mission === mission.id && t.week === week && String(t.by).toLowerCase() === String(by).toLowerCase();
+  const same = (t) => t.game && t.week === week && String(t.by).toLowerCase() === String(by).toLowerCase();
   if (part.list.some(same)) return false;
   const list = part.list.concat(tick).sort((a, b) => a.at - b.at);
   await writePart(year, "ticks", { startedAt: part.startedAt, list });
   return true;
-}
-
-// Wie welke missies van een week al haalde: { naam: [missie-id, ...] }. Een week
-// over de jaargrens staat in twee jaarlogs.
-export async function missionsDone(week) {
-  const years = new Set([Number(week.slice(0, 4)), Number(week.slice(0, 4)) + 1]);
-  const done = {};
-  for (const year of years) {
-    const part = await readPart(year, "ticks");
-    for (const tick of (part && part.list) || []) {
-      if (!tick.game || tick.week !== week) continue;
-      (done[tick.by] = done[tick.by] || []).push(tick.mission);
-    }
-  }
-  return done;
 }
 
 // ---- Herinneringen ----

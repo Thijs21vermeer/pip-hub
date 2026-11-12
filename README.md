@@ -9,7 +9,7 @@ Een checklist voor Pip op je Google Nest Hub: taken afvinken (wie en hoe laat), 
 | `index.html`, `app.js`, `style.css` | Het Pip-scherm op de Google Hub (1024×600, 's avonds donker) |
 | `cast.js` | Maakt er een Cast-app van en houdt hem wakker |
 | `config.js` | **Hier pas je alles aan:** taken, namen, voorraad, App-ID |
-| `piprun.html`, `piprun/`, `missies.js` | Pip Run: het spel, met elke week vijf missies (1 punt per missie) |
+| `piprun.html`, `piprun/`, `missies.js` | Pip Run: het spel, met elke week vijf missies (alle vijf gehaald is 1 punt) |
 | `start.html` | Startknop voor Chrome op Android of je Mac |
 | `start-pip.command` | Dubbelklik op je Mac om Pip te starten |
 | `houd-pip-aan.command` | Dubbelklik: zet Pip steeds terug zolang dat venster openstaat |
@@ -253,8 +253,8 @@ NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --dir
 
 - **Het spel:** `piprun.html` (Thuis › Pip Run). Pip rent door de woonkamer weg voor de stofzuiger. De 3D-modellen, geluiden en muziek staan in `piprun/`. Brokjes, record en het rode pakje worden op de telefoon bewaard.
 - **Missies:** elke maandag om 04:00 (net als de Scores) vijf nieuwe: twee makkelijke, twee gemiddelde en één moeilijke, voor iedereen in huis dezelfde. De lijst en de volgorde staan in `missies.js`; die gebruiken het spel, Thuis en het servertje alle drie. Een missie is "in één run" of "opgeteld over de week". Binnen een rondje door de lijst komt geen missie twee keer, en nooit twee weken achter elkaar.
-- **Punten:** een gehaalde missie is 1 punt voor wie de telefoon gebruikt (de naam die je op Thuis kiest). Het spel stuurt hem naar `/api/piprun` (`netlify/functions/piprun.mjs`); dat controleert of de missie bij deze week hoort en telt elke missie één keer per persoon per week. In het jaarlog staat hij als vinkje met `game: true` (`recordMission` in `netlify/lib/history.mjs`): hij telt mee bij Scores en de held van de week, maar niet als taak voor Pip (net als de foto van de maand). Geen netwerk? Dan blijft het punt op de telefoon klaarstaan en gaat het later alsnog.
-- **Op Thuis:** een kaart met de missies van deze week, een vinkje bij wat jij al haalde en de rondjes van wie ze ook haalde. In Activiteit staat "Missie gehaald in Pip Run".
+- **Punten:** haal je alle vijf missies van de week, dan krijg je 1 punt (losse missies geven geen punt). Het spel stuurt elke gehaalde missie naar `/api/piprun` (`netlify/functions/piprun.mjs`), met de naam die je op Thuis kiest. Dat controleert of de missie bij deze week hoort en onthoudt per week wie wat haalde (blob `piprun-<week>`), zodat je ook op een andere telefoon verder kunt. Is de vijfde binnen, dan komt er één vinkje van 1 punt in het jaarlog, met `game: true` (`recordGameWeek` in `netlify/lib/history.mjs`): het telt mee bij Scores en de held van de week, maar niet als taak voor Pip (net als de foto van de maand). Geen netwerk? Dan blijven de missies op de telefoon klaarstaan en gaan ze later alsnog.
+- **Op Thuis:** een kaart met de missies van deze week, een vinkje bij wat jij al haalde en de rondjes van wie ze ook haalde. In Activiteit staat "Alle missies gehaald in Pip Run".
 - **Andere missies?** Pas `POOL` in `missies.js` aan en zet daarna ook het servertje opnieuw online (dat controleert met dezelfde lijst).
 
 ## 5. Eerste test op de Google Hub

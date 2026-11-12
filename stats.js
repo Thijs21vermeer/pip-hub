@@ -141,10 +141,10 @@
         person.photos = (person.photos || 0) + 1;
         continue;
       }
-      // Een gehaalde missie in Pip Run: ook punten, geen taak.
+      // Alle missies van een week gehaald in Pip Run: ook een punt, geen taak.
       if (tick.game) {
         person.points += tick.pts || 0;
-        person.missions = (person.missions || 0) + 1;
+        person.gameWeeks = (person.gameWeeks || 0) + 1;
         continue;
       }
       person.points += tick.pts || 1;
@@ -179,7 +179,7 @@
         if (top && top[1] > 1) parts.push(`${names.get(top[0]).title.toLowerCase()} ${top[1]}×`);
         if (run >= 2) parts.push(`reeks ${run} dagen`);
         if (person.photos) parts.push(person.photos === 1 ? "foto van de maand" : `${person.photos}× foto van de maand`);
-        if (person.missions) parts.push(`${person.missions} ${person.missions === 1 ? "missie" : "missies"} in Pip Run`);
+        if (person.gameWeeks) parts.push(person.gameWeeks === 1 ? "alle missies in Pip Run" : `${person.gameWeeks}× alle missies in Pip Run`);
         return { name: person.name, points: person.points, count: person.count, photo: Boolean(person.photos), detail: parts.length ? parts.join(" · ") : "nog niets afgevinkt" };
       });
 

@@ -460,7 +460,7 @@
     for (const tick of (jaarlog && jaarlog.ticks) || []) {
       if (tick.at < from) continue;
       if (tick.play) care(tick.id, tick.at, "Met Pip gespeeld", played(tick.by, tick.min));
-      else if (tick.game) care(`${tick.id}:${tick.mission}`, tick.at, "Missie gehaald in Pip Run", `${tick.by} · ${String(tick.title || "").replace(/^Pip Run: /, "")} · +${tick.pts || 1} punt`);
+      else if (tick.game) care(`${tick.id}:${tick.week}`, tick.at, "Alle missies gehaald in Pip Run", `${tick.by} · +${tick.pts || 1} punt`);
       else care(tick.id, tick.at, titleOf(tick.id, tick.title), `Afgevinkt door ${tick.by}`);
     }
     for (const task of tasks.filter((t) => !t.play)) {

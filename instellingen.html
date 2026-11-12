@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261112-72">
+  <link rel="stylesheet" href="stijl.css?v=20261112-73">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -124,7 +124,7 @@
         </a>
         <div class="tasks-head pr-head"><h3>Missies deze week</h3><span id="pr-count"></span></div>
         <ol class="pr-list" id="pr-list"></ol>
-        <div class="card-foot"><span id="pr-foot">Elke missie is 1 punt</span><a href="piprun.html">Spelen ›</a></div>
+        <div class="card-foot"><span id="pr-foot">Haal alle vijf voor 1 punt</span><a href="piprun.html">Spelen ›</a></div>
       </section>
 
 
@@ -256,11 +256,11 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261112-72"></script>
-  <script src="telefoon.js?v=20261112-72"></script>
-  <script src="taken.js?v=20261112-72"></script>
-  <script src="stats.js?v=20261112-72"></script>
-  <script src="missies.js?v=20261112-72"></script>
+  <script src="config.js?v=20261112-73"></script>
+  <script src="telefoon.js?v=20261112-73"></script>
+  <script src="taken.js?v=20261112-73"></script>
+  <script src="stats.js?v=20261112-73"></script>
+  <script src="missies.js?v=20261112-73"></script>
   <script>
     (function () {
       "use strict";
@@ -315,15 +315,19 @@
           li.className = `pr-item${done ? " done" : ""}`;
           li.innerHTML = `<i class="pr-check" aria-hidden="true">${done ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ""}</i><span class="pr-text"><strong></strong><small></small>${done || !v ? "" : `<span class="pr-bar"><i style="width:${(v / mission.goal * 100).toFixed(1)}%"></i></span>`}</span><span class="pr-who"></span>`;
           li.querySelector("strong").textContent = mission.title;
-          li.querySelector("small").textContent = done ? `${mission.text} · +1 punt` : v ? `${mission.text} · ${nl(v)}/${nl(mission.goal)}` : mission.text;
+          li.querySelector("small").textContent = !done && v ? `${mission.text} · ${nl(v)}/${nl(mission.goal)}` : mission.text;
           const who = li.querySelector(".pr-who");
           doneBy(mission.id).filter((name) => name !== me).slice(0, 3).forEach((name) => who.appendChild(P.avatarElement(name, people, avatars)));
           li.setAttribute("aria-label", `${mission.title}: ${mission.text}${done ? ", gehaald" : ""}`);
           list.appendChild(li);
         }
-        $("pr-count").textContent = `${count} van ${missions.length}`;
+        // Eén punt voor alle vijf samen: laat zien hoeveel er nog moeten.
+        const open = missions.length - count;
         const days = M.daysLeft(now);
-        $("pr-foot").textContent = days <= 1 ? "Maandag nieuwe missies" : `Nog ${days} dagen, elke missie 1 punt`;
+        $("pr-count").textContent = `${count} van ${missions.length}`;
+        $("pr-foot").textContent = !open
+          ? `Alle ${missions.length} gehaald: +${M.POINTS} punt`
+          : `${open === 1 ? "Nog 1 missie" : `Nog ${open} missies`} voor ${M.POINTS} punt` + (days <= 1 ? ", maandag nieuwe" : `, nog ${days} dagen`);
       }
 
       const urls = {

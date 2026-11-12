@@ -7,7 +7,7 @@
 // Elke maandag om 04:00 (net als de Scores) komen er vijf nieuwe: twee makkelijke,
 // twee gemiddelde en één moeilijke. De volgorde ligt vast per week (geen toeval op
 // het toestel), en binnen een rondje door de lijst komt geen missie twee keer.
-// Elke gehaalde missie is 1 punt voor wie hem haalde.
+// Haal je alle vijf, dan krijg je 1 punt (POINTS). Losse missies geven geen punt.
 //
 // scope "run": in één run halen. scope "week": opgeteld over alle runs van de week.
 // tip: hoe je hem haalt (staat bij de volgende missie in het spel).
@@ -15,6 +15,7 @@
   "use strict";
 
   const RESET_HOUR = 4;
+  // Punten voor wie alle missies van een week haalt.
   const POINTS = 1;
 
   const POOL = [
@@ -128,7 +129,13 @@
       const order = roundOrder(list, tier, round, per, weeksPerRound);
       out.push(...order.slice(slot * per, slot * per + per));
     }
-    return out.map((mission) => ({ ...mission, points: POINTS }));
+    return out;
+  }
+
+  // Heeft iemand met deze gehaalde missies (lijst met id's) alles van de week?
+  function allDone(week, ids) {
+    const have = new Set(ids || []);
+    return forWeek(week).every((mission) => have.has(mission.id));
   }
 
   function byId(id) {
@@ -148,5 +155,5 @@
     return Math.max(0, Math.ceil((nextWeekAt(ms) - ms) / (24 * 3600 * 1000)));
   }
 
-  root.PipMissions = { POOL, POINTS, dayKey, weekKey, forWeek, byId, nextWeekAt, daysLeft };
+  root.PipMissions = { POOL, POINTS, dayKey, weekKey, forWeek, allDone, byId, nextWeekAt, daysLeft };
 })(typeof window !== "undefined" ? window : globalThis);

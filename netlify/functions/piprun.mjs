@@ -1,29 +1,44 @@
 // Pip Run: de missies van de week (zie missies.js in de hoofdmap).
 //
-//   GET  /api/piprun   { week, missions: [{ id, title, … }], people, done: { naam: [missie-id, …] } }
-//   POST /api/piprun   { by, week, mission }  een gehaalde missie: 1 punt voor `by`
-//                      → 201 { added: true, … } of 200 { added: false, … } als hij al telde
+//   GET  /api/piprun   { week, missions: [{ id, title, … }], points, people, done: { naam: [missie-id, …] } }
+//   POST /api/piprun   { by, week, mission }  een gehaalde missie van `by`
+//                      → 201 { added: true, scored, … } of 200 { added: false, … } als hij er al stond
 //
 // Het servertje controleert of de missie bij deze week hoort (dezelfde lijst als
-// het spel), of `by` een baasje is, en dat elke missie maar één keer per persoon
-// per week telt. Daarna staat hij als vinkje van 1 punt in het jaarlog, zodat hij
-// meetelt bij Scores en de held van de week. Zelfde code als de rest (PIP_ACTION_CODE).
+// het spel) en of `by` een baasje is, en onthoudt per week wie welke missie haalde
+// (blob piprun-<week>). Heeft iemand daarmee alle vijf, dan komt er één vinkje van
+// 1 punt in het jaarlog (scored: true), zodat het meetelt bij Scores en de held van
+// de week. Losse missies geven geen punt. Zelfde code als de rest (PIP_ACTION_CODE).
 
 import { getStore } from "@netlify/blobs";
 import "../../missies.js";
 import { authorized, corsHeaders, json } from "../lib/http.mjs";
-import { missionsDone, recordMission, weekStart } from "../lib/history.mjs";
+import { recordGameWeek, weekStart } from "../lib/history.mjs";
 
 const Missions = globalThis.PipMissions;
 
+function store() {
+  return getStore({ name: "pip", consistency: "strong" });
+}
+
 async function readPeople() {
-  const settings = await getStore({ name: "pip", consistency: "strong" }).get("settings", { type: "json" });
+  const settings = await store().get("settings", { type: "json" });
   return Array.isArray(settings && settings.people) ? settings.people : [];
 }
 
-async function summary(week, people) {
-  const missions = Missions.forWeek(week).map(({ id, tier, scope, stat, goal, unit, title, text, points }) => ({ id, tier, scope, stat, goal, unit, title, text, points }));
-  return { week, missions, people, done: await missionsDone(week) };
+// { naam: { missie-id: tijd } } van één week.
+async function readProgress(week) {
+  const value = await store().get(`piprun-${week}`, { type: "json" });
+  return value && value.done && typeof value.done === "object" ? value.done : {};
+}
+
+function doneLists(progress) {
+  return Object.fromEntries(Object.entries(progress).map(([name, missions]) => [name, Object.keys(missions)]));
+}
+
+function summary(week, people, progress) {
+  const missions = Missions.forWeek(week).map(({ id, tier, scope, stat, goal, unit, title, text }) => ({ id, tier, scope, stat, goal, unit, title, text }));
+  return { week, missions, points: Missions.POINTS, people, done: doneLists(progress) };
 }
 
 export default async (request) => {
@@ -33,7 +48,7 @@ export default async (request) => {
     if (!authorized(request)) return json(401, { error: "UNAUTHORIZED" }, headers);
     const week = weekStart(Date.now());
     const people = await readPeople();
-    if (request.method === "GET") return json(200, await summary(week, people), headers);
+    if (request.method === "GET") return json(200, summary(week, people, await readProgress(week)), headers);
     if (request.method !== "POST") return json(405, { error: "METHOD_NOT_ALLOWED" }, headers);
 
     const body = await request.json().catch(() => null);
@@ -45,9 +60,18 @@ export default async (request) => {
     const mission = Missions.forWeek(week).find((item) => item.id === body.mission);
     if (!mission) return json(400, { error: "UNKNOWN_MISSION" }, headers);
 
-    const added = await recordMission(by, mission, week);
-    if (added) console.log(JSON.stringify({ event: "piprun.mission", by, mission: mission.id, week }));
-    return json(added ? 201 : 200, { added, ...(await summary(week, people)) }, headers);
+    const progress = await readProgress(week);
+    const mine = (progress[by] = progress[by] || {});
+    const added = !mine[mission.id];
+    if (added) {
+      mine[mission.id] = Date.now();
+      await store().setJSON(`piprun-${week}`, { week, done: progress });
+    }
+    // Alle vijf? Dan het punt (ook als het eerder misging: recordGameWeek telt het maar één keer).
+    let scored = false;
+    if (Missions.allDone(week, Object.keys(mine))) scored = await recordGameWeek(by, week, Date.now(), Missions.POINTS);
+    if (added) console.log(JSON.stringify({ event: "piprun.mission", by, mission: mission.id, week, scored }));
+    return json(added ? 201 : 200, { added, scored, ...summary(week, people, progress) }, headers);
   } catch (error) {
     console.error(JSON.stringify({ event: "piprun.error", code: error.code || error.name || "UNKNOWN" }));
     return json(502, { error: error.code === "CONFIG" ? "NOT_CONFIGURED" : "STORAGE_ERROR" }, headers);
