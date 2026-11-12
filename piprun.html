@@ -14,8 +14,8 @@
   <meta name="theme-color" content="#e6e2dc">
   <!-- Pip Run: het spel van Pip, met elke week vijf missies (missies.js). Een gehaalde missie is
        1 punt bij Scores (/api/piprun). Gebouwd uit de bron van het spel; de bestanden staan in piprun/. -->
-  <script src="config.js?v=20261112-75"></script>
-  <script src="telefoon.js?v=20261112-75"></script>
+  <script src="config.js?v=20261112-76"></script>
+  <script src="telefoon.js?v=20261112-76"></script>
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -447,7 +447,7 @@ a.round{text-decoration:none}
 <script>
   setTimeout(function () { if (!window.__pipReady) document.getElementById('fail').hidden = false; }, 12000);
 </script>
-<script src="missies.js?v=20261112-75"></script>
+<script src="missies.js?v=20261112-76"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -2643,15 +2643,15 @@ function clearPlay() { for (let i = items.length - 1; i >= 0; i--) if (items[i].
 function resetGame() {
   Object.assign(game, { dist: 0, kib: 0, dodged: 0, v: 0, lane: 1, x: 0, y: 0, vy: 0, air: false, duckT: 0, duckAmt: 0, ph: 0,
     meterOn: false, meterT: 0, knocked: false, slowT: 0, invT: 0, magT: 0, jumpT: 0, shakeT: 0, overT: 0, overV: 0, overShown: false, reason: '',
-    nextSpawn: 18, nextPower: 130 + Math.random() * 50, nextHide: 290 + Math.random() * 100, vacZ: 8, camBlend: 0, vRamp: 1, chaseT: 0, fallT: -1, banked: false, vLane: 1, vacY: 0, vacVy: 0, ms: newRunStats() });
+    nextSpawn: 18, nextPower: 130 + Math.random() * 50, nextHide: 290 + Math.random() * 100, vacZ: 8, prevFree: -1, camBlend: 0, vRamp: 1, chaseT: 0, fallT: -1, banked: false, vLane: 1, vacY: 0, vacVy: 0, ms: newRunStats() });
 }
 resetGame();
 
 /* ---------- Spawnen ---------- */
 function obstacle(name, lane, z) {
-  if (name === 'krabpaalGroot' && lane === 1) name = 'krabpaalKlein';
   const it = place(name, LANES[lane], z, { kind: DEF[name].type, lane });
-  if (name === 'krabpaalGroot') { it.obj.scale.x = lane === 0 ? -1 : 1; return it; }
+  // de grote krabpaal: de tak wijst naar de muur, of in het midden naar achteren (dan steekt hij niet in de buurbaan)
+  if (name === 'krabpaalGroot') { if (lane === 1) it.obj.rotation.y = Math.PI / 2; else it.obj.scale.x = lane === 0 ? -1 : 1; return it; }
   if (name === 'tunnel' || name === 'eettafel') { it.obj.rotation.y = 0; return it; }
   if (name === 'voerbak') { it.obj.rotation.y = 0; kibbleArc(lane, z, .82); return it; }
   if (name === 'bank' || name === 'poef') it.obj.rotation.y = LANES[lane] < 0 ? Math.PI : 0;
@@ -2661,28 +2661,62 @@ function obstacle(name, lane, z) {
 function kibbleLine(lane, z, n, y = .14, step = 1.1) { for (let i = 0; i < n; i++) place('kibble', LANES[lane], z - i * step, { kind: 'kibble', lane, y }); }
 function kibbleArc(lane, zc, top) { for (let i = -3; i <= 3; i++) { const t = i / 3; place('kibble', LANES[lane], zc + i * .55, { kind: 'kibble', lane, y: .14 + (top - .14) * (1 - t * t) }); } }
 
+// De grote krabpaal is de enige muur: er kun je niet overheen springen en niet onderdoor. Hij komt vaker, zodat je
+// geregeld van baan moet wisselen. Bij het kiezen telt hij drie keer mee (TALL3).
+const TALL3 = [...TALL, ...TALL, ...TALL];
 function spawnPattern(z0) {
-  const d = game.dist, lanes = [0, 1, 2].sort(() => Math.random() - .5), free = lanes[0];
-  let r = Math.random(), len = 2;
+  const d = game.dist, lanes = [0, 1, 2].sort(() => Math.random() - .5);
+  let free = lanes[0], r = Math.random(), len = 2;
+  // een muur in de eerste rij, precies in de baan waar je loopt, laat te weinig tijd om uit te wijken: dan iets om over te springen
+  const was = game.prevFree, ob = (list, lane, z) => { let n = pick(list); if (n === 'krabpaalGroot' && lane === was) n = pick(JUMP); return obstacle(n, lane, z); };
   if (d < 100) r *= .5;
-  if (d > 280 && Math.random() < Math.min(.32, (d - 280) / 1400)) {
-    const a = free, b = pick([0, 1, 2].filter((l) => l !== a)), gap = clamp(topSpeed(d) * (Math.abs(a - b) > 1 ? .52 : .44), 4, 7);
-    for (const l of [0, 1, 2]) if (l !== a) obstacle(pick([...JUMP, ...DUCK, ...TALL]), l, z0);
-    for (const l of [0, 1, 2]) if (l !== b) obstacle(pick([...JUMP, ...DUCK, ...TALL]), l, z0 - gap);
+  // vanaf 60 m af en toe een baan dicht met de grote krabpaal, later vaker (tot ongeveer één op de vier)
+  const wallP = d < 60 ? 0 : Math.min(.26, .13 + (d - 60) / 4000);
+  if (Math.random() < wallP) {
+    // nooit een muur in de baan waar de brokjes van het vorige stuk je naartoe leidden: daar loop je waarschijnlijk
+    const open = [0, 1, 2].filter((l) => l !== game.prevFree);
+    if (d > 220 && Math.random() < .4) {
+      // slalom: eerst de ene baan dicht, iets verderop een andere; daartussen moet je wisselen
+      const a = pick(open), b = pick([0, 1, 2].filter((l) => l !== a)), gap = clamp(topSpeed(d) * (Math.abs(a - b) > 1 ? .55 : .46), 4.2, 7.5);
+      obstacle('krabpaalGroot', a, z0); obstacle('krabpaalGroot', b, z0 - gap);
+      // in de derde baan soms iets om over te springen of onderdoor te gaan (nooit een tweede muur)
+      const c = [0, 1, 2].find((l) => l !== a && l !== b);
+      if (d > 400 && Math.random() < .5) obstacle(pick([...JUMP, ...DUCK]), c, z0 - gap / 2);
+      kibbleLine(b, z0 + .6, 3, .14, .7); kibbleLine(a, z0 - 1.4, 3, .14, (gap - 2.4) / 3);
+      free = b; len = gap + 2; game.prevFree = a;
+      return spawnExtras(d, z0, free, len);
+    } else {
+      // één baan dicht; van de andere twee is er minstens één vrij (bij voorkeur die waar je al loopt)
+      const wall = pick(open), rest = [0, 1, 2].filter((l) => l !== wall);
+      free = rest.includes(game.prevFree) ? game.prevFree : pick(rest);
+      const other = rest.find((l) => l !== free);
+      obstacle('krabpaalGroot', wall, z0);
+      if (Math.random() < .55) obstacle(pick([...JUMP, ...DUCK]), other, z0 - (Math.random() < .5 ? 0 : 1.2));
+      kibbleLine(free, z0 + 1.4, 4);
+    }
+  } else if (d > 280 && Math.random() < Math.min(.32, (d - 280) / 1400)) {
+    const a = free, b = pick([0, 1, 2].filter((l) => l !== a));
+    const row1 = [0, 1, 2].filter((l) => l !== a).map((l) => [l, ob([...JUMP, ...DUCK, ...TALL3], l, z0)]);
+    const row2 = [0, 1, 2].filter((l) => l !== b).map((l) => [l, pick([...JUMP, ...DUCK, ...TALL3])]);
+    // met een muur erin moet je echt wisselen (je kunt er niet overheen): dan iets meer ruimte tussen de rijen
+    const walled = row1.some(([, it]) => it.name === 'krabpaalGroot') || row2.some(([, n]) => n === 'krabpaalGroot');
+    const gap = clamp(topSpeed(d) * (Math.abs(a - b) > 1 ? .52 : .44) * (walled ? 1.12 : 1), 4, walled ? 7.8 : 7);
+    for (const [l, n] of row2) obstacle(n, l, z0 - gap);
     kibbleLine(a, z0 + 1.4, 2, .14, .6);
     kibbleLine(b, z0 - .9, 3, .14, (gap - 1.8) / 2);
-    len = gap + 2;
+    len = gap + 2; game.prevFree = b;
+    return spawnExtras(d, z0, free, len);
   } else if (d > 280 && r < .26 && Math.random() < .45) {
     // het makkelijkste patroon (één obstakel) komt later minder vaak voor
-    obstacle(pick([...JUMP, ...TALL]), lanes[1], z0);
+    ob([...JUMP, ...TALL3], lanes[1], z0);
     obstacle(pick([...DUCK, ...JUMP]), lanes[2], z0);
     kibbleLine(free, z0 + 1.5, 5);
   } else if (r < .26) {
-    obstacle(pick([...JUMP, ...DUCK, ...TALL]), lanes[1], z0);
+    ob([...JUMP, ...DUCK, ...TALL3], lanes[1], z0);
     if (Math.random() < .4) { obstacle('tunnel', free, z0 + .6); kibbleLine(free, z0 + 1.1, 4, .14, .35); }
     else kibbleLine(free, z0 + 2, 5);
   } else if (r < .46) {
-    obstacle(pick([...JUMP, ...TALL]), lanes[1], z0);
+    ob([...JUMP, ...TALL3], lanes[1], z0);
     obstacle(pick([...DUCK, ...JUMP]), lanes[2], z0 - (Math.random() < .5 ? 0 : 1.6));
     kibbleLine(free, z0 + 1.5, 5);
   } else if (r < .62) {
@@ -2702,6 +2736,10 @@ function spawnPattern(z0) {
     kibbleLine(free, z0 + 1.2, 4);
     len = 3;
   }
+  game.prevFree = free;
+  return spawnExtras(d, z0, free, len);
+}
+function spawnExtras(d, z0, free, len) {
   if (d > game.nextPower) { place(pick(['bal', 'hengel', 'snoepje']), LANES[free], z0 + 3.6, { kind: 'power', lane: free }); game.nextPower = d + 210 + Math.random() * 110; }
   else if (d > game.nextHide) { place('kattenbak', LANES[free], z0 + 3.6, { kind: 'hide', lane: free }); game.nextHide = d + 430 + Math.random() * 200; }
   return len;
@@ -2874,7 +2912,7 @@ function showOver() {
   $('newRec').hidden = !isRec;
   misOver();
   sfx(isRec ? 'record' : 'lose', { vol: isRec ? .65 : .4, at: .1 });
-  $('hud').hidden = true; $('meter').hidden = true; $('power').hidden = true;
+  $('hud').hidden = true; $('meter').hidden = true; $('power').hidden = true; $('skipHint').hidden = true;
   showSheet('over'); $('againBtn').focus();
 }
 $('playBtn').addEventListener('click', play);
@@ -3046,7 +3084,8 @@ resize();
 /* ---------- Pip: het echte model met skelet ---------- */
 // Procedurele bewegingen voor het echte kattenskelet (Advanced-Skeleton-namen: Hip_R, Knee_R, Shoulder_L, Spine1_M ...)
 const SITP = { hip: 1.2, knee: -1.9, ankle: 1.25, toe: .3, scap: -.2, shoulder: -.55, elbow: .05, wrist: .05, neck: -.35, neck1: -.2, chest: .1, spine3: .05, tail0: -.5, tailN: -.05, curl: .22, rump: .15 };
-function makeRig(model, clip, baseTime = 9.4, { tailDrop = 1 } = {}) {
+function makeRig(model, clip, baseTime = 9.4, { tailDrop = 1, sit: sitOver = null } = {}) {
+  const SP = Object.assign({ tilt: 1 }, SITP, sitOver || {});   // zithouding, per model bij te stellen
   const bones = {};
   model.traverse((o) => { if (o.isBone) { const k = o.name.replace(/_\d+(_\d+)*$/, ''); if (!bones[k]) bones[k] = o; } });
   const mixer = new THREE.AnimationMixer(model);
@@ -3163,7 +3202,7 @@ function makeRig(model, clip, baseTime = 9.4, { tailDrop = 1 } = {}) {
   const set = (k, ang) => { const d = drive[k]; if (d) d.a += ang; };
   const S = Math.sin, C = Math.cos, clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   return {
-    bones, fwd, lat, Lh, Lf,
+    bones, fwd, lat, Lh, Lf, SP,
     // ph: fase van de galop, air: in de lucht (0..1), duck: duiken (0..1), stum: struikelen (0..1), caught: gepakt (0..1), run: 0 = draf, 1 = volle galop
     // speed: snelheid van de vloer in modeleenheden per seconde; ph: fase in radialen (2π per pas)
     pose(ph, { air = 0, duck = 0, stum = 0, caught = 0, run = 1, tailWag = 0, speed = 0, freq = 3.5, look = 0, yaw = 0, ears = 0, tail = 0, walk = 0, sit = 0 } = {}) {
@@ -3208,17 +3247,17 @@ function makeRig(model, clip, baseTime = 9.4, { tailDrop = 1 } = {}) {
       ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k, i) => set(k, (-.18 + .1 * S(ph * .5 - i * .7)) * run + .08 * S(ph * .5 - i * .7) - tail * .09));
       if (sit > 0) {
         for (const s of ['R', 'L']) {
-          set('Hip_' + s, sit * SITP.hip); set('Knee_' + s, sit * SITP.knee); set('Ankle_' + s, sit * SITP.ankle); set('Toes1_' + s, sit * SITP.toe);
-          set('Scapula_' + s, sit * SITP.scap); set('Shoulder_' + s, sit * SITP.shoulder); set('Elbow_' + s, sit * SITP.elbow); set('Wrist_' + s, sit * SITP.wrist);
+          set('Hip_' + s, sit * SP.hip); set('Knee_' + s, sit * SP.knee); set('Ankle_' + s, sit * SP.ankle); set('Toes1_' + s, sit * SP.toe);
+          set('Scapula_' + s, sit * SP.scap); set('Shoulder_' + s, sit * SP.shoulder); set('Elbow_' + s, sit * SP.elbow); set('Wrist_' + s, sit * SP.wrist);
         }
-        set('Neck_M', sit * SITP.neck); set('Neck1_M', sit * SITP.neck1); set('Chest_M', sit * SITP.chest); set('Spine3_M', sit * SITP.spine3);
-        set('Tail0_M', sit * SITP.tail0); ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k) => set(k, sit * SITP.tailN));
+        set('Neck_M', sit * SP.neck); set('Neck1_M', sit * SP.neck1); set('Chest_M', sit * SP.chest); set('Spine3_M', sit * SP.spine3);
+        set('Tail0_M', sit * SP.tail0); ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k) => set(k, sit * SP.tailN));
       }
       for (const k in drive) { const d = drive[k]; d.b.quaternion.copy(d.q0).multiply(tmpQ.setFromAxisAngle(d.axis, d.a * d.sign)); }
       ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k, i) => bones[k].quaternion.multiply(tmpQ.setFromAxisAngle(tailYaw[k], (.06 * S(ph * .5 - i * .6) + tailWag * .4 * S(ph - i)))));
       if (yaw) for (const k in headYaw) bones[k].quaternion.multiply(tmpQ.setFromAxisAngle(headYaw[k][0], yaw * headYaw[k][1]));
       root.quaternion.copy(rootQ0);
-      if (sit > 0) root.quaternion.multiply(tmpQ.setFromAxisAngle(axP, sit * sitTheta * pSign));
+      if (sit > 0) root.quaternion.multiply(tmpQ.setFromAxisAngle(axP, sit * sitTheta * SP.tilt * pSign));
       for (const s in scap) scap[s].b.position.copy(scap[s].p0);
       const bw = g * (1 - duck) * (1 - gal) * amp * (1 - caught);
       let sway = 0;
@@ -3266,10 +3305,10 @@ function makeRig(model, clip, baseTime = 9.4, { tailDrop = 1 } = {}) {
       root.position.copy(rootP0); root.position.y += bob / rootParentScale; root.position.addScaledVector(latRoot, sway);
       if (sit > 0) {
         model.updateMatrixWorld(true);
-        const tb = ML0(bones.Tail0_M).y, want = floorY + hipH * SITP.rump;
+        const tb = ML0(bones.Tail0_M).y, want = floorY + hipH * SP.rump;
         root.position.y += (want - tb) * sit / rootParentScale;
         // staart ligt in een boogje om haar heen op de vloer
-        ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k, i) => bones[k].quaternion.multiply(tmpQ.setFromAxisAngle(tailYaw[k], sit * SITP.curl * (1 + i * .15))));
+        ['Tail16_M', 'Tail17_M', 'Tail18_M', 'Tail19_M', 'Tail20_M'].forEach((k, i) => bones[k].quaternion.multiply(tmpQ.setFromAxisAngle(tailYaw[k], sit * SP.curl * (1 + i * .15))));
       }
       const hd = drive.Head_M;
       if (hd && lip) {
@@ -3464,7 +3503,11 @@ function useRealPip(gltf) {
   model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; if (o.material) { o.material.roughness = 1; o.material.metalness = 0; o.material.onBeforeCompile = pipBounce;
     for (const k of ['map', 'normalMap', 'roughnessMap', 'aoMap']) { const tx = o.material[k]; if (tx) { tx.anisotropy = maxAniso; tx.needsUpdate = true; } } } } });
   // het BSH-model heeft een lagere staartaanzet: de staart zakt bij het rennen minder ver, anders raakt hij de vloer
-  const rig = makeRig(model, null, 9.4, { tailDrop: isBSH ? .7 : 1 });   // rusthouding van het model: rechte rug; de kop zet makeRig recht
+  // en het zitten (als ze gepakt is) is bij de BSH gemeten: minder ver achterover, de knieën minder dubbel en de
+  // staart niet omlaag, zodat poten, billen en staart allemaal op de vloer komen
+  const rig = makeRig(model, null, 9.4, { tailDrop: isBSH ? .7 : 1, sit: isBSH ? { tilt: .7, knee: -1.1, tail0: 0 } : null });
+  REAL.sitLift = isBSH ? .004 : .042;
+  // (makeRig neemt de rusthouding van het model: rechte rug; de kop zet makeRig recht)
   const holder = new THREE.Group(), inner = new THREE.Group(); holder.add(inner); inner.add(model);
   inner.quaternion.setFromUnitVectors(rig.fwd, new THREE.Vector3(0, 0, -1));
   holder.updateMatrixWorld(true);
@@ -3547,7 +3590,7 @@ const realFail = () => setStatus('Het model van Pip kon niet laden, dus nu rent 
 const oldPip = () => fetch('piprun/pip-model.txt').then((r) => { if (!r.ok) throw new Error('geen tekstversie'); return r.text(); })
   .then((b64) => { const raw = atob(b64.trim()), bin = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i); loader.parse(bin.buffer, '', useRealPip, realFail); })
   .catch(() => loader.load('pip.glb', useRealPip, undefined, realFail));
-loader.load('piprun/pip-bsh.glb?v=20261112-75', useRealPip, undefined, oldPip);
+loader.load('piprun/pip-bsh.glb?v=20261112-76', useRealPip, undefined, oldPip);
 
 
 /* ---------- Thijs als echt 3D-model ---------- */
@@ -4346,7 +4389,10 @@ function stepImpact(dt) {
   }
 }
 function bonk() { sfx('bonk', { vol: .85 }); sfx('meow_hi', { vol: .3, at: .1 }); }
-function skipCaught() { if (state === 'over' && !game.overShown && game.overT < OT.sheet - .05) game.overT = OT.sheet - .05; }
+// Overslaan kan pas na de klap en het duizelen: wie nog aan het vegen was om te ontwijken, zou anders met de
+// volgende veeg meteen het hele eindfilmpje wegtikken (en het opzuigen nooit zien).
+const SKIP_AFTER = 1.6;
+function skipCaught() { if (state === 'over' && !game.overShown && game.overT > SKIP_AFTER && game.overT < OT.sheet - .05) game.overT = OT.sheet - .05; }
 
 /* ---------- Stofwolkjes van de stofzuigerwielen ---------- */
 const puffs = [];
@@ -4508,6 +4554,7 @@ function frame(now) {
     if (X(OT.suck1 + .55)) sfx('meow_sad', { vol: .3, lp: 900, rate: .97 });
     if (game.overT >= game.tweetN && game.overT < OT.suck0 - .3 && game.overT - game.tweetN < .3) { game.tweetK = -(game.tweetK || .55); sfx('tweet', { vol: .3, pan: game.tweetK, rate: .95 + Math.random() * .15 }); game.tweetN += .62 + Math.random() * .15; }
     if (game.overT > OT.sheet && !game.overShown) showOver();
+    { const sh = $('skipHint'), on = !game.overShown && game.overT > SKIP_AFTER && game.overT < OT.sheet - .2; if (sh.hidden === on) sh.hidden = !on; }
   }
   game.duckAmt += ((game.duckT > 0 && state === 'run' ? 1 : 0) - game.duckAmt) * Math.min(1, dt * 18);
   const gaitF = gaitFreq(v);
@@ -4532,8 +4579,8 @@ function frame(now) {
   }
   animatePip(pip, game.ph, game.air && state !== 'over', game.duckAmt, dt * Math.max(.6, Math.abs(v) / 8), { stum: game.shakeT / .45, caught: 0, sit: OV.sit, look: he * (.06 * Math.sin(clockT * .7)) + OV.look, yaw: he * (.16 * Math.sin(clockT * .37) + .04 * Math.sin(clockT * 1.1)) + OV.yaw, ears: he * Math.max(0, Math.sin(clockT * .9) - .85) * 4 + OV.ears, tailWag: he * .35, run: state === 'menu' ? .45 * (1 - he) : state === 'over' ? Math.max(0, 1 - game.overT * 2) : 1, speed: Math.max(0, v), freq: gaitF });
   if (state === 'over' && !pip.rig) pip.pose.rotation.x = .35;
-  // in de zithouding zakt het hele lijf ~4 cm door de vloer (gemeten op de vervormde mesh): optillen tot poten, billen en staart precies op de vloer liggen
-  if (state === 'over' && pip.rig) { pip.root.position.y += OV.sit * .042; if (pip.ao) pip.ao.position.y -= OV.sit * .042; }
+  // in de zithouding zakt het lijf iets door de vloer (gemeten op de vervormde mesh, per model): optillen tot poten, billen en staart precies op de vloer liggen
+  if (state === 'over' && pip.rig) { const lift = OV.sit * (REAL.sitLift ?? .042); pip.root.position.y += lift; if (pip.ao) pip.ao.position.y -= lift; }
   if (state === 'over') {
     const T = game.overT;
     if (T < OT.sit1) {
