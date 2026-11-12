@@ -141,6 +141,12 @@
         person.photos = (person.photos || 0) + 1;
         continue;
       }
+      // Alle missies van een week gehaald in Pip Run: ook een punt, geen taak.
+      if (tick.game) {
+        person.points += tick.pts || 0;
+        person.gameWeeks = (person.gameWeeks || 0) + 1;
+        continue;
+      }
       person.points += tick.pts || 1;
       person.count += 1;
       count(person.tasks, tick.id);
@@ -173,13 +179,14 @@
         if (top && top[1] > 1) parts.push(`${names.get(top[0]).title.toLowerCase()} ${top[1]}×`);
         if (run >= 2) parts.push(`reeks ${run} dagen`);
         if (person.photos) parts.push(person.photos === 1 ? "foto van de maand" : `${person.photos}× foto van de maand`);
+        if (person.gameWeeks) parts.push(person.gameWeeks === 1 ? "alle missies in Pip Run" : `${person.gameWeeks}× alle missies in Pip Run`);
         return { name: person.name, points: person.points, count: person.count, photo: Boolean(person.photos), detail: parts.length ? parts.join(" · ") : "nog niets afgevinkt" };
       });
 
     const badges = [];
     // De taak die het vaakst gedaan is, en wie hem het vaakst deed.
     const perTask = new Map();
-    ticks.filter((tick) => !tick.battle).forEach((tick) => count(perTask, tick.id));
+    ticks.filter((tick) => !tick.battle && !tick.game).forEach((tick) => count(perTask, tick.id));
     const topTask = topOf(perTask);
     if (topTask) {
       const doers = new Map();
@@ -268,8 +275,9 @@
   function wrapped(log, extra, now, resetHour) {
     const year = Number(log.year) || new Date(now).getFullYear();
     const yearTicks = (log.ticks || []).filter((tick) => dayKey(tick.at, resetHour).slice(0, 4) === String(year));
-    // Taken zonder de foto van de maand (die telt wel mee voor de punten).
-    const ticks = yearTicks.filter((tick) => !tick.battle);
+    // Taken zonder de foto van de maand en de missies van Pip Run (die tellen wel
+    // mee voor de punten).
+    const ticks = yearTicks.filter((tick) => !tick.battle && !tick.game);
     const dayEntries = Object.entries(log.days || {}).filter(([key]) => key.slice(0, 4) === String(year)).sort(([a], [b]) => a.localeCompare(b));
     const days = dayEntries.map(([key, day]) => ({ key, ...day }));
     const reminders = log.reminders || [];
