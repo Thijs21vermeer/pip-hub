@@ -90,6 +90,9 @@ window.PIP_CONFIG = {
   // Fotobattle: elke maand samen de foto van de maand kiezen (fotobattle.html,
   // netlify/lib/battle.mjs). Zelfde servertje en code.
   fotobattle: { url: "https://pip-kattenbak.netlify.app/api/fotobattle" },
+  // Pip Run: het spel (piprun.html) met elke week vijf missies (missies.js). Een
+  // gehaalde missie is 1 punt bij Scores. Zelfde servertje en code.
+  piprun: { url: "https://pip-kattenbak.netlify.app/api/piprun" },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is
