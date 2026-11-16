@@ -10,6 +10,7 @@ Een checklist voor Pip op je Google Nest Hub: taken afvinken (wie en hoe laat), 
 | `cast.js` | Maakt er een Cast-app van en houdt hem wakker |
 | `config.js` | **Hier pas je alles aan:** taken, namen, voorraad, App-ID |
 | `piprun.html`, `piprun/`, `missies.js` | Pip Run: het spel, met elke week vijf missies (alle vijf gehaald is 1 punt) |
+| `netlify/functions/huis.mjs` | Het huis voor Waar is Pip, alleen op het servertje en achter de koppelcode (nooit in deze repo) |
 | `start.html` | Startknop voor Chrome op Android of je Mac |
 | `start-pip.command` | Dubbelklik op je Mac om Pip te starten |
 | `houd-pip-aan.command` | Dubbelklik: zet Pip steeds terug zolang dat venster openstaat |
@@ -256,6 +257,16 @@ NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --dir
 - **Punten:** haal je alle vijf missies van de week, dan krijg je 1 punt (losse missies geven geen punt). Het spel stuurt elke gehaalde missie naar `/api/piprun` (`netlify/functions/piprun.mjs`), met de naam die je op Thuis kiest. Dat controleert of de missie bij deze week hoort en onthoudt per week wie wat haalde (blob `piprun-<week>`), zodat je ook op een andere telefoon verder kunt. Is de vijfde binnen, dan komt er één vinkje van 1 punt in het jaarlog, met `game: true` (`recordGameWeek` in `netlify/lib/history.mjs`): het telt mee bij Scores en de held van de week, maar niet als taak voor Pip (net als de foto van de maand). Geen netwerk? Dan blijven de missies op de telefoon klaarstaan en gaan ze later alsnog.
 - **Op Thuis:** een kaart met de missies van deze week, een vinkje bij wat jij al haalde en de rondjes van wie ze ook haalde. In Activiteit staat "Alle missies gehaald in Pip Run".
 - **Andere missies?** Pas `POOL` in `missies.js` aan en zet daarna ook het servertje opnieuw online (dat controleert met dezelfde lijst).
+
+## Waar is Pip: het huis
+
+Voor het zoekspel Waar is Pip (komt eraan) gebruikt het spel de plattegrond van het huis, gemaakt van een LiDAR-scan met de iPhone. **Het huis staat nooit in deze repo**: de repo en GitHub Pages zijn openbaar, dus alles hierin kan iedereen zien.
+
+- **Waar het staat:** alleen op het servertje, in Netlify Blobs (store `pip-huis`), via `/api/huis` (`netlify/functions/huis.mjs`). Met dezelfde code als de rest (`PIP_ACTION_CODE`): zonder koppelcode krijg je niets. In het log komen alleen aantallen (verdiepingen, kamers), nooit wat erin staat.
+- **Erop zetten:** Thuis › Instellen › **Huis voor Waar is Pip** › **Huisbestand kiezen**. Kies het `.json`-bestand van de scan; daar zie je ook hoeveel verdiepingen en kamers erop staan, en kun je het huis weer weghalen.
+- **Zonder huis:** het spel gebruikt dan een verzonnen voorbeeldhuis.
+- **Scans en huisbestanden** (`*.usdz`, `*.usd*`, `*.obj`, `*.ply`, `*.e57`, `*.pip-huis.json`, `pip-huis*.json`, de mappen `huis/` en `scans/`) staan in `.gitignore`, zodat ze er nooit per ongeluk in komen.
+- **Het huisbestand:** JSON met `pipHuis: 1` en een lijst `verdiepingen`. Elke verdieping heeft een `id` en lijsten `muren`, `openingen` (deuren, ramen), `kamers` en `meubels`. Het servertje controleert alleen die vorm en de grootte (max. 512 kB); wat erin staat leest het spel.
 
 ## 5. Eerste test op de Google Hub
 

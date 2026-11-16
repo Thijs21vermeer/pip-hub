@@ -4,3 +4,17 @@ __pycache__/
 voerraad-code.txt
 .netlify/
 node_modules/
+
+# Het huis voor Waar is Pip: scans en de plattegrond komen nooit in deze openbare
+# repo. Het huisbestand staat alleen op het servertje (netlify/functions/huis.mjs).
+*.usdz
+*.usd
+*.usda
+*.usdc
+*.ply
+*.obj
+*.e57
+*.pip-huis.json
+pip-huis*.json
+huis/
+scans/

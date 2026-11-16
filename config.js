@@ -93,6 +93,9 @@ window.PIP_CONFIG = {
   // Pip Run: het spel (piprun.html) met elke week vijf missies (missies.js). Een
   // gehaalde missie is 1 punt bij Scores. Zelfde servertje en code.
   piprun: { url: "https://pip-kattenbak.netlify.app/api/piprun" },
+  // Waar is Pip: het huis (de plattegrond van de scan). Staat alleen op het
+  // servertje, achter de code, en nooit in deze openbare map (netlify/functions/huis.mjs).
+  huis: { url: "https://pip-kattenbak.netlify.app/api/huis" },
 
   // Koppeling met Voerraad: zodra de Hub een koppelcode heeft, komt de voorraad
   // uit je Voerraad-account. De code zelf hoort NIET in dit bestand (deze map is

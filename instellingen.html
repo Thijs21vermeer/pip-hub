@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261112-78">
+  <link rel="stylesheet" href="stijl.css?v=20261116-79">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -139,6 +139,7 @@
         </div>
         <div id="more-pages"></div>
         <button class="link-row" id="push-row" type="button"><i class="led off" id="push-led" aria-hidden="true"></i><span id="push-label">Meldingen</span><b aria-hidden="true">›</b></button>
+        <button class="link-row" id="house-row" type="button"><i class="led off" id="house-led" aria-hidden="true"></i><span>Huis voor Waar is Pip<small id="house-sub">Nog geen huis</small></span><b aria-hidden="true">›</b></button>
         <button class="link-row" id="unlink" type="button"><i class="led" aria-hidden="true"></i><span>Gekoppeld met de Google Hub</span><b aria-hidden="true">›</b></button>
       </section>
     </div>
@@ -155,6 +156,21 @@
         <button type="button" class="sheet-action" id="push-toggle"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><span id="push-toggle-label">Zet meldingen aan<small id="push-toggle-sub"></small></span></button>
       </div>
       <button class="sheet-cancel" id="push-close" type="button">Sluiten</button>
+    </div>
+  </div>
+
+  <!-- Achter "Huis voor Waar is Pip": het huisbestand van de scan op het servertje
+       zetten of weghalen. Het huis staat alleen daar, achter de koppelcode. -->
+  <div class="sheet" id="house-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="house-title">
+      <h2 id="house-title">Huis voor Waar is Pip</h2>
+      <p id="house-text"></p>
+      <div class="sheet-actions">
+        <button type="button" class="sheet-action" id="house-pick"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M12 17v-6M9.5 13.5L12 11l2.5 2.5"/></svg></i><span id="house-pick-label">Huisbestand kiezen<small id="house-pick-sub">Het .json-bestand van de scan</small></span></button>
+        <button type="button" class="sheet-action danger" id="house-delete" hidden><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></i><span>Huis weghalen<small>Het spel gebruikt dan weer het voorbeeldhuis</small></span></button>
+      </div>
+      <input type="file" id="house-file" accept=".json,application/json" hidden>
+      <button class="sheet-cancel" id="house-close" type="button">Sluiten</button>
     </div>
   </div>
 
@@ -253,11 +269,11 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261112-78"></script>
-  <script src="telefoon.js?v=20261112-78"></script>
-  <script src="taken.js?v=20261112-78"></script>
-  <script src="stats.js?v=20261112-78"></script>
-  <script src="missies.js?v=20261112-78"></script>
+  <script src="config.js?v=20261116-79"></script>
+  <script src="telefoon.js?v=20261116-79"></script>
+  <script src="taken.js?v=20261116-79"></script>
+  <script src="stats.js?v=20261116-79"></script>
+  <script src="missies.js?v=20261116-79"></script>
   <script>
     (function () {
       "use strict";
@@ -320,6 +336,7 @@
         kattenbak: serverUrl("kattenbak", config.kattenbak.url),
         photos: serverUrl("fotos", config.photos.url),
         fotobattle: serverUrl("fotobattle", (config.fotobattle && config.fotobattle.url) || ""),
+        huis: serverUrl("huis", (config.huis && config.huis.url) || ""),
       };
       const SLIDE_MS = 6000;
       let data = { settings: {}, jaarlog: null, log: null };
@@ -1525,6 +1542,83 @@
         location.reload();
       });
 
+      // Achter "Huis voor Waar is Pip": het huisbestand van de scan (de plattegrond)
+      // op het servertje zetten (netlify/functions/huis.mjs). Het huis staat alleen
+      // daar, achter de koppelcode, en nooit in GitHub. Hier alleen hoeveel
+      // verdiepingen en kamers; het huis zelf haalt het spel op.
+      const HOUSE_MAX = 512 * 1024;
+      const HOUSE_SUB = "Het .json-bestand van de scan";
+      let house = null; // { updatedAt, verdiepingen, kamers } of null
+      const plural = (n, one, more) => `${n} ${n === 1 ? one : more}`;
+      function paintHouse(note) {
+        $("house-led").className = `led ${house ? "" : "off"}`;
+        $("house-sub").textContent = house ? `${plural(house.verdiepingen, "verdieping", "verdiepingen")}, ${plural(house.kamers, "kamer", "kamers")}` : "Nog geen huis";
+        $("house-text").textContent = note || (house
+          ? `Het huis staat op het servertje van Pip, bijgewerkt op ${P.longDate(new Date(house.updatedAt)).toLowerCase()}. Alleen telefoons met de koppelcode kunnen het zien.`
+          : "Zet hier het huisbestand van de scan op het servertje van Pip. Het komt nooit in GitHub; alleen telefoons met de koppelcode kunnen het zien.");
+        $("house-delete").hidden = !house;
+        $("house-pick-label").firstChild.textContent = house ? "Nieuw huisbestand kiezen" : "Huisbestand kiezen";
+      }
+      async function refreshHouse() {
+        if (!urls.huis || !P.code()) return;
+        try {
+          const response = await fetch(`${urls.huis}?kort=1`, { headers: P.auth(), cache: "no-store" });
+          if (response.status === 404) house = null;
+          else if (response.ok) house = await response.json();
+          else return;
+        } catch (error) {
+          return; // Niet bereikbaar: de vorige stand blijft staan.
+        }
+        paintHouse();
+      }
+      $("house-row").hidden = !urls.huis;
+      $("house-row").addEventListener("click", () => {
+        $("house-pick-sub").textContent = HOUSE_SUB;
+        paintHouse();
+        $("house-sheet").hidden = false;
+        refreshHouse();
+      });
+      $("house-close").addEventListener("click", () => { $("house-sheet").hidden = true; });
+      $("house-sheet").addEventListener("click", (event) => { if (event.target === $("house-sheet")) $("house-sheet").hidden = true; });
+      $("house-pick").addEventListener("click", () => $("house-file").click());
+      $("house-file").addEventListener("change", async () => {
+        const file = $("house-file").files[0];
+        $("house-file").value = "";
+        if (!file) return;
+        if (file.size > HOUSE_MAX) return paintHouse("Dit bestand is te groot voor een huisbestand.");
+        let text = "";
+        try {
+          text = await file.text();
+          const parsed = JSON.parse(text);
+          if (!parsed || parsed.pipHuis !== 1 || !Array.isArray(parsed.verdiepingen) || !parsed.verdiepingen.length) throw new Error("NOT_A_HOUSE");
+        } catch (error) {
+          return paintHouse("Dit is geen huisbestand. Kies het .json-bestand van de scan.");
+        }
+        $("house-pick-sub").textContent = "Even op het servertje zetten…";
+        try {
+          const response = await fetch(urls.huis, { method: "PUT", headers: P.auth({ "Content-Type": "application/json" }), body: text });
+          if (!response.ok) throw new Error(String(response.status));
+          house = await response.json();
+          paintHouse("Gelukt. Het huis staat op het servertje van Pip, en alleen telefoons met de koppelcode kunnen het zien.");
+        } catch (error) {
+          paintHouse("Op het servertje zetten lukte niet. Probeer het zo nog eens.");
+        } finally {
+          $("house-pick-sub").textContent = HOUSE_SUB;
+        }
+      });
+      $("house-delete").addEventListener("click", async () => {
+        if (!confirm("Het huis weghalen van het servertje? Waar is Pip gebruikt dan weer het voorbeeldhuis.")) return;
+        try {
+          const response = await fetch(urls.huis, { method: "DELETE", headers: P.auth() });
+          if (!response.ok) throw new Error(String(response.status));
+          house = null;
+          paintHouse("Het huis is weg van het servertje.");
+        } catch (error) {
+          paintHouse("Weghalen lukte niet. Probeer het zo nog eens.");
+        }
+      });
+      paintHouse();
+
       // ---- Laden ----
 
       async function load() {
@@ -1940,6 +2034,7 @@
           renderAll();
         });
         refreshKb();
+        refreshHouse();
         await load();
         setInterval(load, 60 * 1000);
         document.addEventListener("visibilitychange", () => {
