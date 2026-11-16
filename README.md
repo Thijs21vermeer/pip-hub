@@ -217,14 +217,14 @@ Onder **Acties** staan twee knoppen:
 - **Veiligheid:** draaien kan niet als er een kat in de bak zit, en niet twee keer binnen 2 minuten. "Alle korrels verversen" zit er bewust niet in.
 - **De code:** het servertje reageert alleen op de kattenbak-code. Die staat op je Mac in `~/.config/pip/kattenbak-code.txt` en in de Netlify-instellingen (`PIP_ACTION_CODE`). Plak hem op de startpagina bij **Kattenbak koppelen**, of start Pip met `start-pip.command`: dat stuurt hem automatisch mee.
 - **Tuya-abonnement:** het gratis IoT Core-abonnement van Tuya moet je ongeveer elke 6 maanden verlengen (platform.tuya.com → Cloud Services → IoT Core → Extend Trial Period). Is het verlopen, dan staat er op de knop "Tuya-abonnement verlopen".
-- **Servertje aanpassen:** na een wijziging in `netlify/functions` zet je het opnieuw online. Draai eerst `npm ci`: zonder `node_modules` gaat `@netlify/blobs` niet mee en vallen de instellingen en het logboek uit (HTTP 502).
+- **Servertje aanpassen:** na een wijziging in `netlify/functions` zet je het opnieuw online, vanuit deze map (daar staat `netlify.toml`). Draai eerst `npm ci`: zonder `node_modules` gaat `@netlify/blobs` niet mee en vallen de instellingen en het logboek uit (HTTP 502).
 
 ```bash
 npm ci
 ```
 
 ```bash
-NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --dir netlify/public --functions netlify/functions
+NETLIFY_SITE_ID=e5487a3d-43b5-42e8-8d84-22ea7461b335 netlify deploy --prod --no-build --dir netlify/public --functions netlify/functions
 ```
 
 - **Welke commando's kent de kattenbak?** `python3 tools/tuya_check.py` laat het zien. Dit script leest alleen.
