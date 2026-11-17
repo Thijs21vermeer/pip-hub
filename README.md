@@ -217,6 +217,11 @@ Onder **Acties** staan twee knoppen:
 - **Veiligheid:** draaien kan niet als er een kat in de bak zit, en niet twee keer binnen 2 minuten. "Alle korrels verversen" zit er bewust niet in.
 - **De code:** het servertje reageert alleen op de kattenbak-code. Die staat op je Mac in `~/.config/pip/kattenbak-code.txt` en in de Netlify-instellingen (`PIP_ACTION_CODE`). Plak hem op de startpagina bij **Kattenbak koppelen**, of start Pip met `start-pip.command`: dat stuurt hem automatisch mee.
 - **Tuya-abonnement:** het gratis IoT Core-abonnement van Tuya moet je ongeveer elke 6 maanden verlengen (platform.tuya.com → Cloud Services → IoT Core → Extend Trial Period). Is het verlopen, dan staat er op de knop "Tuya-abonnement verlopen".
+- **Tuya-tegoed:** elke vraag aan Tuya telt mee voor een maandtegoed (ook het ophalen van een token). Daarom:
+  - Het servertje bewaart wat Tuya weet in een eigen opslag (`netlify/lib/tuya-cache.mjs`, opslag `tuya`). De Hub, de telefoons, het logboek en het jaarlog krijgen die kopie: de stand van de bak en de voerbak en de bezoeken van 7 dagen hooguit een kwartier oud, online of niet hooguit een uur. Het token (2 uur geldig) staat er ook en wordt door alle serverinstanties gedeeld.
+  - Draaien en voeren kijken altijd vers (zit Pip erin, is het apparaat online). Het draaiblad op de telefoon vraagt `?fresh=1`: alleen de bak zelf vers. Na een actie is de kopie 2 minuten lang hooguit 20 seconden oud.
+  - De Hub vraagt overdag elk half uur (`refreshMinutes` in `config.js`) en 's nachts (01:00 tot 07:00) elk uur. Thuis op de telefoon haalt het logboek op bij openen, na een actie en verder hooguit eens per kwartier. Het jaarlog gebruikt de kopie als die jonger is dan 2,5 uur.
+  - Samen ongeveer 190 vragen per dag (was ongeveer 600 plus elke minuut dat Thuis openstond). Het verbruik per dag zie je op platform.tuya.com.
 - **Servertje aanpassen:** na een wijziging in `netlify/functions` zet je het opnieuw online, vanuit deze map (daar staat `netlify.toml`). Draai eerst `npm ci`: zonder `node_modules` gaat `@netlify/blobs` niet mee en vallen de instellingen en het logboek uit (HTTP 502).
 
 ```bash

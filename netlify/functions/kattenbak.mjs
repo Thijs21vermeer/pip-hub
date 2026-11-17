@@ -3,7 +3,9 @@
 // en niet in Pip: die pagina is openbaar. Pip komt binnen met PIP_ACTION_CODE.
 //
 //   GET  /api/kattenbak                      status (gewicht, bezoeken, bak vol, kat erin)
-//                                            en van de voerbak (feeder)
+//                                            en van de voerbak (feeder); hooguit een
+//                                            kwartier oud (lib/tuya-cache.mjs)
+//   GET  /api/kattenbak?fresh=1              idem, maar de bak zelf vers (zit Pip erin?)
 //   GET  /api/kattenbak?log=1                logboek van 7 dagen: bezoeken aan de bak,
 //                                            voerbeurten en schoonmaakbeurten
 //   POST /api/kattenbak  {"action":"clean"}  nu schoonmaken (niet als er een kat in zit)
@@ -19,7 +21,8 @@
 import { getStore } from "@netlify/blobs";
 import { authorized, corsHeaders, json, setting } from "../lib/http.mjs";
 import { localTime } from "../lib/notify.mjs";
-import { accessToken, DAY_MS, readVisits, tuya } from "../lib/tuya.mjs";
+import { accessToken, DAY_MS, tuya } from "../lib/tuya.mjs";
+import { noteAction, readCachedVisits, readDevice } from "../lib/tuya-cache.mjs";
 import { cleanVisits, usualWeight } from "../lib/visits.mjs";
 
 // Pip-actie → datapunt van deze kattenbak (uitgelezen met tools/tuya_check.py).
@@ -40,26 +43,13 @@ const SAME_FEED_MS = 3 * 60 * 1000;
 let lastClean = 0;
 let lastFeed = 0;
 
-async function readDevice(device, token) {
-  const [shadow, info] = await Promise.all([
-    tuya("GET", `/v2.0/cloud/thing/${device}/shadow/properties`, undefined, token),
-    tuya("GET", `/v2.0/cloud/thing/${device}`, undefined, token),
-  ]);
-  return {
-    online: Boolean(info.is_online ?? info.isOnline ?? info.online),
-    value: Object.fromEntries(shadow.properties.map((p) => [p.code, p.value])),
-    // Wanneer elk datapunt voor het laatst veranderde (ms).
-    time: Object.fromEntries(shadow.properties.map((p) => [p.code, p.time])),
-  };
-}
-
 // Voerbak: online, bezig of niet, en de laatste voerbeurt (ook die van het
-// schema in de app). null als er geen voerbak is ingesteld.
-async function readFeeder(token) {
+// schema in de app). null als er geen voerbak is ingesteld. fresh: vlak voor voeren.
+async function readFeeder({ fresh = false } = {}) {
   const device = process.env.TUYA_FEEDER_ID;
   if (!device) return null;
   try {
-    const { online, value, time } = await readDevice(device, token);
+    const { online, value, time } = await readDevice(device, { fresh, freshOnline: fresh });
     let record = null;
     try {
       record = JSON.parse(value.feed_record || "null");
@@ -99,8 +89,8 @@ async function addToLog(kind, entry) {
 }
 
 // De laatste voerbeurt van de voerbak zelf (schema of app) erbij zetten, als die
-// nog niet in het logboek staat. Pip vraagt elk kwartier de status op, dus
-// voerbeurten die verder dan een kwartier uit elkaar liggen komen er allemaal in.
+// nog niet in het logboek staat. De Hub vraagt overdag elk half uur de status op,
+// dus voerbeurten die verder dan een half uur uit elkaar liggen komen er allemaal in.
 async function noteFeederRecord(lastFeed) {
   if (!lastFeed || !lastFeed.at || lastFeed.at < Date.now() - LOG_DAYS * DAY_MS) return;
   const log = await readLog();
@@ -117,8 +107,7 @@ async function readUsualWeight() {
 }
 
 async function readLogbook() {
-  const token = await accessToken();
-  const [raw, log] = await Promise.all([readVisits(token, LOG_DAYS), readLog()]);
+  const [{ raw }, log] = await Promise.all([readCachedVisits(), readLog()]);
   const visits = cleanVisits(raw, { usualKg: usualWeight(raw) });
   return {
     visits,
@@ -130,10 +119,11 @@ async function readLogbook() {
 // Bezoeken van vandaag, geteld uit de meldingen van de bak zelf. De teller in de
 // bak (excretion_times_day) gaat bij draaien terug naar 0 en klopt dan niet meer.
 // Met het gewicht van het laatste echte bezoek (niet van iemand die schoonmaakt).
-async function countVisitsToday(token) {
+// Uit dezelfde kopie van 7 dagen als het logboek: geen extra vraag aan Tuya.
+async function countVisitsToday() {
   const here = localTime(Date.now());
-  const sinceMidnight = (here.hour * 60 + here.minute + 1) * 60 * 1000;
-  const [raw, usualKg] = await Promise.all([readVisits(token, sinceMidnight / DAY_MS), readUsualWeight()]);
+  const { raw } = await readCachedVisits();
+  const usualKg = usualWeight(raw) || await readUsualWeight();
   const visits = cleanVisits(raw, { usualKg }).filter((visit) => localTime(visit.at).date === here.date);
   return { count: visits.length, latestKg: visits[0] ? visits[0].weightKg : null, usualKg };
 }
@@ -146,12 +136,12 @@ function plausibleKg(kg, usualKg) {
   return kg >= usualKg * 0.6 && kg <= usualKg * 1.4 ? kg : null;
 }
 
-async function readStatus() {
-  const token = await accessToken();
-  const [{ online, value }, feeder, counted, log] = await Promise.all([
-    readDevice(setting("TUYA_DEVICE_ID"), token),
-    readFeeder(token),
-    countVisitsToday(token).catch(() => null),
+// fresh: de bak zelf vers ophalen (de rest mag uit de kopie).
+async function readStatus({ fresh = false } = {}) {
+  const [{ online, value, at }, feeder, counted, log] = await Promise.all([
+    readDevice(setting("TUYA_DEVICE_ID"), { fresh }),
+    readFeeder(),
+    countVisitsToday().catch(() => null),
     readLog().catch(() => ({ cleans: [] })),
   ]);
   const lastClean = log.cleans.reduce((latest, clean) => Math.max(latest, clean.at || 0), 0);
@@ -169,7 +159,8 @@ async function readStatus() {
     catInside: Boolean(value.monitoring),
     fault: Boolean(value.fault),
     feeder,
-    updatedAt: new Date().toISOString(),
+    // Wanneer de stand van de bak bij Tuya is opgehaald.
+    updatedAt: new Date(at).toISOString(),
   };
 }
 
@@ -182,8 +173,7 @@ async function feed(portions, source = "overzicht") {
   const device = process.env.TUYA_FEEDER_ID;
   if (!device) return [503, { error: "NOT_CONFIGURED" }];
   if (!Number.isInteger(portions) || portions < 1 || portions > MAX_PORTIONS) return [400, { error: "BAD_PORTIONS" }];
-  const token = await accessToken();
-  const status = await readFeeder(token);
+  const status = await readFeeder({ fresh: true });
   if (status.error) return [502, { error: status.error }];
   if (!status.online) return [409, { error: "FEEDER_OFFLINE" }];
   if (status.feeding || Date.now() - lastFeed < FEED_COOLDOWN_MS) return [429, { error: "FEEDING" }];
@@ -191,8 +181,9 @@ async function feed(portions, source = "overzicht") {
     "POST",
     `/v2.0/cloud/thing/${device}/shadow/properties/issue`,
     { properties: JSON.stringify({ manual_feed: portions }) },
-    token,
+    await accessToken(),
   );
+  await noteAction();
   lastFeed = Date.now();
   await addToLog("feeds", { at: lastFeed, portions, source }).catch(() => {});
   return [200, { ok: true, action: "feed", portions, at: new Date().toISOString() }];
@@ -203,18 +194,19 @@ async function runAction(action, portions, source = "overzicht") {
   const code = ACTIONS[action];
   if (!code) return [400, { error: "UNKNOWN_ACTION" }];
   if (action === "clean") {
-    const status = await readStatus();
-    if (!status.online) return [409, { error: "OFFLINE" }];
-    if (status.catInside) return [409, { error: "CAT_INSIDE" }];
     if (Date.now() - lastClean < CLEAN_COOLDOWN_MS) return [429, { error: "TOO_SOON" }];
+    // Altijd vers: zit Pip erin, en is de bak online?
+    const { online, value } = await readDevice(setting("TUYA_DEVICE_ID"), { fresh: true, freshOnline: true });
+    if (!online) return [409, { error: "OFFLINE" }];
+    if (value.monitoring) return [409, { error: "CAT_INSIDE" }];
   }
-  const token = await accessToken();
   await tuya(
     "POST",
     `/v2.0/cloud/thing/${setting("TUYA_DEVICE_ID")}/shadow/properties/issue`,
     { properties: JSON.stringify({ [code]: true }) },
-    token,
+    await accessToken(),
   );
+  await noteAction();
   if (action === "clean") {
     lastClean = Date.now();
     await addToLog("cleans", { at: lastClean, source }).catch(() => {});
@@ -228,8 +220,9 @@ export default async (request) => {
   try {
     if (!authorized(request)) return json(401, { error: "UNAUTHORIZED" }, headers);
     if (request.method === "GET") {
-      const wantsLog = new URL(request.url).searchParams.get("log") === "1";
-      return json(200, wantsLog ? await readLogbook() : await readStatus(), headers);
+      const params = new URL(request.url).searchParams;
+      if (params.get("log") === "1") return json(200, await readLogbook(), headers);
+      return json(200, await readStatus({ fresh: params.get("fresh") === "1" }), headers);
     }
     if (request.method === "POST") {
       const { action, portions, source } = await request.json().catch(() => ({}));

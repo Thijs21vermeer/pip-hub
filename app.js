@@ -454,8 +454,21 @@
     return !!(actionCode() && kattenbakUrl());
   }
 
+  // Elke vraag aan het servertje kan Tuya-tegoed kosten (het servertje bewaart
+  // de stand een kwartier). Overdag elk half uur (config), 's nachts elk uur.
+  const NIGHT_HOURS = [1, 7]; // van 01:00 tot 07:00
+  let kattenbakAt = 0;
+
+  function refreshKattenbakOnSchedule() {
+    const hour = new Date().getHours();
+    const night = hour >= NIGHT_HOURS[0] && hour < NIGHT_HOURS[1];
+    if (night && Date.now() - kattenbakAt < 55 * 60 * 1000) return;
+    refreshKattenbak();
+  }
+
   async function refreshKattenbak() {
     if (!kattenbakLinked()) return renderActions();
+    kattenbakAt = Date.now();
     try {
       const response = await fetch(kattenbakUrl(), {
         headers: { Authorization: `Bearer ${actionCode()}` },
@@ -3025,7 +3038,7 @@
   refreshKattenbak();
   pullSettings();
   setInterval(refreshVoerraad, config.voerraad.refreshMinutes * 60 * 1000);
-  setInterval(refreshKattenbak, config.kattenbak.refreshMinutes * 60 * 1000);
+  setInterval(refreshKattenbakOnSchedule, config.kattenbak.refreshMinutes * 60 * 1000);
   setInterval(refreshGoogleButton, 10 * 60 * 1000); // script aan- of uitgezet?
   refreshPhotos();
   setInterval(refreshPhotos, 5 * 60 * 1000); // wijzigingen op fotos.html binnen 5 minuten

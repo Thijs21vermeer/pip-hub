@@ -37,7 +37,7 @@ window.PIP_CONFIG = {
 
   // Adres van dat servertje. De code om het te gebruiken staat NIET hier (deze
   // map is openbaar): die vul je in op de startpagina.
-  kattenbak: { url: "https://pip-kattenbak.netlify.app/api/kattenbak", refreshMinutes: 15 },
+  kattenbak: { url: "https://pip-kattenbak.netlify.app/api/kattenbak", refreshMinutes: 30 },
 
   // Waar de Hub zijn takenlijst en huisgenoten bewaart (zelfde servertje en code),
   // zodat ze een herstart van de Hub overleven.

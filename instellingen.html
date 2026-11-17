@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
-  <link rel="stylesheet" href="stijl.css?v=20261116-79">
+  <link rel="stylesheet" href="stijl.css?v=20261117-80">
   <!-- Het thuisscherm op de telefoon: Pip (de foto's uit de fotolijst wisselen zoals
        op de Hub), de taken van vandaag met wie wat deed, Pip Wrapped (december tot
        half januari), de scores van deze week en de instellingen. -->
@@ -269,11 +269,11 @@
     </div>
   </div>
 
-  <script src="config.js?v=20261116-79"></script>
-  <script src="telefoon.js?v=20261116-79"></script>
-  <script src="taken.js?v=20261116-79"></script>
-  <script src="stats.js?v=20261116-79"></script>
-  <script src="missies.js?v=20261116-79"></script>
+  <script src="config.js?v=20261117-80"></script>
+  <script src="telefoon.js?v=20261117-80"></script>
+  <script src="taken.js?v=20261117-80"></script>
+  <script src="stats.js?v=20261117-80"></script>
+  <script src="missies.js?v=20261117-80"></script>
   <script>
     (function () {
       "use strict";
@@ -973,9 +973,11 @@
 
       // De stand van de bak en de voerbak: bij het openen, als Pip weer naar voren
       // komt en vlak voor een actie (niet elke minuut: dat zijn telkens vragen aan Tuya).
-      async function refreshKb() {
+      // fresh: de bak zelf vers bij Tuya (vlak voor draaien); anders mag het
+      // servertje zijn kopie van hooguit een kwartier oud geven.
+      async function refreshKb(fresh = false) {
         try {
-          kbStatus = await getJson(urls.kattenbak);
+          kbStatus = await getJson(fresh ? `${urls.kattenbak}${urls.kattenbak.includes("?") ? "&" : "?"}fresh=1` : urls.kattenbak);
         } catch (error) {
           // Niet bereikbaar: dan alleen het logboek.
         }
@@ -997,6 +999,7 @@
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw Object.assign(new Error(result.error || "ERROR"), { code: result.error });
+        logAt = 0; // het logboek bij de volgende keer ophalen weer mee
         return result;
       }
 
@@ -1047,7 +1050,7 @@
       $("act-clean").addEventListener("click", () => {
         paintCleanSheet();
         $("clean-sheet").hidden = false;
-        refreshKb().then(paintCleanSheet); // net even opnieuw kijken
+        refreshKb(true).then(paintCleanSheet); // net even opnieuw kijken: zit Pip erin?
       });
       $("clean-cancel").addEventListener("click", () => { $("clean-sheet").hidden = true; });
       $("clean-sheet").addEventListener("click", (event) => { if (event.target === $("clean-sheet")) $("clean-sheet").hidden = true; });
@@ -1621,14 +1624,23 @@
 
       // ---- Laden ----
 
+      // Het logboek van de kattenbak (bezoeken komen van Tuya) niet elke minuut:
+      // bij openen, na een actie en verder hooguit eens per kwartier.
+      const LOG_EVERY_MS = 15 * 60 * 1000;
+      let logAt = 0;
+
       async function load() {
         // Lukt ophalen niet, dan blijft de vorige stand staan (en bewaard).
         let fresh = true;
         const keep = (value) => () => { fresh = false; return value; };
+        const wantLog = !data.log || Date.now() - logAt >= LOG_EVERY_MS;
+        if (wantLog) logAt = Date.now();
         const [settings, jaarlog, log] = await Promise.all([
           getJson(urls.settings).catch(keep(data.settings)),
           getJson(urls.jaarlog).catch(keep(data.jaarlog)),
-          getJson(`${urls.kattenbak}${urls.kattenbak.includes("?") ? "&" : "?"}log=1`).catch(keep(data.log)),
+          wantLog
+            ? getJson(`${urls.kattenbak}${urls.kattenbak.includes("?") ? "&" : "?"}log=1`).catch(keep(data.log))
+            : data.log,
         ]);
         const before = data.settings.play && data.settings.play.timer;
         data = { settings: settings || {}, jaarlog, log };
@@ -2039,6 +2051,7 @@
         setInterval(load, 60 * 1000);
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
+            logAt = 0;
             load();
             refreshKb();
           }

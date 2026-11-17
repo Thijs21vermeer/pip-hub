@@ -7,15 +7,20 @@
 //                     fo: voerbeurten via het overzicht, c: keer gedraaid via het overzicht } }
 //
 // Elke run schrijft de dagen die helemaal binnen de laatste 7 dagen vallen
-// opnieuw, dus een gemiste run haalt de volgende in.
+// opnieuw, dus een gemiste run haalt de volgende in. Daarom mag de lijst met
+// bezoeken ook de gedeelde kopie zijn (lib/tuya-cache.mjs), als die jonger is
+// dan een run: overdag haalt de Hub hem toch al op, en dat scheelt Tuya-tegoed.
 
 import { getStore } from "@netlify/blobs";
 import { readPart, writePart } from "../lib/history.mjs";
 import { localTime } from "../lib/notify.mjs";
-import { accessToken, DAY_MS, readVisits } from "../lib/tuya.mjs";
+import { DAY_MS } from "../lib/tuya.mjs";
+import { readCachedVisits } from "../lib/tuya-cache.mjs";
 import { cleanVisits, usualWeight } from "../lib/visits.mjs";
 
 const WINDOW_DAYS = 7;
+// Elke 3 uur een run; een kopie van minder dan 2,5 uur oud is goed genoeg.
+const VISITS_MAX_AGE_MS = 150 * 60 * 1000;
 
 function emptyDay() {
   return { v: 0, ws: 0, wn: 0, h: new Array(24).fill(0), f: 0, p: 0, fo: 0, c: 0 };
@@ -37,7 +42,7 @@ export default async () => {
   const store = getStore({ name: "pip", consistency: "strong" });
   try {
     // Alleen echte bezoeken van Pip (zie lib/visits.mjs).
-    const raw = await readVisits(await accessToken(), WINDOW_DAYS);
+    const { raw } = await readCachedVisits(VISITS_MAX_AGE_MS);
     const usualKg = usualWeight(raw);
     visits = cleanVisits(raw, { usualKg });
     // Pips gewone gewicht van deze 7 dagen, voor de teller van vandaag (kattenbak.mjs).
